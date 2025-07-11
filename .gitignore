@@ -39,3 +39,15 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# secret keys and certificates
+*.key
+*.cert
+*.crt
+
+# claude
+.claude
+CLAUDE.md
+
+# memo
+.memo/
