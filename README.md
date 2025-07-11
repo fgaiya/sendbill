@@ -1,36 +1,153 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 見積書・請求書作成ツール
 
-## Getting Started
+フリーランスや個人事業主のための見積書・請求書作成・管理Webアプリケーション。AIによる補助機能を搭載し、帳票作成に付随するノンコア業務の負担を軽減します。
 
-First, run the development server:
+## 🎯 概要
+
+シングルユーザー向けの見積書・請求書作成ツール。効率的な帳票作成と管理により、フリーランス・個人事業主の業務負担を軽減することを目的としています。
+
+### 主な特徴
+
+- ✅ 見積書・請求書の作成・管理
+- ✅ 取引先情報の管理
+- ✅ PDF出力対応
+- ✅ AI補助機能（送付メール作成）
+- ✅ インボイス制度対応
+- ✅ 直感的なUI/UX
+
+## 🛠️ 技術スタック
+
+- **Frontend**: Next.js 15 (App Router)
+- **Language**: TypeScript
+- **Database**: PostgreSQL
+- **ORM**: Prisma
+- **Styling**: Tailwind CSS
+- **UI Components**: shadcn/ui
+- **Authentication**: Clerk
+- **Font**: Geist
+
+## 🚀 機能
+
+### 1. 認証システム
+- メールアドレス＋パスワード
+- Googleアカウントによるソーシャルログイン
+- Clerkによる安全な認証
+
+### 2. ユーザー情報管理
+- 会社名・屋号の設定
+- ロゴ画像のアップロード
+- 住所・電話番号の登録
+- インボイス登録番号の管理
+- 振込先口座情報の設定
+
+### 3. 取引先管理
+- 取引先情報のCRUD操作
+- 取引先名・敬称の設定
+- 住所・担当者名の管理
+
+### 4. 帳票管理
+- **見積書作成**: 件名、発行日、見積有効期限、品目詳細
+- **請求書作成**: 件名、発行日、支払期限、品目詳細
+- **複製機能**: 見積書→請求書、既存帳票→新規帳票
+- **自動採番**: 帳票番号の自動生成
+- **ステータス管理**: 下書き、送付済み、受注/入金済み等
+- **検索・絞り込み**: 取引先名、ステータス、帳票種別
+
+### 5. AI補助機能
+- **送付メール作成**: AI が取引先名、請求書番号、請求金額、支払期日を含む適切なメール文面を自動生成
+
+### 6. 出力機能
+- **PDF出力**: 作成した帳票をPDF形式でダウンロード
+- **将来対応**: 共有可能な一意のURL発行
+
+## 📋 ステータス管理
+
+### 見積書
+- 下書き
+- 送付済み
+- 受注
+- 失注
+
+### 請求書
+- 下書き
+- 送付済み
+- 入金済み
+- 期限超過
+
+## 🏗️ 開発環境のセットアップ
+
+### 前提条件
+- Node.js 18.x以上
+- PostgreSQL
+- npm/yarn/pnpm
+
+### インストール
 
 ```bash
+# リポジトリをクローン
+git clone https://github.com/fgaiya/sendbill.git
+cd git-test
+
+# 依存関係をインストール
+npm install
+
+# 環境変数を設定
+cp .env.example .env.local
+# .env.localを編集してデータベースとClerkの設定を追加
+
+# データベースのセットアップ
+npm run db:migrate
+npm run db:seed
+
+# 開発サーバーを起動
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 開発コマンド
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run dev          # 開発サーバー起動 (http://localhost:3000)
+npm run build        # 本番用ビルド
+npm run start        # 本番サーバー起動
+npm run lint         # ESLintチェック
+npm run typecheck    # TypeScript型チェック
+npm test             # テスト実行
+npm run test:e2e     # E2Eテスト実行
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🎨 UI/UXデザイン
 
-## Learn More
+- **日本語対応**: 完全な日本語インターフェース
+- **レスポンシブデザイン**: モバイル・タブレット対応
+- **アクセシビリティ**: WCAG準拠
+- **ダークモード**: ライト・ダークテーマ対応
 
-To learn more about Next.js, take a look at the following resources:
+## 📁 プロジェクト構成
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+├── app/                    # Next.js App Router
+│   ├── api/               # API Routes
+│   ├── (auth)/            # 認証関連ページ
+│   ├── dashboard/         # ダッシュボード
+│   ├── quotes/            # 見積書管理
+│   ├── invoices/          # 請求書管理
+│   └── clients/           # 取引先管理
+├── components/            # 再利用可能コンポーネント
+├── lib/                   # ユーティリティ関数
+├── prisma/               # データベース定義
+├── docs/                 # ドキュメント
+└── public/               # 静的ファイル
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🔒 セキュリティ
 
-## Deploy on Vercel
+- Clerk認証による安全なユーザー管理
+- CSRF攻撃対策
+- XSS攻撃対策
+- 入力値バリデーション
+- 機密情報の暗号化
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+**対象ユーザー**: フリーランス、個人事業主  
+**利用形態**: シングルユーザー（個人利用）
