@@ -111,9 +111,14 @@
 }
 
 @layer base {
-  * {
-    @apply border-border focus:ring-2 focus:ring-ring/50;
+  *:where(button,a,input,textarea,select,summary) {
+    @apply border-border;
   }
+
+  :where(button,a,input,textarea,select,summary):focus-visible {
+    @apply ring-2 ring-ring/50;
+  }
+
   body {
     @apply bg-background text-foreground;
   }
