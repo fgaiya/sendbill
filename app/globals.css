@@ -112,7 +112,7 @@
 
 @layer base {
   * {
-    @apply border-border outline-[color:var(--ring)/0.5];
+    @apply border-border focus:ring-2 focus:ring-ring/50;
   }
   body {
     @apply bg-background text-foreground;
