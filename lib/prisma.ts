@@ -1,12 +1,21 @@
+declare global {
+  var prisma: PrismaClient | undefined
+}
+
 import { PrismaClient } from '@prisma/client'
 
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined
-}
-
-export const prisma =
-  globalForPrisma.prisma ?? new PrismaClient()
+// グローバルキャッシュを利用（開発環境での接続数増殖防止）
+export const prisma = globalThis.prisma ?? new PrismaClient()
 
 if (process.env.NODE_ENV !== 'production') {
-  globalForPrisma.prisma = prisma
+  globalThis.prisma = prisma
 }
+
+// プロセス終了時に接続を明示的に切断（CIやテスト環境でのリーク防止）
+const disconnect = async () => {
+  await prisma.$disconnect()
+}
+
+process.on('beforeExit', disconnect)
+process.on('SIGINT', disconnect) 
+process.on('SIGTERM', disconnect)
