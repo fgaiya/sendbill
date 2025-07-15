@@ -13,7 +13,11 @@ if (process.env.NODE_ENV !== 'production') {
 
 // プロセス終了時に接続を明示的に切断（CIやテスト環境でのリーク防止）
 const disconnect = async () => {
-  await prisma.$disconnect()
+  try {
+    await prisma.$disconnect()
+  } catch (error) {
+    console.error('Prisma disconnect error:', error)
+  }
 }
 
 process.on('beforeExit', disconnect)
