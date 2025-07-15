@@ -7,57 +7,144 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Client {
+model User {
   id        String    @id @default(cuid())
-  name      String
+  clerkId   String    @unique
   email     String    @unique
-  phone     String?
-  address   String?
-  company   String?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+
+  company   Company?
+
+  clients   Client[]
+  quotes    Quote[]
   invoices  Invoice[]
 
+  @@map("users")
+}
+
+model Company {
+  id                        String   @id @default(cuid())
+  user                      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId                    String   @unique
+  companyName               String
+  businessName              String?
+  logoUrl                   String?
+  address                   String?
+  phone                     String?
+  contactEmail              String?
+  invoiceRegistrationNumber String?
+  representativeName        String?
+  bankName                  String?
+  bankBranch                String?
+  bankAccountNumber         String?
+  bankAccountHolder         String?
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+
+  @@map("companies")
+}
+
+model Client {
+  id           String    @id @default(cuid())
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId       String
+  name         String
+  contactName  String?
+  contactEmail String?
+  address      String?
+  phone        String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  invoices     Invoice[]
+  quotes       Quote[]
+
+  @@index([userId])
   @@map("clients")
 }
 
-model Invoice {
-  id          String        @id @default(cuid())
-  number      String        @unique
-  title       String
+model Quote {
+  id          String      @id @default(cuid())
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  client      Client      @relation(fields: [clientId], references: [id], onDelete: Cascade)
   clientId    String
+  quoteNumber String      @unique
   issueDate   DateTime
-  dueDate     DateTime
-  status      InvoiceStatus @default(DRAFT)
-  subtotal    Decimal       @db.Decimal(10, 2) @default(0)
-  taxAmount   Decimal       @db.Decimal(10, 2) @default(0)
-  totalAmount Decimal       @db.Decimal(10, 2) @default(0)
+  expiryDate  DateTime?
+  status      QuoteStatus @default(DRAFT)
   notes       String?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  items       InvoiceItem[]
-  // TODO: MVP後にRestrictまたはソフトデリートの検討
-  client      Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  
+  items       QuoteItem[]
+  invoices    Invoice[]
 
   @@index([clientId])
+  @@index([userId])
+  @@index([status])
+  @@map("quotes")
+}
+
+model QuoteItem {
+  id          String   @id @default(cuid())
+  quote       Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  quoteId     String
+  description String
+  quantity    Decimal  @db.Decimal(10, 2)
+  unitPrice   Decimal  @db.Decimal(10, 2)
+  taxRate     Decimal? @db.Decimal(5, 2)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([quoteId])
+  @@map("quote_items")
+}
+
+model Invoice {
+  id            String        @id @default(cuid())
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId        String
+  client        Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  clientId      String
+  quote         Quote?        @relation(fields: [quoteId], references: [id], onDelete: SetNull)
+  quoteId       String?
+  invoiceNumber String        @unique
+  issueDate     DateTime
+  dueDate       DateTime?
+  status        InvoiceStatus @default(DRAFT)
+  notes         String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  items         InvoiceItem[]
+
+  @@index([clientId])
+  @@index([quoteId])
+  @@index([userId])
   @@index([status])
   @@map("invoices")
 }
 
 model InvoiceItem {
-  id        String   @id @default(cuid())
-  invoiceId String
-  name      String
-  quantity  Int
-  unitPrice Decimal  @db.Decimal(10, 2) @default(0)
-  amount    Decimal  @db.Decimal(10, 2) @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  // TODO: 請求書削除時の挙動を業務フローに合わせて見直す
-  invoice   Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  id          String   @id @default(cuid())
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoiceId   String
+  description String
+  quantity    Decimal  @db.Decimal(10, 2)
+  unitPrice   Decimal  @db.Decimal(10, 2)
+  taxRate     Decimal? @db.Decimal(5, 2)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@index([invoiceId])
   @@map("invoice_items")
+}
+
+enum QuoteStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  DECLINED
 }
 
 enum InvoiceStatus {
@@ -65,5 +152,4 @@ enum InvoiceStatus {
   SENT
   PAID
   OVERDUE
-  CANCELLED
 }
