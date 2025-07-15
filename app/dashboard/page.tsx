@@ -44,7 +44,7 @@ export default async function DashboardPage() {
                 </div>
                 <div>
                   <dt className="inline font-medium">メールアドレス: </dt>
-                  <dd className="inline">{user?.emailAddresses[0]?.emailAddress}</dd>
+                  <dd className="inline">{user?.emailAddresses[0]?.emailAddress || '未設定'}</dd>
                 </div>
               </dl>
             </div>
