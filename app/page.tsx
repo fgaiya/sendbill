@@ -1,49 +1,16 @@
 import { auth } from '@clerk/nextjs/server'
-import { UserButton } from '@clerk/nextjs'
 import Link from "next/link"
+import Header from '@/components/layout/Header'
+import Footer from '@/components/layout/Footer'
 
 export default async function Home() {
   const { userId } = await auth()
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <header className="bg-white shadow-sm">
-        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-gray-900">SendBill</h1>
-            <div className="flex items-center space-x-4">
-              {userId ? (
-                <>
-                  <Link
-                    href="/dashboard"
-                    className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
-                  >
-                    ダッシュボード
-                  </Link>
-                  <UserButton />
-                </>
-              ) : (
-                <>
-                  <Link
-                    href="/sign-in"
-                    className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
-                  >
-                    ログイン
-                  </Link>
-                  <Link
-                    href="/sign-up"
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-                  >
-                    新規登録
-                  </Link>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-7xl py-16 px-4 sm:py-24 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col">
+      <Header />
+      
+      <main className="flex-1 mx-auto max-w-7xl py-16 px-4 sm:py-24 sm:px-6 lg:px-8">
         <div className="text-center">
           <h1 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl md:text-6xl">
             <span className="block">請求書管理を</span>
@@ -53,31 +20,29 @@ export default async function Home() {
             SendBillで請求書の作成・管理・送信を効率化。認証システムが組み込まれた安全で使いやすいプラットフォームです。
           </p>
           <div className="mx-auto mt-10 max-w-sm sm:max-w-none sm:flex sm:justify-center">
-            <div className="space-y-4 sm:mx-auto sm:inline-grid sm:grid-cols-2 sm:gap-5 sm:space-y-0">
-              {userId ? (
+            {userId ? (
+              <Link
+                href="/dashboard"
+                className="flex items-center justify-center rounded-md border border-transparent bg-blue-600 px-8 py-3 text-base font-medium text-white hover:bg-blue-700 md:py-4 md:px-10 md:text-lg transition-colors"
+              >
+                ダッシュボードへ
+              </Link>
+            ) : (
+              <div className="space-y-4 sm:mx-auto sm:inline-grid sm:grid-cols-2 sm:gap-5 sm:space-y-0">
                 <Link
-                  href="/dashboard"
-                  className="flex items-center justify-center rounded-md border border-transparent bg-blue-600 px-8 py-3 text-base font-medium text-white hover:bg-blue-700 md:py-4 md:px-10 md:text-lg"
+                  href="/sign-up"
+                  className="flex items-center justify-center rounded-md border border-transparent bg-blue-600 px-8 py-3 text-base font-medium text-white hover:bg-blue-700 md:py-4 md:px-10 md:text-lg transition-colors"
                 >
-                  ダッシュボードへ
+                  始める
                 </Link>
-              ) : (
-                <>
-                  <Link
-                    href="/sign-up"
-                    className="flex items-center justify-center rounded-md border border-transparent bg-blue-600 px-8 py-3 text-base font-medium text-white hover:bg-blue-700 md:py-4 md:px-10 md:text-lg"
-                  >
-                    始める
-                  </Link>
-                  <Link
-                    href="/sign-in"
-                    className="flex items-center justify-center rounded-md border border-blue-600 bg-white px-8 py-3 text-base font-medium text-blue-600 hover:bg-blue-50 md:py-4 md:px-10 md:text-lg"
-                  >
-                    ログイン
-                  </Link>
-                </>
-              )}
-            </div>
+                <Link
+                  href="/sign-in"
+                  className="flex items-center justify-center rounded-md border border-blue-600 bg-white px-8 py-3 text-base font-medium text-blue-600 hover:bg-blue-50 md:py-4 md:px-10 md:text-lg transition-colors"
+                >
+                  ログイン
+                </Link>
+              </div>
+            )}
           </div>
         </div>
 
@@ -94,6 +59,8 @@ export default async function Home() {
           </div>
         )}
       </main>
+
+      <Footer />
     </div>
-  );
+  )
 }
