@@ -108,7 +108,7 @@ model Invoice {
   userId        String
   client        Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
   clientId      String
-  quote         Quote?        @relation(fields: [quoteId], references: [id], onDelete: SetNull)
+  quote         Quote?        @relation(fields: [quoteId], references: [id], onDelete: Restrict)
   quoteId       String?
   invoiceNumber String
   issueDate     DateTime
