@@ -5,7 +5,8 @@ import { SELECTORS, A11Y_MESSAGES, TIMING } from './constants'
  */
 export const getFocusableElements = (container: HTMLElement | null): HTMLElement[] => {
   if (!container) return []
-  return Array.from(container.querySelectorAll(SELECTORS.FOCUSABLE_ELEMENTS)) as HTMLElement[]
+  return Array.from(container.querySelectorAll(SELECTORS.FOCUSABLE_ELEMENTS))
+  .filter((element): element is HTMLElement => element instanceof HTMLElement)
 }
 
 /**
@@ -13,24 +14,39 @@ export const getFocusableElements = (container: HTMLElement | null): HTMLElement
  */
 export const getMenuItems = (container: HTMLElement | null): HTMLElement[] => {
   if (!container) return []
-  return Array.from(container.querySelectorAll(SELECTORS.MENU_ITEM)) as HTMLElement[]
+  return Array.from(container.querySelectorAll(SELECTORS.MENU_ITEM)).filter((element): element is HTMLElement => element instanceof HTMLElement)
 }
 
 /**
  * スクリーンリーダー用の音声通知を作成
  */
+let currentAnnouncement: HTMLElement | null = null
+let cleanupTimer: number | null = null
+
 export const announceToScreenReader = (message: string): void => {
+  // 既存のアナウンスメントをクリーンアップ
+  if (currentAnnouncement && document.body.contains(currentAnnouncement)) {
+    document.body.removeChild(currentAnnouncement)
+  }
+  if (cleanupTimer) {
+    clearTimeout(cleanupTimer)
+  }
+
   const announcement = document.createElement('div')
   announcement.setAttribute('aria-live', 'polite')
   announcement.setAttribute('aria-atomic', 'true')
   announcement.setAttribute('class', 'sr-only')
   announcement.textContent = message
   
+  currentAnnouncement = announcement
   document.body.appendChild(announcement)
-  setTimeout(() => {
-    if (document.body.contains(announcement)) {
-      document.body.removeChild(announcement)
+
+  cleanupTimer = window.setTimeout(() => {
+    if (currentAnnouncement && document.body.contains(currentAnnouncement)) {
+      document.body.removeChild(currentAnnouncement)
+      currentAnnouncement = null
     }
+    cleanupTimer = null
   }, TIMING.ANNOUNCEMENT_CLEANUP_DELAY)
 }
 
@@ -46,6 +62,7 @@ export const announceMenuToggle = (isOpen: boolean): void => {
  * 配列内の次のインデックスを計算（循環）
  */
 export const getNextIndex = (currentIndex: number, length: number): number => {
+  if (length <= 0) return 0
   return (currentIndex + 1) % length
 }
 
@@ -53,6 +70,7 @@ export const getNextIndex = (currentIndex: number, length: number): number => {
  * 配列内の前のインデックスを計算（循環）
  */
 export const getPreviousIndex = (currentIndex: number, length: number): number => {
+  if (length <= 0) return 0
   return (currentIndex - 1 + length) % length
 }
 
