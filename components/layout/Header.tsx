@@ -2,13 +2,28 @@
 
 import { useAuth, UserButton } from '@clerk/nextjs'
 import Link from "next/link"
-import { useState } from 'react'
-import { Menu, X } from 'lucide-react'
-import Navigation from './Navigation'
+import { Navigation } from '@/components/domains/navigation'
+import { MenuButton } from './MenuButton'
+import { MobileMenu } from './MobileMenu'
+import { useMenuState, useKeyboardNavigation } from '@/lib/domains/navigation/hooks'
+import { useOutsideClick } from '@/lib/shared/hooks'
+import { BUTTON_CLASSES } from '@/lib/domains/navigation/styles'
 
 export default function Header() {
   const { isSignedIn } = useAuth()
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const menu = useMenuState()
+  const { menuRef, buttonRef, handleMenuKeyDown, handleButtonKeyDown } = useKeyboardNavigation(
+    menu.isOpen,
+    menu.toggle,
+    menu.close
+  )
+
+  // 外部クリック検出
+  useOutsideClick({
+    refs: [menuRef, buttonRef],
+    isEnabled: menu.isOpen,
+    onOutsideClick: menu.close,
+  })
 
   return (
     <header className="bg-white shadow-sm border-b border-gray-200">
@@ -35,7 +50,7 @@ export default function Header() {
               <>
                 <Link
                   href="/dashboard"
-                  className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                  className={BUTTON_CLASSES.SECONDARY}
                 >
                   ダッシュボード
                 </Link>
@@ -45,13 +60,13 @@ export default function Header() {
               <>
                 <Link
                   href="/sign-in"
-                  className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                  className={BUTTON_CLASSES.SECONDARY}
                 >
                   ログイン
                 </Link>
                 <Link
                   href="/sign-up"
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+                  className={BUTTON_CLASSES.PRIMARY}
                 >
                   新規登録
                 </Link>
@@ -60,60 +75,21 @@ export default function Header() {
           </div>
 
           {/* モバイルメニューボタン */}
-          <div className="md:hidden">
-            <button
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="text-gray-700 hover:text-gray-900 p-2 rounded-md transition-colors"
-              aria-label="メニュー"
-            >
-              {isMobileMenuOpen ? (
-                <X className="h-6 w-6" />
-              ) : (
-                <Menu className="h-6 w-6" />
-              )}
-            </button>
-          </div>
+          <MenuButton
+            ref={buttonRef}
+            isOpen={menu.isOpen}
+            onClick={menu.toggle}
+            onKeyDown={handleButtonKeyDown}
+          />
         </div>
 
         {/* モバイルメニュー */}
-        {isMobileMenuOpen && (
-          <div className="md:hidden border-t border-gray-200 pt-4 pb-3">
-            <div className="space-y-1">
-              <Navigation isMobile />
-              <div className="pt-4 border-t border-gray-200 mt-4">
-                {isSignedIn ? (
-                  <div className="flex items-center justify-between px-4">
-                    <Link
-                      href="/dashboard"
-                      className="text-gray-700 hover:text-gray-900 block px-3 py-2 rounded-md text-base font-medium"
-                      onClick={() => setIsMobileMenuOpen(false)}
-                    >
-                      ダッシュボード
-                    </Link>
-                    <UserButton />
-                  </div>
-                ) : (
-                  <div className="space-y-2 px-4">
-                    <Link
-                      href="/sign-in"
-                      className="text-gray-700 hover:text-gray-900 block px-3 py-2 rounded-md text-base font-medium"
-                      onClick={() => setIsMobileMenuOpen(false)}
-                    >
-                      ログイン
-                    </Link>
-                    <Link
-                      href="/sign-up"
-                      className="bg-blue-600 hover:bg-blue-700 text-white block px-3 py-2 rounded-md text-base font-medium text-center transition-colors"
-                      onClick={() => setIsMobileMenuOpen(false)}
-                    >
-                      新規登録
-                    </Link>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
+        <MobileMenu
+          ref={menuRef}
+          isOpen={menu.isOpen}
+          onClose={menu.close}
+          onKeyDown={handleMenuKeyDown}
+        />
       </div>
     </header>
   )

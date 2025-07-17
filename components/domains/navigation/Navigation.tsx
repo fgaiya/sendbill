@@ -3,12 +3,10 @@
 import { useAuth } from '@clerk/nextjs'
 import Link from "next/link"
 import { usePathname } from 'next/navigation'
+import { NavigationProps, NavigationItem } from '@/lib/domains/navigation/types'
+import { NAV_LINK_BASE_CLASSES, NAV_LINK_STATE_CLASSES } from '@/lib/domains/navigation/styles'
 
-interface NavigationProps {
-  isMobile?: boolean
-}
-
-const navigationItems = [
+const navigationItems: NavigationItem[] = [
   { href: '/', label: 'ホーム', requireAuth: false },
   { href: '/dashboard', label: 'ダッシュボード', requireAuth: true },
   { href: '/invoices', label: '請求書', requireAuth: true },
@@ -24,25 +22,24 @@ export default function Navigation({ isMobile = false }: NavigationProps) {
     !item.requireAuth || isSignedIn
   )
 
-  const baseClasses = isMobile 
-    ? "block px-3 py-2 rounded-md text-base font-medium transition-colors"
-    : "px-3 py-2 rounded-md text-sm font-medium transition-colors"
+  const baseClasses = isMobile ? NAV_LINK_BASE_CLASSES.MOBILE : NAV_LINK_BASE_CLASSES.DESKTOP
 
   return (
     <nav className={isMobile ? "space-y-1" : "flex space-x-4"}>
       {visibleItems.map((item) => {
         const isActive = pathname === item.href
-        const classes = `${baseClasses} ${
-          isActive
-            ? "bg-blue-100 text-blue-900"
-            : "text-gray-700 hover:text-gray-900 hover:bg-gray-50"
-        }`
+        const stateClasses = isActive ? NAV_LINK_STATE_CLASSES.ACTIVE : NAV_LINK_STATE_CLASSES.INACTIVE
+        const classes = `${baseClasses} ${stateClasses}`
 
         return (
           <Link
             key={item.href}
             href={item.href}
             className={classes}
+            role={isMobile ? "menuitem" : undefined}
+            data-menu-item={isMobile ? "true" : undefined}
+            tabIndex={isMobile ? 0 : undefined}
+            aria-current={isActive ? 'page' : undefined}
           >
             {item.label}
           </Link>
