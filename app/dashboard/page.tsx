@@ -1,7 +1,8 @@
 import { currentUser } from '@clerk/nextjs/server'
 
 export default async function DashboardPage() {
-  const user = await currentUser()
+  try {
+    const user = await currentUser();
 
   return (
     <div className="mx-auto max-w-7xl py-6 sm:px-6 lg:px-8">
@@ -41,4 +42,14 @@ export default async function DashboardPage() {
       </div>
     </div>
   )
+  } catch (error) {
+    console.error("ユーザー情報取得に失敗しました:", error);
+    return (
+      <div className="mx-auto max-w-7xl py-6 sm:px-6 lg:px-8">
+        <h1 className="text-xl font-bold text-red-600">
+          認証情報の取得に失敗しました
+        </h1>
+      </div>
+    );
+  }
 }

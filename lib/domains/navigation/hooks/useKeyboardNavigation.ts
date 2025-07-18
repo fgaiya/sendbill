@@ -35,17 +35,19 @@ export const useKeyboardNavigation = (
     const currentIndex = menuItems.findIndex(item => item === document.activeElement)
 
     switch (e.key) {
-      case KEYBOARD_KEYS.ARROW_DOWN:
+      case KEYBOARD_KEYS.ARROW_DOWN: {
         e.preventDefault()
         const nextIndex = getNextIndex(currentIndex, menuItems.length)
         menuItems[nextIndex]?.focus()
         break
+      }
         
-      case KEYBOARD_KEYS.ARROW_UP:
+      case KEYBOARD_KEYS.ARROW_UP: {
         e.preventDefault()
         const prevIndex = getPreviousIndex(currentIndex, menuItems.length)
         menuItems[prevIndex]?.focus()
         break
+      }
         
       case KEYBOARD_KEYS.HOME:
         e.preventDefault()
@@ -57,7 +59,7 @@ export const useKeyboardNavigation = (
         menuItems[menuItems.length - 1]?.focus()
         break
         
-      case KEYBOARD_KEYS.TAB:
+      case KEYBOARD_KEYS.TAB: {
         // フォーカストラップ
         const focusableElements = getFocusableElements(menuRef.current)
         const firstElement = focusableElements[0]
@@ -71,6 +73,7 @@ export const useKeyboardNavigation = (
           firstElement?.focus()
         }
         break
+      }
     }
   }, [isMenuOpen])
 
