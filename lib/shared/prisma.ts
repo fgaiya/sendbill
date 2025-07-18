@@ -1,5 +1,6 @@
 declare global {
   var prisma: PrismaClient | undefined
+  var __prisma_disconnect_hook__: boolean | undefined
 }
 
 import { PrismaClient } from '@prisma/client'
@@ -20,6 +21,11 @@ const disconnect = async () => {
   }
 }
 
+// 多重登録防止フラグ
+if (!globalThis.__prisma_disconnect_hook__) {
+  globalThis.__prisma_disconnect_hook__ = true
+
 process.on('beforeExit', disconnect)
 process.on('SIGINT', disconnect) 
 process.on('SIGTERM', disconnect)
+}
