@@ -1,6 +1,12 @@
 import { useEffect } from 'react'
 import { OutsideClickConfig } from '../../domains/navigation/types'
-import { isElementInContainer } from '../../domains/navigation/utils'
+
+/**
+ * 要素が指定されたコンテナ内に含まれているかチェック
+ */
+const isElementInContainer = (element: Node | null, container: HTMLElement | null): boolean => {
+  return !!(container && element && container.contains(element))
+}
 
 /**
  * 外部クリック検出フック

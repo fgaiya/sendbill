@@ -3,6 +3,8 @@ import { auth } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
+import { Sidebar } from '@/components/layout/Sidebar'
+import { SidebarProvider } from '@/lib/domains/navigation/contexts/SidebarContext'
 
 export const metadata: Metadata = {
   title: "ダッシュボード - SendBill",
@@ -21,12 +23,19 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <Header />
-      <main className="flex-1">
-        {children}
-      </main>
-      <Footer />
-    </div>
+    <SidebarProvider>
+      <div className="min-h-screen bg-gray-50">
+        <Header />
+        <Sidebar />
+        <div className="md:ml-16 transition-all duration-300 ease-in-out">
+          <main className="min-h-screen">
+            <div className="p-6">
+              {children}
+            </div>
+          </main>
+          <Footer />
+        </div>
+      </div>
+    </SidebarProvider>
   )
 }
