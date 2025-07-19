@@ -1,6 +1,7 @@
 import Link from 'next/link'
-import { cn } from '@/lib/shared/utils/ui'
+
 import { APP_CONFIG } from '@/lib/shared/config'
+import { cn } from '@/lib/shared/utils/ui'
 
 interface CTAButtonProps {
   variant: 'primary' | 'secondary'

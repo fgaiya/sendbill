@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
-import { OutsideClickConfig } from '../../domains/navigation/types'
+
+import { OutsideClickConfig } from '@/lib/domains/navigation/types'
 
 /**
  * 要素が指定されたコンテナ内に含まれているかチェック

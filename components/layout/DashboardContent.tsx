@@ -1,9 +1,9 @@
 'use client'
 
-import { useSidebar } from '@/lib/domains/navigation/contexts/SidebarContext'
-import { cn } from '@/lib/shared/utils/ui'
-import { APP_CONFIG } from '@/lib/shared/config'
 import Footer from '@/components/layout/Footer'
+import { useSidebar } from '@/lib/domains/navigation/contexts/SidebarContext'
+import { APP_CONFIG } from '@/lib/shared/config'
+import { cn } from '@/lib/shared/utils/ui'
 
 interface DashboardContentProps {
   children: React.ReactNode

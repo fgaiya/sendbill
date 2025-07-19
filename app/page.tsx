@@ -1,9 +1,10 @@
 import { auth } from '@clerk/nextjs/server'
-import { cn } from '@/lib/shared/utils/ui'
-import { APP_CONFIG } from '@/lib/shared/config'
-import Header from '@/components/layout/Header'
+
 import Footer from '@/components/layout/Footer'
+import Header from '@/components/layout/Header'
 import { CTAButton } from '@/components/ui/CTAButton'
+import { APP_CONFIG } from '@/lib/shared/config'
+import { cn } from '@/lib/shared/utils/ui'
 
 export default async function Home() {
   const { userId } = await auth()

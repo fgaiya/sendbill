@@ -11,7 +11,9 @@ import {
   Settings,
   LogOut 
 } from 'lucide-react'
+
 import { SIDEBAR_MENU_CONFIG, SIDEBAR_ACTION_CONFIG } from './constants'
+
 import type { SidebarMenuItem, IconName } from './types'
 
 const ICON_MAP: Record<IconName, React.ComponentType<{ className?: string }>> = {

@@ -2,9 +2,10 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { cn } from '@/lib/shared/utils/ui'
+
 import { SIDEBAR_ITEM_CLASSES } from '@/lib/domains/navigation/styles'
 import type { SidebarItemProps } from '@/lib/domains/navigation/types'
+import { cn } from '@/lib/shared/utils/ui'
 
 export function SidebarItem({ item, isCollapsed, className }: SidebarItemProps) {
   const pathname = usePathname()

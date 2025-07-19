@@ -1,6 +1,7 @@
 'use client'
 
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react'
+
 import { SidebarContextType } from '../types'
 
 const SidebarContext = createContext<SidebarContextType | undefined>(undefined)

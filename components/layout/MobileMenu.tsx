@@ -1,10 +1,13 @@
 import { forwardRef } from 'react'
-import { useAuth, UserButton } from '@clerk/nextjs'
+
 import Link from "next/link"
-import { cn } from '@/lib/shared/utils/ui'
-import { APP_CONFIG } from '@/lib/shared/config'
+
+import { useAuth, UserButton } from '@clerk/nextjs'
+
 import { Navigation } from '@/components/domains/navigation'
 import { KeyboardEventHandler } from '@/lib/domains/navigation/types'
+import { APP_CONFIG } from '@/lib/shared/config'
+import { cn } from '@/lib/shared/utils/ui'
 
 interface MobileMenuProps {
   isOpen: boolean

@@ -1,14 +1,17 @@
 'use client'
 
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { cn } from '@/lib/shared/utils/ui'
+
 import { 
   SIDEBAR_BASE_CLASSES, 
   SIDEBAR_STATE_CLASSES, 
   SIDEBAR_TOGGLE_CLASSES 
 } from '@/lib/domains/navigation/styles'
-import { SidebarItem } from './SidebarItem'
 import type { SidebarMenuItem } from '@/lib/domains/navigation/types'
+import { cn } from '@/lib/shared/utils/ui'
+
+import { SidebarItem } from './SidebarItem'
+
 
 interface SidebarContentProps {
   isCollapsed: boolean

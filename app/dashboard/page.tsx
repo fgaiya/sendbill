@@ -1,6 +1,7 @@
 import { currentUser } from '@clerk/nextjs/server'
-import { cn } from '@/lib/shared/utils/ui'
+
 import { APP_CONFIG } from '@/lib/shared/config'
+import { cn } from '@/lib/shared/utils/ui'
 
 export default async function DashboardPage() {
   try {
@@ -45,7 +46,7 @@ export default async function DashboardPage() {
     </div>
   )
   } catch (error) {
-    console.error("ユーザー情報取得に失敗しました:", error);
+    console.error("Failed to fetch user information:", error);
     return (
       <div className={cn("mx-auto", APP_CONFIG.UI.LAYOUT.CONTAINER_MAX_WIDTH, APP_CONFIG.UI.LAYOUT.CONTENT_PADDING)}>
         <h1 className="text-xl font-bold text-red-600">

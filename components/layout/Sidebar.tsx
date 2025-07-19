@@ -1,10 +1,13 @@
 'use client'
 
 import { useAuth } from '@clerk/nextjs'
-import { useSidebar } from '@/lib/domains/navigation/contexts/SidebarContext'
+
 import { SIDEBAR_MENU_ITEMS, SIDEBAR_ACTION_ITEMS } from '@/lib/domains/navigation/client'
-import { SidebarContent } from './SidebarContent'
+import { useSidebar } from '@/lib/domains/navigation/contexts/SidebarContext'
 import type { SidebarProps } from '@/lib/domains/navigation/types'
+
+import { SidebarContent } from './SidebarContent'
+
 
 export function Sidebar({ className }: SidebarProps) {
   const { isSignedIn } = useAuth()

@@ -1,7 +1,9 @@
 import { forwardRef } from 'react'
+
 import { Menu, X } from 'lucide-react'
-import { BUTTON_CLASSES } from '@/lib/domains/navigation/styles'
+
 import { A11Y_MESSAGES } from '@/lib/domains/navigation/constants'
+import { BUTTON_CLASSES } from '@/lib/domains/navigation/styles'
 import { KeyboardEventHandler } from '@/lib/domains/navigation/types'
 
 interface MenuButtonProps {

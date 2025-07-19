@@ -1,10 +1,13 @@
-import type { Metadata } from "next"
-import { auth } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
+
+import { auth } from '@clerk/nextjs/server'
+
+import { DashboardContent } from '@/components/layout/DashboardContent'
 import Header from '@/components/layout/Header'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { SidebarProvider } from '@/lib/domains/navigation/contexts/SidebarContext'
-import { DashboardContent } from '../../components/layout/DashboardContent'
+
+import type { Metadata } from "next"
 
 export const metadata: Metadata = {
   title: "ダッシュボード - SendBill",
