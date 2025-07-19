@@ -39,12 +39,9 @@ export interface NavigationProps {
 // サイドバー状態の型定義
 export interface SidebarState {
   isCollapsed: boolean
-  isMobileOpen: boolean
   toggle: () => void
   collapse: () => void
   expand: () => void
-  toggleMobile: () => void
-  closeMobile: () => void
 }
 
 // サイドバーコンテキストの型

@@ -7,29 +7,49 @@ const SidebarContext = createContext<SidebarContextType | undefined>(undefined)
 
 const SIDEBAR_STORAGE_KEY = 'sendbill-sidebar-collapsed'
 
+  // localStorage が利用可能かどうかをチェックするヘルパー関数
+  const isLocalStorageAvailable = () => {
+    try {
+      const test = '__test__'
+      localStorage.setItem(test, test)
+      localStorage.removeItem(test)
+      return true
+    } catch {
+      return false
+    }
+  }
+
 interface SidebarProviderProps {
   children: React.ReactNode
 }
 
 export function SidebarProvider({ children }: SidebarProviderProps) {
   const [isCollapsed, setIsCollapsed] = useState(false)
-  const [isMobileOpen, setIsMobileOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [storageAvailable] = useState(isLocalStorageAvailable())
 
   useEffect(() => {
     setMounted(true)
+
+    if (!storageAvailable) return
+
     const stored = localStorage.getItem(SIDEBAR_STORAGE_KEY)
     if (stored !== null) {
-      setIsCollapsed(JSON.parse(stored))
+      try {
+        setIsCollapsed(JSON.parse(stored))
+      } catch (error) {
+        console.warn('Failed to parse sidebar state from localStorage:', error)
+        localStorage.removeItem(SIDEBAR_STORAGE_KEY)
+      }
     }
-  }, [])
+  }, [storageAvailable])
 
   // LocalStorage更新ヘルパー
   const updateStorage = useCallback((value: boolean) => {
-    if (mounted) {
+    if (mounted && storageAvailable) {
       localStorage.setItem(SIDEBAR_STORAGE_KEY, JSON.stringify(value))
     }
-  }, [mounted])
+  }, [mounted, storageAvailable])
 
   const toggle = useCallback(() => {
     setIsCollapsed(prev => {
@@ -49,22 +69,12 @@ export function SidebarProvider({ children }: SidebarProviderProps) {
     updateStorage(false)
   }, [updateStorage])
 
-  const toggleMobile = useCallback(() => {
-    setIsMobileOpen(prev => !prev)
-  }, [])
-
-  const closeMobile = useCallback(() => {
-    setIsMobileOpen(false)
-  }, [])
 
   const value: SidebarContextType = {
     isCollapsed,
-    isMobileOpen,
     toggle,
     collapse,
     expand,
-    toggleMobile,
-    closeMobile,
   }
 
   return (

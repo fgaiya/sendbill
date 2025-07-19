@@ -10,7 +10,7 @@ import {
 import { SidebarItem } from './SidebarItem'
 import type { SidebarMenuItem } from '@/lib/domains/navigation/types'
 
-interface DesktopSidebarProps {
+interface SidebarContentProps {
   isCollapsed: boolean
   onToggle: () => void
   menuItems: SidebarMenuItem[]
@@ -18,17 +18,17 @@ interface DesktopSidebarProps {
   className?: string
 }
 
-export function DesktopSidebar({ 
+export function SidebarContent({ 
   isCollapsed, 
   onToggle, 
   menuItems, 
   actionItems, 
   className 
-}: DesktopSidebarProps) {
+}: SidebarContentProps) {
   return (
     <aside
       className={cn(
-        SIDEBAR_BASE_CLASSES.DESKTOP,
+        SIDEBAR_BASE_CLASSES.SIDEBAR,
         SIDEBAR_BASE_CLASSES.CONTAINER,
         isCollapsed 
           ? SIDEBAR_STATE_CLASSES.COLLAPSED 
@@ -36,7 +36,7 @@ export function DesktopSidebar({
         className
       )}
     >
-      {/* デスクトップヘッダー */}
+      {/* サイドバーヘッダー */}
       <div className="flex items-center justify-between px-4 py-4 border-b border-gray-200">
         {!isCollapsed && (
           <h2 className="text-lg font-semibold text-gray-900">SendBill</h2>
@@ -54,7 +54,7 @@ export function DesktopSidebar({
         </button>
       </div>
 
-      {/* デスクトップメニュー */}
+      {/* メインメニュー */}
       <nav className="flex-1 px-3 py-4 space-y-1">
         {menuItems.map((item) => (
           <SidebarItem
@@ -65,7 +65,7 @@ export function DesktopSidebar({
         ))}
       </nav>
 
-      {/* デスクトップアクション */}
+      {/* アクションメニュー */}
       {actionItems.length > 0 && (
         <div className="px-3 py-4 border-t border-gray-200 space-y-1">
           {actionItems.map((item) => (
