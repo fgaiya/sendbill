@@ -24,9 +24,11 @@ export const KEYBOARD_KEYS = {
   TAB: 'Tab',
 } as const
 
-// 時間定数
+// ナビゲーション固有の時間定数（共通設定は config.ts に移動）
+import { APP_CONFIG } from '@/lib/shared/config'
+
 export const TIMING = {
-  ANNOUNCEMENT_CLEANUP_DELAY: 1000,
+  ANNOUNCEMENT_CLEANUP_DELAY: APP_CONFIG.ANIMATION.CLEANUP_DELAY,
 } as const
 
 // サイドバーメニュー項目定義（アイコンなし）

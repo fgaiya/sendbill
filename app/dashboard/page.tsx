@@ -1,12 +1,14 @@
 import { currentUser } from '@clerk/nextjs/server'
+import { cn } from '@/lib/shared/utils/ui'
+import { APP_CONFIG } from '@/lib/shared/config'
 
 export default async function DashboardPage() {
   try {
     const user = await currentUser();
 
   return (
-    <div className="mx-auto max-w-7xl py-6 sm:px-6 lg:px-8">
-      <div className="px-4 py-6 sm:px-0">
+    <div className={cn("mx-auto", APP_CONFIG.UI.LAYOUT.CONTAINER_MAX_WIDTH, APP_CONFIG.UI.LAYOUT.CONTENT_PADDING)}>
+      <div className={APP_CONFIG.UI.LAYOUT.DASHBOARD_PADDING}>
         <div className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight text-gray-900">
             ダッシュボード
@@ -45,7 +47,7 @@ export default async function DashboardPage() {
   } catch (error) {
     console.error("ユーザー情報取得に失敗しました:", error);
     return (
-      <div className="mx-auto max-w-7xl py-6 sm:px-6 lg:px-8">
+      <div className={cn("mx-auto", APP_CONFIG.UI.LAYOUT.CONTAINER_MAX_WIDTH, APP_CONFIG.UI.LAYOUT.CONTENT_PADDING)}>
         <h1 className="text-xl font-bold text-red-600">
           認証情報の取得に失敗しました
         </h1>
