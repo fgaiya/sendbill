@@ -2,23 +2,13 @@
 
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react'
 
+import { isLocalStorageAvailable } from '@/lib/shared/utils/storage'
+
 import { SidebarContextType } from '../types'
 
 const SidebarContext = createContext<SidebarContextType | undefined>(undefined)
 
 const SIDEBAR_STORAGE_KEY = 'sendbill-sidebar-collapsed'
-
-  // localStorage が利用可能かどうかをチェックするヘルパー関数
-  const isLocalStorageAvailable = () => {
-    try {
-      const test = '__test__'
-      localStorage.setItem(test, test)
-      localStorage.removeItem(test)
-      return true
-    } catch {
-      return false
-    }
-  }
 
 interface SidebarProviderProps {
   children: React.ReactNode
@@ -26,16 +16,15 @@ interface SidebarProviderProps {
 
 export function SidebarProvider({ children }: SidebarProviderProps) {
   const [isCollapsed, setIsCollapsed] = useState(false)
-  const [mounted, setMounted] = useState(false)
   const [storageAvailable] = useState(isLocalStorageAvailable())
 
   useEffect(() => {
-    setMounted(true)
+    let isMounted = true
 
     if (!storageAvailable) return
 
     const stored = localStorage.getItem(SIDEBAR_STORAGE_KEY)
-    if (stored !== null) {
+    if (stored !== null && isMounted) {
       try {
         setIsCollapsed(JSON.parse(stored))
       } catch (error) {
@@ -43,14 +32,18 @@ export function SidebarProvider({ children }: SidebarProviderProps) {
         localStorage.removeItem(SIDEBAR_STORAGE_KEY)
       }
     }
+
+    return () => {
+      isMounted = false
+    }
   }, [storageAvailable])
 
   // LocalStorage更新ヘルパー
   const updateStorage = useCallback((value: boolean) => {
-    if (mounted && storageAvailable) {
+    if (storageAvailable) {
       localStorage.setItem(SIDEBAR_STORAGE_KEY, JSON.stringify(value))
     }
-  }, [mounted, storageAvailable])
+  }, [storageAvailable])
 
   const toggle = useCallback(() => {
     setIsCollapsed(prev => {
@@ -61,13 +54,17 @@ export function SidebarProvider({ children }: SidebarProviderProps) {
   }, [updateStorage])
 
   const collapse = useCallback(() => {
-    setIsCollapsed(true)
-    updateStorage(true)
+    setIsCollapsed(() => {
+      updateStorage(true)
+      return true
+    })
   }, [updateStorage])
 
   const expand = useCallback(() => {
-    setIsCollapsed(false)
-    updateStorage(false)
+    setIsCollapsed(() => {
+      updateStorage(false)
+      return false
+    })
   }, [updateStorage])
 
 

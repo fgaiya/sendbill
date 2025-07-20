@@ -5,7 +5,7 @@ import Link from "next/link"
 import { useAuth, UserButton } from '@clerk/nextjs'
 
 import { Navigation } from '@/components/domains/navigation'
-import { useMenuState, useKeyboardNavigation } from '@/lib/domains/navigation/hooks'
+import { useMenuState, useKeyboardNavigation } from '@/lib/domains/navigation/client'
 import { BUTTON_CLASSES } from '@/lib/domains/navigation/styles'
 import { useOutsideClick } from '@/lib/shared/hooks'
 
