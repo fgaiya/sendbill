@@ -1,9 +1,13 @@
 import { forwardRef } from 'react'
-import { useAuth, UserButton } from '@clerk/nextjs'
+
 import Link from "next/link"
+
+import { useAuth, UserButton } from '@clerk/nextjs'
+
 import { Navigation } from '@/components/domains/navigation'
 import { KeyboardEventHandler } from '@/lib/domains/navigation/types'
-import { FOCUS_RING_CLASSES } from '@/lib/domains/navigation/styles'
+import { APP_CONFIG } from '@/lib/shared/config'
+import { cn } from '@/lib/shared/utils/ui'
 
 interface MobileMenuProps {
   isOpen: boolean
@@ -34,7 +38,7 @@ export const MobileMenu = forwardRef<HTMLDivElement, MobileMenuProps>(
               <div className="flex items-center justify-between px-4">
                 <Link
                   href="/dashboard"
-                  className={`text-gray-700 hover:text-gray-900 block px-3 py-2 rounded-md text-base font-medium ${FOCUS_RING_CLASSES}`}
+                  className={cn("text-gray-700 hover:text-gray-900 block px-3 py-2 rounded-md text-base font-medium", APP_CONFIG.UI.FOCUS.RING)}
                   onClick={onClose}
                   role="menuitem"
                   data-menu-item="true"
@@ -48,7 +52,7 @@ export const MobileMenu = forwardRef<HTMLDivElement, MobileMenuProps>(
               <div className="space-y-2 px-4">
                 <Link
                   href="/sign-in"
-                  className={`text-gray-700 hover:text-gray-900 block px-3 py-2 rounded-md text-base font-medium ${FOCUS_RING_CLASSES}`}
+                  className={cn("text-gray-700 hover:text-gray-900 block px-3 py-2 rounded-md text-base font-medium", APP_CONFIG.UI.FOCUS.RING)}
                   onClick={onClose}
                   role="menuitem"
                   data-menu-item="true"
@@ -58,7 +62,7 @@ export const MobileMenu = forwardRef<HTMLDivElement, MobileMenuProps>(
                 </Link>
                 <Link
                   href="/sign-up"
-                  className={`bg-blue-600 hover:bg-blue-700 text-white block px-3 py-2 rounded-md text-base font-medium text-center transition-colors ${FOCUS_RING_CLASSES}`}
+                  className={cn("bg-blue-600 hover:bg-blue-700 text-white block px-3 py-2 rounded-md text-base font-medium text-center transition-colors", APP_CONFIG.UI.FOCUS.RING)}
                   onClick={onClose}
                   role="menuitem"
                   data-menu-item="true"

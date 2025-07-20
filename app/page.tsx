@@ -1,7 +1,10 @@
 import { auth } from '@clerk/nextjs/server'
-import Link from "next/link"
-import Header from '@/components/layout/Header'
+
 import Footer from '@/components/layout/Footer'
+import Header from '@/components/layout/Header'
+import { CTAButton } from '@/components/ui/CTAButton'
+import { APP_CONFIG } from '@/lib/shared/config'
+import { cn } from '@/lib/shared/utils/ui'
 
 export default async function Home() {
   const { userId } = await auth()
@@ -10,7 +13,7 @@ export default async function Home() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col">
       <Header />
       
-      <main className="flex-1 mx-auto max-w-7xl py-16 px-4 sm:py-24 sm:px-6 lg:px-8">
+      <main className={cn("flex-1 mx-auto", APP_CONFIG.UI.LAYOUT.CONTAINER_MAX_WIDTH, "py-16 px-4 sm:py-24 sm:px-6 lg:px-8")}>
         <div className="text-center">
           <h1 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl md:text-6xl">
             <span className="block">請求書管理を</span>
@@ -21,26 +24,29 @@ export default async function Home() {
           </p>
           <div className="mx-auto mt-10 max-w-sm sm:max-w-none sm:flex sm:justify-center">
             {userId ? (
-              <Link
+              <CTAButton
+                variant="primary"
+                size="large"
                 href="/dashboard"
-                className="flex items-center justify-center rounded-md border border-transparent bg-blue-600 px-8 py-3 text-base font-medium text-white hover:bg-blue-700 md:py-4 md:px-10 md:text-lg transition-colors"
               >
                 ダッシュボードへ
-              </Link>
+              </CTAButton>
             ) : (
               <div className="space-y-4 sm:mx-auto sm:inline-grid sm:grid-cols-2 sm:gap-5 sm:space-y-0">
-                <Link
+                <CTAButton
+                  variant="primary"
+                  size="large"
                   href="/sign-up"
-                  className="flex items-center justify-center rounded-md border border-transparent bg-blue-600 px-8 py-3 text-base font-medium text-white hover:bg-blue-700 md:py-4 md:px-10 md:text-lg transition-colors"
                 >
                   始める
-                </Link>
-                <Link
+                </CTAButton>
+                <CTAButton
+                  variant="secondary"
+                  size="large"
                   href="/sign-in"
-                  className="flex items-center justify-center rounded-md border border-blue-600 bg-white px-8 py-3 text-base font-medium text-blue-600 hover:bg-blue-50 md:py-4 md:px-10 md:text-lg transition-colors"
                 >
                   ログイン
-                </Link>
+                </CTAButton>
               </div>
             )}
           </div>

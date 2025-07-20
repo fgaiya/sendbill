@@ -36,6 +36,50 @@ export interface NavigationProps {
   isMobile?: boolean
 }
 
+// サイドバー状態の型定義
+export interface SidebarState {
+  isCollapsed: boolean
+  toggle: () => void
+  collapse: () => void
+  expand: () => void
+}
+
+// サイドバーコンテキストの型
+export type SidebarContextType = SidebarState
+
+// アイコン名の型定義
+export type IconName = 'LayoutDashboard' | 'FileText' | 'Users' | 'Receipt' | 'Settings' | 'LogOut'
+
+// サイドバーメニュー設定の型
+export interface SidebarMenuConfig {
+  href: string
+  label: string
+  iconName: IconName
+  requireAuth: boolean
+  isActive?: (pathname: string) => boolean
+}
+
+// サイドバーメニュー項目の型
+export interface SidebarMenuItem {
+  href: string
+  label: string
+  icon: React.ComponentType<{ className?: string }>
+  requireAuth: boolean
+  isActive?: (pathname: string) => boolean
+}
+
+// サイドバーコンポーネントのプロパティ型
+export interface SidebarProps {
+  className?: string
+}
+
+// サイドバーアイテムコンポーネントのプロパティ型
+export interface SidebarItemProps {
+  item: SidebarMenuItem
+  isCollapsed: boolean
+  className?: string
+}
+
 // アクセシビリティ属性の型
 export interface AccessibilityAttributes {
   'aria-expanded'?: boolean

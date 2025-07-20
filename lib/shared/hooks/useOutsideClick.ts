@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
-import { OutsideClickConfig } from '../../domains/navigation/types'
-import { isElementInContainer } from '../../domains/navigation/utils'
+
+import { isElementInContainer } from '@/lib/domains/navigation/client'
+import { OutsideClickConfig } from '@/lib/domains/navigation/types'
 
 /**
  * 外部クリック検出フック
