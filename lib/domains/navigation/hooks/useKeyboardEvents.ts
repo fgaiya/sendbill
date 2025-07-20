@@ -1,4 +1,4 @@
-import { useCallback, RefObject } from 'react'
+import { useCallback, RefObject, useMemo } from 'react'
 
 import { KEYBOARD_KEYS } from '../constants'
 import { KeyboardEventHandler } from '../types'
@@ -29,11 +29,19 @@ export const useKeyboardEvents = (
     }
   }, [onToggle])
 
+  // menuItems をキャッシュ
+  const menuItems = useMemo(() => {
+    if (!isMenuOpen || !menuRef.current) return []
+    return getMenuItems(menuRef.current)
+  }, [isMenuOpen, menuRef])
+
   // メニュー内のキーボードナビゲーション
   const handleMenuKeyDown: KeyboardEventHandler = useCallback((e) => {
     if (!isMenuOpen) return
+    if (!menuRef.current) return
 
-    const menuItems = getMenuItems(menuRef.current)
+    if (menuItems.length === 0) return
+
     const currentIndex = menuItems.findIndex(item => item === document.activeElement)
 
     switch (e.key) {
@@ -64,6 +72,12 @@ export const useKeyboardEvents = (
       case KEYBOARD_KEYS.TAB: {
         // フォーカストラップ
         const focusableElements = getFocusableElements(menuRef.current)
+        if (focusableElements.length === 0) break
+        if (focusableElements.length === 1) {
+          e.preventDefault()
+          break
+        }
+
         const firstElement = focusableElements[0]
         const lastElement = focusableElements[focusableElements.length - 1]
         
@@ -77,7 +91,7 @@ export const useKeyboardEvents = (
         break
       }
     }
-  }, [isMenuOpen, menuRef])
+  }, [isMenuOpen, menuRef, menuItems])
 
   return {
     handleButtonKeyDown,

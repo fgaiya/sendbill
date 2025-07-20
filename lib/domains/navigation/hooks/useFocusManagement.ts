@@ -13,8 +13,12 @@ export const useFocusManagement = (isMenuOpen: boolean) => {
   // メニュー開閉時のフォーカス管理
   useEffect(() => {
     if (isMenuOpen) {
+      if (!menuRef.current) return
       const firstMenuItem = getMenuItems(menuRef.current)[0]
       firstMenuItem?.focus()
+    } else {
+      // メニューが閉じられた時、フォーカスを元のボタンに戻す
+      buttonRef.current?.focus()
     }
   }, [isMenuOpen])
 

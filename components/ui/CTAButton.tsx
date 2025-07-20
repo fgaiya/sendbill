@@ -36,7 +36,7 @@ export function CTAButton({
   }
 
   return (
-    <button onClick={onClick} className={baseClasses}>
+    <button type="button" onClick={onClick} className={baseClasses}>
       {children}
     </button>
   )
