@@ -4,6 +4,7 @@ import { cn } from '@/lib/shared/utils/ui'
 
 export interface FormFieldWrapperProps {
   label: string
+  id?: string
   required?: boolean
   error?: string
   description?: string
@@ -13,6 +14,7 @@ export interface FormFieldWrapperProps {
 
 export function FormFieldWrapper({
   label,
+  id,
   required = false,
   error,
   description,
@@ -21,7 +23,7 @@ export function FormFieldWrapper({
 }: FormFieldWrapperProps) {
   return (
     <div className={cn('space-y-2', className)}>
-      <label className="text-sm font-medium text-gray-700">
+      <label htmlFor={id} className="text-sm font-medium text-gray-700">
         {label}
         {required && <span className="text-red-500 ml-1">*</span>}
       </label>

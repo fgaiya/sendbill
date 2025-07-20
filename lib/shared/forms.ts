@@ -15,7 +15,7 @@ export const commonValidationSchemas = {
   // メールアドレス
   email: z.string()
     .min(1, 'メールアドレスは必須項目です')
-    .email('有効なメールアドレスを入力してください'),
+    .pipe(z.email({ message: '有効なメールアドレスを入力してください' })),
 
   // 電話番号（日本の形式）
   phoneNumber: z.string()
@@ -42,6 +42,6 @@ export const commonValidationSchemas = {
   // URL
   url: z.string()
     .optional()
-    .refine((val) => !val || val === '' || z.string().url().safeParse(val).success, 
-      '有効なURLを入力してください'),
+    .transform(val => val === '' ? undefined : val)
+    .pipe(z.url({ message: '有効なURLを入力してください' }).optional()),
 }

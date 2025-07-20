@@ -106,11 +106,13 @@ export default function FormDemoPage() {
                 render={({ field }) => (
                   <FormFieldWrapper
                     label="名前"
+                    id="name"
                     required
                     error={errors.name?.message}
                   >
                     <Input
                       {...field}
+                      id="name"
                       placeholder="田中太郎"
                       disabled={isSubmitting}
                       onChange={(e) => field.onChange(e.target.value)}
@@ -126,11 +128,13 @@ export default function FormDemoPage() {
                 render={({ field }) => (
                   <FormFieldWrapper
                     label="メールアドレス"
+                    id="email"
                     required
                     error={errors.email?.message}
                   >
                     <Input
                       {...field}
+                      id="email"
                       type="email"
                       placeholder="example@example.com"
                       disabled={isSubmitting}
@@ -152,11 +156,13 @@ export default function FormDemoPage() {
                 render={({ field }) => (
                   <FormFieldWrapper
                     label="電話番号"
+                    id="phone"
                     error={errors.phone?.message}
                     description="ハイフンありまたはなしで入力してください"
                   >
                     <Input
                       {...field}
+                      id="phone"
                       placeholder="090-1234-5678"
                       disabled={isSubmitting}
                       onChange={(e) => field.onChange(e.target.value)}
@@ -172,11 +178,13 @@ export default function FormDemoPage() {
                 render={({ field }) => (
                   <FormFieldWrapper
                     label="ウェブサイト"
+                    id="website"
                     error={errors.website?.message}
                     description="https://から始まるURLを入力してください"
                   >
                     <Input
                       {...field}
+                      id="website"
                       placeholder="https://example.com"
                       disabled={isSubmitting}
                       onChange={(e) => field.onChange(e.target.value)}
