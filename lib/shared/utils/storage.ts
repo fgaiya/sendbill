@@ -4,7 +4,7 @@
  */
 export const isLocalStorageAvailable = (): boolean => {
   try {
-    const test = '__test__'
+    const test = '__storage_availability_test__'
     localStorage.setItem(test, test)
     localStorage.removeItem(test)
     return true
