@@ -1,6 +1,6 @@
-import { useEffect, RefObject } from 'react'
+import { useEffect, RefObject } from 'react';
 
-import { KEYBOARD_KEYS } from '../constants'
+import { KEYBOARD_KEYS } from '../constants';
 
 /**
  * エスケープキー処理フック
@@ -14,12 +14,12 @@ export const useEscapeHandler = (
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === KEYBOARD_KEYS.ESCAPE && isMenuOpen) {
-        onClose()
-        buttonRef.current?.focus()
+        onClose();
+        buttonRef.current?.focus();
       }
-    }
-    
-    document.addEventListener('keydown', handleEscape)
-    return () => document.removeEventListener('keydown', handleEscape)
-  }, [isMenuOpen, onClose, buttonRef])
-}
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [isMenuOpen, onClose, buttonRef]);
+};

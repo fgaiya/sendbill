@@ -1,28 +1,28 @@
-import { forwardRef } from 'react'
+import { forwardRef } from 'react';
 
-import Link from "next/link"
+import Link from 'next/link';
 
-import { useAuth, UserButton } from '@clerk/nextjs'
+import { useAuth, UserButton } from '@clerk/nextjs';
 
-import { Navigation } from '@/components/domains/navigation'
-import { KeyboardEventHandler } from '@/lib/domains/navigation/types'
-import { APP_CONFIG } from '@/lib/shared/config'
-import { cn } from '@/lib/shared/utils/ui'
+import { Navigation } from '@/components/domains/navigation';
+import { KeyboardEventHandler } from '@/lib/domains/navigation/types';
+import { APP_CONFIG } from '@/lib/shared/config';
+import { cn } from '@/lib/shared/utils/ui';
 
 interface MobileMenuProps {
-  isOpen: boolean
-  onClose: () => void
-  onKeyDown: KeyboardEventHandler
+  isOpen: boolean;
+  onClose: () => void;
+  onKeyDown: KeyboardEventHandler;
 }
 
 export const MobileMenu = forwardRef<HTMLDivElement, MobileMenuProps>(
   ({ isOpen, onClose, onKeyDown }, ref) => {
-    const { isSignedIn } = useAuth()
+    const { isSignedIn } = useAuth();
 
-    if (!isOpen) return null
+    if (!isOpen) return null;
 
     return (
-      <div 
+      <div
         ref={ref}
         className="md:hidden border-t border-gray-200 pt-4 pb-3"
         id="mobile-menu"
@@ -38,7 +38,10 @@ export const MobileMenu = forwardRef<HTMLDivElement, MobileMenuProps>(
               <div className="flex items-center justify-between px-4">
                 <Link
                   href="/dashboard"
-                  className={cn("text-gray-700 hover:text-gray-900 block px-3 py-2 rounded-md text-base font-medium", APP_CONFIG.UI.FOCUS.RING)}
+                  className={cn(
+                    'text-gray-700 hover:text-gray-900 block px-3 py-2 rounded-md text-base font-medium',
+                    APP_CONFIG.UI.FOCUS.RING
+                  )}
                   onClick={onClose}
                   role="menuitem"
                   data-menu-item="true"
@@ -52,7 +55,10 @@ export const MobileMenu = forwardRef<HTMLDivElement, MobileMenuProps>(
               <div className="space-y-2 px-4">
                 <Link
                   href="/sign-in"
-                  className={cn("text-gray-700 hover:text-gray-900 block px-3 py-2 rounded-md text-base font-medium", APP_CONFIG.UI.FOCUS.RING)}
+                  className={cn(
+                    'text-gray-700 hover:text-gray-900 block px-3 py-2 rounded-md text-base font-medium',
+                    APP_CONFIG.UI.FOCUS.RING
+                  )}
                   onClick={onClose}
                   role="menuitem"
                   data-menu-item="true"
@@ -62,7 +68,10 @@ export const MobileMenu = forwardRef<HTMLDivElement, MobileMenuProps>(
                 </Link>
                 <Link
                   href="/sign-up"
-                  className={cn("bg-blue-600 hover:bg-blue-700 text-white block px-3 py-2 rounded-md text-base font-medium text-center transition-colors", APP_CONFIG.UI.FOCUS.RING)}
+                  className={cn(
+                    'bg-blue-600 hover:bg-blue-700 text-white block px-3 py-2 rounded-md text-base font-medium text-center transition-colors',
+                    APP_CONFIG.UI.FOCUS.RING
+                  )}
                   onClick={onClose}
                   role="menuitem"
                   data-menu-item="true"
@@ -75,8 +84,8 @@ export const MobileMenu = forwardRef<HTMLDivElement, MobileMenuProps>(
           </div>
         </div>
       </div>
-    )
+    );
   }
-)
+);
 
-MobileMenu.displayName = 'MobileMenu'
+MobileMenu.displayName = 'MobileMenu';

@@ -1,0 +1,21 @@
+# Ignore build outputs
+.next/
+dist/
+out/
+
+# Ignore dependencies
+node_modules/
+
+# Ignore generated files
+.prisma/
+
+# Ignore cache files
+.eslintcache
+*.tgz
+*.tar.gz
+
+# Ignore environment files
+.env*
+
+# Ignore package-lock.json
+package-lock.json

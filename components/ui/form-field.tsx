@@ -1,15 +1,15 @@
-import React from 'react'
+import React from 'react';
 
-import { cn } from '@/lib/shared/utils/ui'
+import { cn } from '@/lib/shared/utils/ui';
 
 export interface FormFieldWrapperProps {
-  label: string
-  id?: string
-  required?: boolean
-  error?: string
-  description?: string
-  className?: string
-  children: React.ReactNode
+  label: string;
+  id?: string;
+  required?: boolean;
+  error?: string;
+  description?: string;
+  className?: string;
+  children: React.ReactNode;
 }
 
 export function FormFieldWrapper({
@@ -19,7 +19,7 @@ export function FormFieldWrapper({
   error,
   description,
   className,
-  children
+  children,
 }: FormFieldWrapperProps) {
   return (
     <div className={cn('space-y-2', className)}>
@@ -27,9 +27,7 @@ export function FormFieldWrapper({
         {label}
         {required && <span className="text-red-500 ml-1">*</span>}
       </label>
-      {description && (
-        <p className="text-sm text-gray-500">{description}</p>
-      )}
+      {description && <p className="text-sm text-gray-500">{description}</p>}
       {children}
       {error && (
         <p className="text-sm text-red-600 animate-in fade-in-0 slide-in-from-top-1">
@@ -37,5 +35,5 @@ export function FormFieldWrapper({
         </p>
       )}
     </div>
-  )
+  );
 }

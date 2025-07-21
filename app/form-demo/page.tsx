@@ -1,16 +1,16 @@
-'use client'
+'use client';
 
-import React, { useState } from 'react'
+import React, { useState } from 'react';
 
-import { zodResolver } from '@hookform/resolvers/zod'
-import { Controller, useForm } from 'react-hook-form'
-import { z } from 'zod'
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Controller, useForm } from 'react-hook-form';
+import { z } from 'zod';
 
-import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
-import { FormFieldWrapper } from '@/components/ui/form-field'
-import { Input } from '@/components/ui/input'
-import { commonValidationSchemas } from '@/lib/shared/forms'
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { FormFieldWrapper } from '@/components/ui/form-field';
+import { Input } from '@/components/ui/input';
+import { commonValidationSchemas } from '@/lib/shared/forms';
 
 // フォームのバリデーションスキーマ
 const demoFormSchema = z.object({
@@ -18,13 +18,13 @@ const demoFormSchema = z.object({
   email: commonValidationSchemas.email,
   phone: commonValidationSchemas.phoneNumber,
   website: commonValidationSchemas.url,
-})
+});
 
-type DemoFormData = z.infer<typeof demoFormSchema>
+type DemoFormData = z.infer<typeof demoFormSchema>;
 
 export default function FormDemoPage() {
-  const [submitError, setSubmitError] = useState<string>()
-  const [submitSuccess, setSubmitSuccess] = useState(false)
+  const [submitError, setSubmitError] = useState<string>();
+  const [submitSuccess, setSubmitSuccess] = useState(false);
 
   const form = useForm<DemoFormData>({
     resolver: zodResolver(demoFormSchema),
@@ -35,42 +35,43 @@ export default function FormDemoPage() {
       website: '',
     },
     mode: 'onBlur',
-  })
+  });
 
   const {
     control,
     handleSubmit,
     reset,
-    formState: { errors, isSubmitting, isValid, isDirty }
-  } = form
+    formState: { errors, isSubmitting, isValid, isDirty },
+  } = form;
 
   const onSubmit = async (data: DemoFormData) => {
     try {
-      setSubmitError(undefined)
-      setSubmitSuccess(false)
-      
+      setSubmitError(undefined);
+      setSubmitSuccess(false);
+
       // シミュレートされた送信処理
       await new Promise((resolve, reject) => {
         setTimeout(() => {
           // 10%の確率でエラーをシミュレート
           if (Math.random() < 0.1) {
-            reject(new Error('サーバーエラーが発生しました'))
+            reject(new Error('サーバーエラーが発生しました'));
           } else {
-            resolve(undefined)
+            resolve(undefined);
           }
-        }, 1000)
-      })
-      
-      console.log('フォームデータ:', data)
-      setSubmitSuccess(true)
-      
+        }, 1000);
+      });
+
+      console.log('フォームデータ:', data);
+      setSubmitSuccess(true);
+
       // 3秒後に成功メッセージを自動で非表示
-      setTimeout(() => setSubmitSuccess(false), 3000)
+      setTimeout(() => setSubmitSuccess(false), 3000);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'エラーが発生しました'
-      setSubmitError(message)
+      const message =
+        error instanceof Error ? error.message : 'エラーが発生しました';
+      setSubmitError(message);
     }
-  }
+  };
 
   const handleReset = () => {
     reset({
@@ -78,10 +79,10 @@ export default function FormDemoPage() {
       email: '',
       phone: '',
       website: '',
-    })
-    setSubmitError(undefined)
-    setSubmitSuccess(false)
-  }
+    });
+    setSubmitError(undefined);
+    setSubmitSuccess(false);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">
@@ -98,7 +99,7 @@ export default function FormDemoPage() {
             {/* 基本情報 */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-gray-900">基本情報</h3>
-              
+
               {/* 名前 */}
               <Controller
                 control={control}
@@ -147,8 +148,10 @@ export default function FormDemoPage() {
 
             {/* 連絡先（任意） */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900">連絡先（任意）</h3>
-              
+              <h3 className="text-lg font-semibold text-gray-900">
+                連絡先（任意）
+              </h3>
+
               {/* 電話番号 */}
               <Controller
                 control={control}
@@ -202,7 +205,7 @@ export default function FormDemoPage() {
                 </p>
               </div>
             )}
-            
+
             {submitError && (
               <div className="p-4 bg-red-50 border border-red-200 rounded-md animate-in fade-in-0 slide-in-from-top-2">
                 <p className="text-red-800 text-sm font-medium">
@@ -236,7 +239,9 @@ export default function FormDemoPage() {
 
           {/* フォーム状態表示 */}
           <div className="mt-6 p-4 bg-gray-100 rounded">
-            <h3 className="font-semibold text-sm text-gray-700 mb-2">フォーム状態</h3>
+            <h3 className="font-semibold text-sm text-gray-700 mb-2">
+              フォーム状態
+            </h3>
             <ul className="text-xs text-gray-600 space-y-1">
               <li>有効: {isValid ? 'はい' : 'いいえ'}</li>
               <li>変更済み: {isDirty ? 'はい' : 'いいえ'}</li>
@@ -246,5 +251,5 @@ export default function FormDemoPage() {
         </Card>
       </div>
     </div>
-  )
+  );
 }

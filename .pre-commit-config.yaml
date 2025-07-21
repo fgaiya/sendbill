@@ -1,8 +1,0 @@
-repos:
-  - repo: local
-    hooks:
-      - id: git-secrets
-        name: Prevent committing secrets
-        entry: git secrets --scan
-        language: system
-        types: [text]

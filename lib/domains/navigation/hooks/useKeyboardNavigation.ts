@@ -1,8 +1,8 @@
-import { FocusManagement } from '../types'
+import { FocusManagement } from '../types';
 
-import { useEscapeHandler } from './useEscapeHandler'
-import { useFocusManagement } from './useFocusManagement'
-import { useKeyboardEvents } from './useKeyboardEvents'
+import { useEscapeHandler } from './useEscapeHandler';
+import { useFocusManagement } from './useFocusManagement';
+import { useKeyboardEvents } from './useKeyboardEvents';
 
 /**
  * キーボードナビゲーションフック
@@ -14,22 +14,22 @@ export const useKeyboardNavigation = (
   onClose: () => void
 ): FocusManagement => {
   // フォーカス管理
-  const { menuRef, buttonRef } = useFocusManagement(isMenuOpen)
-  
+  const { menuRef, buttonRef } = useFocusManagement(isMenuOpen);
+
   // キーボードイベント処理
   const { handleButtonKeyDown, handleMenuKeyDown } = useKeyboardEvents(
     isMenuOpen,
     onToggle,
     menuRef
-  )
-  
+  );
+
   // エスケープキー処理
-  useEscapeHandler(isMenuOpen, onClose, buttonRef)
+  useEscapeHandler(isMenuOpen, onClose, buttonRef);
 
   return {
     menuRef,
     buttonRef,
     handleMenuKeyDown,
     handleButtonKeyDown,
-  }
-}
+  };
+};

@@ -1,7 +1,7 @@
-import Link from "next/link"
+import Link from 'next/link';
 
 export default function Footer() {
-  const currentYear = new Date().getFullYear()
+  const currentYear = new Date().getFullYear();
 
   return (
     <footer className="bg-gray-50 border-t border-gray-200">
@@ -22,22 +22,34 @@ export default function Footer() {
             </h4>
             <ul className="space-y-2">
               <li>
-                <Link href="/invoices" className="text-gray-600 hover:text-gray-900 text-sm transition-colors">
+                <Link
+                  href="/invoices"
+                  className="text-gray-600 hover:text-gray-900 text-sm transition-colors"
+                >
                   請求書作成
                 </Link>
               </li>
               <li>
-                <Link href="/quotes" className="text-gray-600 hover:text-gray-900 text-sm transition-colors">
+                <Link
+                  href="/quotes"
+                  className="text-gray-600 hover:text-gray-900 text-sm transition-colors"
+                >
                   見積書作成
                 </Link>
               </li>
               <li>
-                <Link href="/clients" className="text-gray-600 hover:text-gray-900 text-sm transition-colors">
+                <Link
+                  href="/clients"
+                  className="text-gray-600 hover:text-gray-900 text-sm transition-colors"
+                >
                   クライアント管理
                 </Link>
               </li>
               <li>
-                <Link href="/dashboard" className="text-gray-600 hover:text-gray-900 text-sm transition-colors">
+                <Link
+                  href="/dashboard"
+                  className="text-gray-600 hover:text-gray-900 text-sm transition-colors"
+                >
                   ダッシュボード
                 </Link>
               </li>
@@ -51,22 +63,34 @@ export default function Footer() {
             </h4>
             <ul className="space-y-2">
               <li>
-                <Link href="/help" className="text-gray-600 hover:text-gray-900 text-sm transition-colors">
+                <Link
+                  href="/help"
+                  className="text-gray-600 hover:text-gray-900 text-sm transition-colors"
+                >
                   ヘルプ
                 </Link>
               </li>
               <li>
-                <Link href="/contact" className="text-gray-600 hover:text-gray-900 text-sm transition-colors">
+                <Link
+                  href="/contact"
+                  className="text-gray-600 hover:text-gray-900 text-sm transition-colors"
+                >
                   お問い合わせ
                 </Link>
               </li>
               <li>
-                <Link href="/privacy" className="text-gray-600 hover:text-gray-900 text-sm transition-colors">
+                <Link
+                  href="/privacy"
+                  className="text-gray-600 hover:text-gray-900 text-sm transition-colors"
+                >
                   プライバシーポリシー
                 </Link>
               </li>
               <li>
-                <Link href="/terms" className="text-gray-600 hover:text-gray-900 text-sm transition-colors">
+                <Link
+                  href="/terms"
+                  className="text-gray-600 hover:text-gray-900 text-sm transition-colors"
+                >
                   利用規約
                 </Link>
               </li>
@@ -81,5 +105,5 @@ export default function Footer() {
         </div>
       </div>
     </footer>
-  )
+  );
 }

@@ -1,8 +1,9 @@
 // DOM セレクター定数
 export const SELECTORS = {
   MENU_ITEM: '[data-menu-item]',
-  FOCUSABLE_ELEMENTS: 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-} as const
+  FOCUSABLE_ELEMENTS:
+    'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+} as const;
 
 // アクセシビリティメッセージ
 export const A11Y_MESSAGES = {
@@ -10,7 +11,7 @@ export const A11Y_MESSAGES = {
   MENU_CLOSED: 'メニューを閉じました',
   MENU_OPEN_LABEL: 'メニューを開く',
   MENU_CLOSE_LABEL: 'メニューを閉じる',
-} as const
+} as const;
 
 // キーボードキー定数
 export const KEYBOARD_KEYS = {
@@ -22,17 +23,17 @@ export const KEYBOARD_KEYS = {
   HOME: 'Home',
   END: 'End',
   TAB: 'Tab',
-} as const
+} as const;
 
 // ナビゲーション固有の時間定数（共通設定は config.ts に移動）
-import { APP_CONFIG } from '@/lib/shared/config'
+import { APP_CONFIG } from '@/lib/shared/config';
 
 export const TIMING = {
   ANNOUNCEMENT_CLEANUP_DELAY: APP_CONFIG.ANIMATION.CLEANUP_DELAY,
-} as const
+} as const;
 
 // サイドバーメニュー項目定義（アイコンなし）
-import type { SidebarMenuConfig } from './types'
+import type { SidebarMenuConfig } from './types';
 
 export const SIDEBAR_MENU_CONFIG: SidebarMenuConfig[] = [
   {
@@ -70,7 +71,7 @@ export const SIDEBAR_MENU_CONFIG: SidebarMenuConfig[] = [
     requireAuth: true,
     isActive: (pathname: string) => pathname.startsWith('/dashboard/settings'),
   },
-] as const
+] as const;
 
 // サイドバーアクション項目定義（アイコンなし）
 export const SIDEBAR_ACTION_CONFIG: SidebarMenuConfig[] = [
@@ -80,4 +81,4 @@ export const SIDEBAR_ACTION_CONFIG: SidebarMenuConfig[] = [
     iconName: 'LogOut',
     requireAuth: true,
   },
-] as const
+] as const;

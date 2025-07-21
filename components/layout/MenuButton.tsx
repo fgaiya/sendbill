@@ -1,15 +1,15 @@
-import { forwardRef } from 'react'
+import { forwardRef } from 'react';
 
-import { Menu, X } from 'lucide-react'
+import { Menu, X } from 'lucide-react';
 
-import { A11Y_MESSAGES } from '@/lib/domains/navigation/constants'
-import { BUTTON_CLASSES } from '@/lib/domains/navigation/styles'
-import { KeyboardEventHandler } from '@/lib/domains/navigation/types'
+import { A11Y_MESSAGES } from '@/lib/domains/navigation/constants';
+import { BUTTON_CLASSES } from '@/lib/domains/navigation/styles';
+import { KeyboardEventHandler } from '@/lib/domains/navigation/types';
 
 interface MenuButtonProps {
-  isOpen: boolean
-  onClick: () => void
-  onKeyDown: KeyboardEventHandler
+  isOpen: boolean;
+  onClick: () => void;
+  onKeyDown: KeyboardEventHandler;
 }
 
 export const MenuButton = forwardRef<HTMLButtonElement, MenuButtonProps>(
@@ -21,21 +21,21 @@ export const MenuButton = forwardRef<HTMLButtonElement, MenuButtonProps>(
           onClick={onClick}
           onKeyDown={onKeyDown}
           className={BUTTON_CLASSES.MENU_TOGGLE}
-          aria-label={isOpen ? A11Y_MESSAGES.MENU_CLOSE_LABEL : A11Y_MESSAGES.MENU_OPEN_LABEL}
+          aria-label={
+            isOpen
+              ? A11Y_MESSAGES.MENU_CLOSE_LABEL
+              : A11Y_MESSAGES.MENU_OPEN_LABEL
+          }
           aria-expanded={isOpen}
           aria-controls="mobile-menu"
           aria-haspopup="menu"
           id="mobile-menu-button"
         >
-          {isOpen ? (
-            <X className="h-6 w-6" />
-          ) : (
-            <Menu className="h-6 w-6" />
-          )}
+          {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
         </button>
       </div>
-    )
+    );
   }
-)
+);
 
-MenuButton.displayName = 'MenuButton'
+MenuButton.displayName = 'MenuButton';
