@@ -1,14 +1,15 @@
-import type { Metadata } from "next"
+import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: "認証 - SendBill",
-  description: "SendBillにログインまたは新規登録してください。安全で使いやすい請求書管理プラットフォーム。",
-}
+  title: '認証 - SendBill',
+  description:
+    'SendBillにログインまたは新規登録してください。安全で使いやすい請求書管理プラットフォーム。',
+};
 
 export default function AuthLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode
+  children: React.ReactNode;
 }>) {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
@@ -24,5 +25,5 @@ export default function AuthLayout({
         </div>
       </div>
     </div>
-  )
+  );
 }

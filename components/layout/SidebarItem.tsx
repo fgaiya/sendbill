@@ -1,16 +1,22 @@
-'use client'
+'use client';
 
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
-import { SIDEBAR_ITEM_CLASSES } from '@/lib/domains/navigation/styles'
-import type { SidebarItemProps } from '@/lib/domains/navigation/types'
-import { cn } from '@/lib/shared/utils/ui'
+import { SIDEBAR_ITEM_CLASSES } from '@/lib/domains/navigation/styles';
+import type { SidebarItemProps } from '@/lib/domains/navigation/types';
+import { cn } from '@/lib/shared/utils/ui';
 
-export function SidebarItem({ item, isCollapsed, className }: SidebarItemProps) {
-  const pathname = usePathname()
-  const isActive = item.isActive ? item.isActive(pathname) : pathname === item.href
-  const Icon = item.icon
+export function SidebarItem({
+  item,
+  isCollapsed,
+  className,
+}: SidebarItemProps) {
+  const pathname = usePathname();
+  const isActive = item.isActive
+    ? item.isActive(pathname)
+    : pathname === item.href;
+  const Icon = item.icon;
 
   return (
     <Link
@@ -29,13 +35,13 @@ export function SidebarItem({ item, isCollapsed, className }: SidebarItemProps) 
       <span
         className={cn(
           SIDEBAR_ITEM_CLASSES.LABEL,
-          isCollapsed 
-            ? SIDEBAR_ITEM_CLASSES.LABEL_COLLAPSED 
+          isCollapsed
+            ? SIDEBAR_ITEM_CLASSES.LABEL_COLLAPSED
             : SIDEBAR_ITEM_CLASSES.LABEL_EXPANDED
         )}
       >
         {item.label}
       </span>
     </Link>
-  )
+  );
 }

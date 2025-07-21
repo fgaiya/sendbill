@@ -1,6 +1,6 @@
 /**
  * Application Configuration
- * 
+ *
  * アプリケーション全体で使用するUI設定値を一元管理する
  * ハードコードされた値をここに集約し、デザインシステムの一貫性を保つ
  */
@@ -25,16 +25,21 @@ export const APP_CONFIG = {
     },
     BUTTON: {
       // CTAボタン基本クラス
-      CTA_BASE: 'flex items-center justify-center rounded-md px-8 py-3 text-base font-medium transition-colors',
+      CTA_BASE:
+        'flex items-center justify-center rounded-md px-8 py-3 text-base font-medium transition-colors',
       // CTAボタンレスポンシブ対応
       CTA_RESPONSIVE: 'md:py-4 md:px-10 md:text-lg',
       // プライマリボタン
-      PRIMARY: 'border border-transparent bg-blue-600 text-white hover:bg-blue-700',
+      PRIMARY:
+        'border border-transparent bg-blue-600 text-white hover:bg-blue-700',
       // セカンダリボタン
-      SECONDARY: 'border border-blue-600 bg-white text-blue-600 hover:bg-blue-50',
+      SECONDARY:
+        'border border-blue-600 bg-white text-blue-600 hover:bg-blue-50',
       // 通常のボタンスタイル
-      REGULAR_PRIMARY: 'bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors',
-      REGULAR_SECONDARY: 'text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors',
+      REGULAR_PRIMARY:
+        'bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors',
+      REGULAR_SECONDARY:
+        'text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors',
       // 共通ボーダー半径
       BORDER_RADIUS: 'rounded-md',
     },
@@ -71,7 +76,7 @@ export const APP_CONFIG = {
     // サイドバー表示ブレークポイント
     SIDEBAR_VISIBLE: 'lg', // 1024px以上
   },
-} as const
+} as const;
 
 // 型安全性のための型エクスポート
-export type AppConfig = typeof APP_CONFIG
+export type AppConfig = typeof APP_CONFIG;

@@ -1,40 +1,39 @@
-'use client'
+'use client';
 
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
-import { 
-  SIDEBAR_BASE_CLASSES, 
-  SIDEBAR_STATE_CLASSES, 
-  SIDEBAR_TOGGLE_CLASSES 
-} from '@/lib/domains/navigation/styles'
-import type { SidebarMenuItem } from '@/lib/domains/navigation/types'
-import { cn } from '@/lib/shared/utils/ui'
+import {
+  SIDEBAR_BASE_CLASSES,
+  SIDEBAR_STATE_CLASSES,
+  SIDEBAR_TOGGLE_CLASSES,
+} from '@/lib/domains/navigation/styles';
+import type { SidebarMenuItem } from '@/lib/domains/navigation/types';
+import { cn } from '@/lib/shared/utils/ui';
 
-import { SidebarItem } from './SidebarItem'
-
+import { SidebarItem } from './SidebarItem';
 
 interface SidebarContentProps {
-  isCollapsed: boolean
-  onToggle: () => void
-  menuItems: SidebarMenuItem[]
-  actionItems: SidebarMenuItem[]
-  className?: string
+  isCollapsed: boolean;
+  onToggle: () => void;
+  menuItems: SidebarMenuItem[];
+  actionItems: SidebarMenuItem[];
+  className?: string;
 }
 
-export function SidebarContent({ 
-  isCollapsed, 
-  onToggle, 
-  menuItems, 
-  actionItems, 
-  className 
+export function SidebarContent({
+  isCollapsed,
+  onToggle,
+  menuItems,
+  actionItems,
+  className,
 }: SidebarContentProps) {
   return (
     <aside
       className={cn(
         SIDEBAR_BASE_CLASSES.SIDEBAR,
         SIDEBAR_BASE_CLASSES.CONTAINER,
-        isCollapsed 
-          ? SIDEBAR_STATE_CLASSES.COLLAPSED 
+        isCollapsed
+          ? SIDEBAR_STATE_CLASSES.COLLAPSED
           : SIDEBAR_STATE_CLASSES.EXPANDED,
         className
       )}
@@ -47,7 +46,9 @@ export function SidebarContent({
         <button
           onClick={onToggle}
           className={SIDEBAR_TOGGLE_CLASSES.BUTTON}
-          aria-label={isCollapsed ? 'サイドバーを展開' : 'サイドバーを折りたたむ'}
+          aria-label={
+            isCollapsed ? 'サイドバーを展開' : 'サイドバーを折りたたむ'
+          }
         >
           {isCollapsed ? (
             <ChevronRight className="w-5 h-5" />
@@ -60,11 +61,7 @@ export function SidebarContent({
       {/* メインメニュー */}
       <nav className="flex-1 px-3 py-4 space-y-1">
         {menuItems.map((item) => (
-          <SidebarItem
-            key={item.href}
-            item={item}
-            isCollapsed={isCollapsed}
-          />
+          <SidebarItem key={item.href} item={item} isCollapsed={isCollapsed} />
         ))}
       </nav>
 
@@ -81,5 +78,5 @@ export function SidebarContent({
         </div>
       )}
     </aside>
-  )
+  );
 }

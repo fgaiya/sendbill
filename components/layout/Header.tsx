@@ -1,33 +1,32 @@
-'use client'
+'use client';
 
-import Link from "next/link"
+import Link from 'next/link';
 
-import { useAuth, UserButton } from '@clerk/nextjs'
+import { useAuth, UserButton } from '@clerk/nextjs';
 
-import { Navigation } from '@/components/domains/navigation'
-import { useMenuState, useKeyboardNavigation } from '@/lib/domains/navigation/client'
-import { BUTTON_CLASSES } from '@/lib/domains/navigation/styles'
-import { useOutsideClick } from '@/lib/shared/hooks'
+import { Navigation } from '@/components/domains/navigation';
+import {
+  useMenuState,
+  useKeyboardNavigation,
+} from '@/lib/domains/navigation/client';
+import { BUTTON_CLASSES } from '@/lib/domains/navigation/styles';
+import { useOutsideClick } from '@/lib/shared/hooks';
 
-import { MenuButton } from './MenuButton'
-import { MobileMenu } from './MobileMenu'
-
+import { MenuButton } from './MenuButton';
+import { MobileMenu } from './MobileMenu';
 
 export default function Header() {
-  const { isSignedIn } = useAuth()
-  const menu = useMenuState()
-  const { menuRef, buttonRef, handleMenuKeyDown, handleButtonKeyDown } = useKeyboardNavigation(
-    menu.isOpen,
-    menu.toggle,
-    menu.close
-  )
+  const { isSignedIn } = useAuth();
+  const menu = useMenuState();
+  const { menuRef, buttonRef, handleMenuKeyDown, handleButtonKeyDown } =
+    useKeyboardNavigation(menu.isOpen, menu.toggle, menu.close);
 
   // 外部クリック検出
   useOutsideClick({
     refs: [menuRef, buttonRef],
     isEnabled: menu.isOpen,
     onOutsideClick: menu.close,
-  })
+  });
 
   return (
     <header className="bg-white shadow-sm border-b border-gray-200">
@@ -35,8 +34,8 @@ export default function Header() {
         <div className="flex items-center justify-between h-16">
           {/* ロゴ・ブランド */}
           <div className="flex-shrink-0">
-            <Link 
-              href="/" 
+            <Link
+              href="/"
               className="text-2xl font-bold text-gray-900 hover:text-blue-600 transition-colors"
             >
               SendBill
@@ -52,26 +51,17 @@ export default function Header() {
           <div className="hidden md:flex md:items-center md:space-x-4">
             {isSignedIn ? (
               <>
-                <Link
-                  href="/dashboard"
-                  className={BUTTON_CLASSES.SECONDARY}
-                >
+                <Link href="/dashboard" className={BUTTON_CLASSES.SECONDARY}>
                   ダッシュボード
                 </Link>
                 <UserButton />
               </>
             ) : (
               <>
-                <Link
-                  href="/sign-in"
-                  className={BUTTON_CLASSES.SECONDARY}
-                >
+                <Link href="/sign-in" className={BUTTON_CLASSES.SECONDARY}>
                   ログイン
                 </Link>
-                <Link
-                  href="/sign-up"
-                  className={BUTTON_CLASSES.PRIMARY}
-                >
+                <Link href="/sign-up" className={BUTTON_CLASSES.PRIMARY}>
                   新規登録
                 </Link>
               </>
@@ -96,5 +86,5 @@ export default function Header() {
         />
       </div>
     </header>
-  )
+  );
 }

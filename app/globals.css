@@ -1,5 +1,5 @@
-@import "tailwindcss";
-@import "tw-animate-css";
+@import 'tailwindcss';
+@import 'tw-animate-css';
 
 @theme inline {
   --color-background: var(--background);
@@ -111,18 +111,18 @@
 }
 
 @layer base {
-  *:where(button,a,input,textarea,select,summary) {
+  *:where(button, a, input, textarea, select, summary) {
     @apply border-border;
   }
 
-  :where(button,a,input,textarea,select,summary):focus-visible {
+  :where(button, a, input, textarea, select, summary):focus-visible {
     @apply ring-2 ring-ring/50;
   }
 
   body {
     @apply bg-background text-foreground;
   }
-  
+
   /* スクリーンリーダー専用 */
   .sr-only {
     position: absolute;
