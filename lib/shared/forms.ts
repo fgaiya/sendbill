@@ -20,7 +20,7 @@ export const commonValidationSchemas = {
   // 電話番号（日本の形式）
   phoneNumber: z.string()
     .optional()
-    .refine((val) => !val || val === '' || /^0\d{1,4}-\d{1,4}-\d{4}$|^0\d{9,10}$/.test(val), 
+    .refine((val) => !val || val === '' || /^(?:0\d{9,10}|0\d{1,4}-\d{1,4}-\d{3,4})$/.test(val), 
       '有効な電話番号を入力してください'),
 
   // 郵便番号（日本の形式）
