@@ -38,6 +38,7 @@ const eslintConfig = [
   ...compat.extends('plugin:import/recommended'),
   {
     rules: {
+      'import/no-named-as-default': 'off',
       // Import順序の統一ルール
       'import/order': [
         'error',
