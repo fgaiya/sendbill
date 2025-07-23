@@ -16,6 +16,15 @@ export const commonValidationSchemas = {
     .min(1, 'メールアドレスは必須項目です')
     .pipe(z.email({ message: '有効なメールアドレスを入力してください' })),
 
+  // メールアドレス（オプショナル、空文字許可）
+  optionalEmail: z
+    .string()
+    .optional()
+    .transform((val) => (val === '' ? undefined : val))
+    .pipe(
+      z.email({ message: '有効なメールアドレスを入力してください' }).optional()
+    ),
+
   // 電話番号（日本の形式）
   phoneNumber: z
     .string()
@@ -54,4 +63,41 @@ export const commonValidationSchemas = {
     .optional()
     .transform((val) => (val === '' ? undefined : val))
     .pipe(z.url({ message: '有効なURLを入力してください' }).optional()),
+};
+
+// 会社情報バリデーションスキーマ
+const baseCompanyFields = {
+  companyName: commonValidationSchemas.requiredString('会社名'),
+  businessName: z.string().optional(),
+  logoUrl: commonValidationSchemas.url,
+  address: z.string().optional(),
+  phone: commonValidationSchemas.phoneNumber,
+  contactEmail: commonValidationSchemas.optionalEmail,
+  invoiceRegistrationNumber: z.string().optional(),
+  representativeName: z.string().optional(),
+  bankName: z.string().optional(),
+  bankBranch: z.string().optional(),
+  bankAccountNumber: z.string().optional(),
+  bankAccountHolder: z.string().optional(),
+};
+
+export const companySchemas = {
+  create: z.object(baseCompanyFields),
+  update: z.object({
+    ...baseCompanyFields,
+    companyName: z.string().min(1, '会社名は必須です').optional(),
+  }),
+};
+
+// API エラーレスポンス共通ユーティリティ
+export const apiErrors = {
+  unauthorized: () => ({ error: '認証が必要です' }),
+  forbidden: () => ({ error: 'アクセス権限がありません' }),
+  notFound: (resource: string) => ({ error: `${resource}が見つかりません` }),
+  conflict: (message: string) => ({ error: message }),
+  validation: (details: z.ZodError['issues']) => ({
+    error: 'バリデーションエラー',
+    details,
+  }),
+  internal: () => ({ error: 'サーバーエラーが発生しました' }),
 };
