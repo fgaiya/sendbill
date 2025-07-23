@@ -5,6 +5,7 @@ import { z } from 'zod';
 
 import { apiErrors, companySchemas } from '@/lib/shared/forms';
 import { prisma } from '@/lib/shared/prisma';
+import { checkResourceOwnership } from '@/lib/shared/utils/auth';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -26,12 +27,13 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       where: { id },
     });
 
-    if (!existingCompany) {
-      return NextResponse.json(apiErrors.notFound('会社情報'), { status: 404 });
-    }
-
-    if (existingCompany.userId !== userId) {
-      return NextResponse.json(apiErrors.forbidden(), { status: 403 });
+    const ownershipError = checkResourceOwnership(
+      existingCompany,
+      userId,
+      '会社情報'
+    );
+    if (ownershipError) {
+      return ownershipError;
     }
 
     const filteredData = Object.fromEntries(
@@ -70,12 +72,13 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
       where: { id },
     });
 
-    if (!existingCompany) {
-      return NextResponse.json(apiErrors.notFound('会社情報'), { status: 404 });
-    }
-
-    if (existingCompany.userId !== userId) {
-      return NextResponse.json(apiErrors.forbidden(), { status: 403 });
+    const ownershipError = checkResourceOwnership(
+      existingCompany,
+      userId,
+      '会社情報'
+    );
+    if (ownershipError) {
+      return ownershipError;
     }
 
     await prisma.company.delete({
