@@ -1,5 +1,6 @@
 import { dirname } from 'path';
 import { fileURLToPath } from 'url';
+
 import { FlatCompat } from '@eslint/eslintrc';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -10,6 +11,29 @@ const compat = new FlatCompat({
 });
 
 const eslintConfig = [
+  {
+    ignores: [
+      '**/node_modules/**',
+      '**/.pnp/**',
+      '**/.yarn/**',
+      '**/coverage/**',
+      '**/playwright-report/**',
+      '**/test-results/**',
+      '**/.next/**',
+      '**/out/**',
+      '**/build/**',
+      '**/.DS_Store',
+      '**/*.pem',
+      '**/*.key',
+      '**/*.cert',
+      '**/*.crt',
+      '**/*.tsbuildinfo',
+      '**/next-env.d.ts',
+      '**/.vercel/**',
+      '**/.claude/**',
+      '**/.memo/**',
+    ],
+  },
   ...compat.extends('next/core-web-vitals', 'next/typescript'),
   ...compat.extends('plugin:import/recommended'),
   {
@@ -64,6 +88,7 @@ const eslintConfig = [
       ],
     },
   },
+  ...compat.extends('prettier'),
 ];
 
 export default eslintConfig;
