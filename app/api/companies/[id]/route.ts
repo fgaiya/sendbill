@@ -37,8 +37,8 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     }
 
     const filteredData = Object.fromEntries(
-      Object.entries(validatedData).filter(([, value]) => value !== undefined)
-    );
+      Object.entries(validatedData).filter(([_, value]) => value !== undefined)
+    ) as Partial<typeof validatedData>;
 
     const updatedCompany = await prisma.company.update({
       where: { id },

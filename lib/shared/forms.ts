@@ -16,6 +16,15 @@ export const commonValidationSchemas = {
     .min(1, 'メールアドレスは必須項目です')
     .pipe(z.email({ message: '有効なメールアドレスを入力してください' })),
 
+  // メールアドレス（オプショナル、空文字許可）
+  optionalEmail: z
+    .string()
+    .optional()
+    .transform((val) => (val === '' ? undefined : val))
+    .pipe(
+      z.email({ message: '有効なメールアドレスを入力してください' }).optional()
+    ),
+
   // 電話番号（日本の形式）
   phoneNumber: z
     .string()
@@ -63,13 +72,7 @@ const baseCompanyFields = {
   logoUrl: commonValidationSchemas.url,
   address: z.string().optional(),
   phone: commonValidationSchemas.phoneNumber,
-  contactEmail: z
-    .string()
-    .optional()
-    .transform((val) => (val === '' ? undefined : val))
-    .pipe(
-      z.email({ message: '有効なメールアドレスを入力してください' }).optional()
-    ),
+  contactEmail: commonValidationSchemas.optionalEmail,
   invoiceRegistrationNumber: z.string().optional(),
   representativeName: z.string().optional(),
   bankName: z.string().optional(),
