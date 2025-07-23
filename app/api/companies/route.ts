@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     if (existingCompany) {
       return NextResponse.json(
         apiErrors.conflict('会社情報は既に登録されています'),
-        { status: 400 }
+        { status: 409 }
       );
     }
 
