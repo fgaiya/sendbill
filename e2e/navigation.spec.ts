@@ -1,7 +1,9 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('ナビゲーション', () => {
-  test('基本的なナビゲーション要素が表示されること', async ({ page }) => {
+  test('@smoke 基本的なナビゲーション要素が表示されること', async ({
+    page,
+  }) => {
     await page.goto('/');
 
     // ナビゲーションバーが存在することを確認

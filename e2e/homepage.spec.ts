@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('ホームページ', () => {
-  test('ページが正しく表示されること', async ({ page }) => {
+  test('@smoke ページが正しく表示されること', async ({ page }) => {
     await page.goto('/');
 
     // ページタイトルが正しく設定されていることを確認
