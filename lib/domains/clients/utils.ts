@@ -11,12 +11,19 @@ export const CLIENT_SEARCH_FIELDS = [
   'contactEmail',
   'address',
 ] as const;
-export const CLIENT_SORT_OPTIONS = [
-  'name_asc',
-  'name_desc',
-  'created_asc',
-  'created_desc',
-] as const;
+
+export const SORT_MAPPING = {
+  name_asc: { name: 'asc' },
+  name_desc: { name: 'desc' },
+  created_asc: { createdAt: 'asc' },
+  created_desc: { createdAt: 'desc' },
+} as const;
+
+// ソートオプションはマッピングから自動生成
+export const CLIENT_SORT_OPTIONS = Object.keys(SORT_MAPPING) as Array<
+  keyof typeof SORT_MAPPING
+>;
+
 export const CLIENT_INCLUDE_OPTIONS = ['invoices', 'quotes'] as const;
 
 // 共通スキーマ
@@ -103,16 +110,5 @@ export function buildClientSearchWhere(userId: string, query?: string) {
 export function buildOrderBy(
   sort: (typeof CLIENT_SORT_OPTIONS)[number]
 ): Record<string, string> {
-  switch (sort) {
-    case 'name_asc':
-      return { name: 'asc' };
-    case 'name_desc':
-      return { name: 'desc' };
-    case 'created_asc':
-      return { createdAt: 'asc' };
-    case 'created_desc':
-      return { createdAt: 'desc' };
-    default:
-      return { createdAt: 'desc' };
-  }
+  return SORT_MAPPING[sort] ?? { createdAt: 'desc' };
 }

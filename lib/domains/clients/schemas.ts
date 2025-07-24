@@ -18,6 +18,6 @@ export const clientSchemas = {
   create: z.object(baseClientFields),
   update: z.object({
     ...baseClientFields,
-    name: z.string().min(1, '取引先名は必須です').optional(),
+    name: z.string().min(1, '取引先名を空にすることはできません').optional(),
   }),
 };

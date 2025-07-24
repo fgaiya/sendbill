@@ -39,18 +39,26 @@ export async function GET(request: NextRequest) {
     const where = buildClientSearchWhere(userId, q);
     const includeRelations = buildIncludeRelations(include);
 
-    // 検索実行（名前順でソート）
-    const clients = await prisma.client.findMany({
-      where,
-      orderBy: { name: 'asc' },
-      take: limit,
-      include: includeRelations,
-    });
+    // 検索実行（名前順でソート）とカウント（並列実行）
+    const [clients, total] = await Promise.all([
+      prisma.client.findMany({
+        where,
+        orderBy: { name: 'asc' },
+        take: limit,
+        include: includeRelations,
+      }),
+      prisma.client.count({ where }),
+    ]);
 
     return NextResponse.json({
       data: clients,
-      query: q,
-      count: clients.length,
+      pagination: {
+        total,
+        page: 1, // 検索APIではページング概念がないため固定
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+      query: q, // 検索キーワードは追加情報として保持
     });
   } catch (error) {
     console.error('Client search error:', error);
