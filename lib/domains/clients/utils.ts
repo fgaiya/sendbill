@@ -24,7 +24,8 @@ export const includeSchema = z.object({
   include: z
     .string()
     .optional()
-    .transform((val) => (val ? val.split(',') : [])),
+    .transform((val) => (val ? val.split(',') : []))
+    .pipe(z.array(z.enum(CLIENT_INCLUDE_OPTIONS))),
 });
 
 export const paginationSchema = z.object({
@@ -48,7 +49,8 @@ export const clientSearchSchema = z.object({
   include: z
     .string()
     .optional()
-    .transform((val) => (val ? val.split(',') : [])),
+    .transform((val) => (val ? val.split(',') : []))
+    .pipe(z.array(z.enum(CLIENT_INCLUDE_OPTIONS))),
 });
 
 export const dedicatedSearchSchema = z.object({
@@ -62,25 +64,23 @@ export const dedicatedSearchSchema = z.object({
   include: z
     .string()
     .optional()
-    .transform((val) => (val ? val.split(',') : [])),
+    .transform((val) => (val ? val.split(',') : []))
+    .pipe(z.array(z.enum(CLIENT_INCLUDE_OPTIONS))),
 });
 
 /**
  * 関連データ取得設定を構築
  */
 export function buildIncludeRelations(
-  include: string[]
+  include: (typeof CLIENT_INCLUDE_OPTIONS)[number][]
 ): Record<string, boolean> {
-  const includeRelations: Record<string, boolean> = {};
-
-  if (include.includes('invoices')) {
-    includeRelations.invoices = true;
-  }
-  if (include.includes('quotes')) {
-    includeRelations.quotes = true;
-  }
-
-  return includeRelations;
+  return include.reduce(
+    (acc, key) => {
+      acc[key] = true;
+      return acc;
+    },
+    {} as Record<string, boolean>
+  );
 }
 
 /**

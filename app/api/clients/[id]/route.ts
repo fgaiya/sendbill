@@ -11,6 +11,7 @@ import {
 import { apiErrors } from '@/lib/shared/forms';
 import { prisma } from '@/lib/shared/prisma';
 import { checkResourceOwnership } from '@/lib/shared/utils/auth';
+import { omitUndefined } from '@/lib/shared/utils/objects';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -87,9 +88,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     }
 
     // undefinedの値を除外してPrismaに渡す
-    const filteredData = Object.fromEntries(
-      Object.entries(validatedData).filter(([_, value]) => value !== undefined)
-    ) as Partial<typeof validatedData>;
+    const filteredData = omitUndefined(validatedData);
 
     const updatedClient = await prisma.client.update({
       where: { id },
