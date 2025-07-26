@@ -1,24 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { auth } from '@clerk/nextjs/server';
 import { z } from 'zod';
 
 import { apiErrors, companySchemas } from '@/lib/shared/forms';
 import { prisma } from '@/lib/shared/prisma';
+import { requireAuth } from '@/lib/shared/utils/auth';
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId } = await auth();
+    const { user, error, status } = await requireAuth();
 
-    if (!userId) {
-      return NextResponse.json(apiErrors.unauthorized(), { status: 401 });
+    if (error) {
+      return NextResponse.json(error, { status });
     }
 
     const body = await request.json();
     const validatedData = companySchemas.create.parse(body);
 
     const existingCompany = await prisma.company.findUnique({
-      where: { userId },
+      where: { userId: user!.id },
     });
 
     if (existingCompany) {
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     const company = await prisma.company.create({
       data: {
         ...validatedData,
-        userId,
+        userId: user!.id,
       },
     });
 
@@ -50,21 +50,17 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
   try {
-    const { userId } = await auth();
+    const { user, error, status } = await requireAuth();
 
-    if (!userId) {
-      return NextResponse.json(apiErrors.unauthorized(), { status: 401 });
+    if (error) {
+      return NextResponse.json(error, { status });
     }
 
-    const company = await prisma.company.findUnique({
-      where: { userId },
+    const companies = await prisma.company.findMany({
+      where: { userId: user!.id },
     });
 
-    if (!company) {
-      return NextResponse.json(apiErrors.notFound('会社情報'), { status: 404 });
-    }
-
-    return NextResponse.json(company);
+    return NextResponse.json(companies);
   } catch (error) {
     console.error('Company fetch error:', error);
     return NextResponse.json(apiErrors.internal(), { status: 500 });

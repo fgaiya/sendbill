@@ -1,27 +1,75 @@
-import { NextResponse } from 'next/server';
+import { auth } from '@clerk/nextjs/server';
 
 import { apiErrors } from '@/lib/shared/forms';
+import { prisma } from '@/lib/shared/prisma';
 
 /**
- * リソースの所有者チェックを行う共通ヘルパー関数
- *
- * @param resource - チェック対象のリソース（userId プロパティを持つ）
- * @param currentUserId - 現在のユーザーID
- * @param resourceName - リソース名（エラーメッセージ用）
- * @returns 権限がない場合はエラーレスポンス、権限がある場合はnull
+ * 現在認証されているユーザーのデータベースレコードを取得
+ * Clerkの認証情報からPrismaのUserレコードを取得する
  */
-export function checkResourceOwnership<T extends { userId: string }>(
-  resource: T | null,
-  currentUserId: string,
-  resourceName: string
-): NextResponse | null {
-  if (!resource) {
-    return NextResponse.json(apiErrors.notFound(resourceName), { status: 404 });
+export async function getCurrentUser() {
+  const { userId: clerkId } = await auth();
+
+  if (!clerkId) {
+    return null;
   }
 
-  if (resource.userId !== currentUserId) {
-    return NextResponse.json(apiErrors.forbidden(), { status: 403 });
+  try {
+    const user = await prisma.user.findUnique({
+      where: { clerkId },
+    });
+
+    return user;
+  } catch (error) {
+    console.error('Failed to get current user:', error);
+    return null;
+  }
+}
+
+/**
+ * 認証チェックとユーザー取得を行うヘルパー関数
+ * APIルートで使用するための統一的な認証処理
+ */
+export async function requireAuth() {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    return {
+      error: apiErrors.unauthorized(),
+      status: 401,
+      user: null,
+    };
   }
 
-  return null;
+  return {
+    error: null,
+    status: 200,
+    user,
+  };
+}
+
+/**
+ * リソースの所有権をチェックする関数
+ * ユーザーが指定されたリソースにアクセスする権限があるかを確認
+ */
+export async function checkResourceOwnership(resourceUserId: string) {
+  const { user, error, status } = await requireAuth();
+
+  if (error) {
+    return { error, status, hasAccess: false };
+  }
+
+  if (user!.id !== resourceUserId) {
+    return {
+      error: apiErrors.forbidden(),
+      status: 403,
+      hasAccess: false,
+    };
+  }
+
+  return {
+    error: null,
+    status: 200,
+    hasAccess: true,
+  };
 }

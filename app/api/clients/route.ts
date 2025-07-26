@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { auth } from '@clerk/nextjs/server';
 import { z } from 'zod';
 
 import { clientSchemas } from '@/lib/domains/clients/schemas';
@@ -13,13 +12,14 @@ import {
 } from '@/lib/domains/clients/utils';
 import { apiErrors } from '@/lib/shared/forms';
 import { prisma } from '@/lib/shared/prisma';
+import { requireAuth } from '@/lib/shared/utils/auth';
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId } = await auth();
+    const { user, error, status } = await requireAuth();
 
-    if (!userId) {
-      return NextResponse.json(apiErrors.unauthorized(), { status: 401 });
+    if (error) {
+      return NextResponse.json(error, { status });
     }
 
     const body = await request.json();
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     const client = await prisma.client.create({
       data: {
         ...validatedData,
-        userId,
+        userId: user!.id,
       },
     });
 
@@ -47,10 +47,10 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const { userId } = await auth();
+    const { user, error, status } = await requireAuth();
 
-    if (!userId) {
-      return NextResponse.json(apiErrors.unauthorized(), { status: 401 });
+    if (error) {
+      return NextResponse.json(error, { status });
     }
 
     const { searchParams } = new URL(request.url);
@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
     const { q, sort, include } = searchResult.data;
 
     // 検索条件とソート条件、関連データ取得設定の構築
-    const where = buildClientSearchWhere(userId, q);
+    const where = buildClientSearchWhere(user!.id, q);
     const orderBy = buildOrderBy(sort);
     const includeRelations = buildIncludeRelations(include);
 

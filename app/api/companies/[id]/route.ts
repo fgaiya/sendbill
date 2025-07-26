@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { auth } from '@clerk/nextjs/server';
 import { z } from 'zod';
 
 import { apiErrors, companySchemas } from '@/lib/shared/forms';
 import { prisma } from '@/lib/shared/prisma';
-import { checkResourceOwnership } from '@/lib/shared/utils/auth';
+import { requireAuth } from '@/lib/shared/utils/auth';
 import { omitUndefined } from '@/lib/shared/utils/objects';
 
 interface RouteContext {
@@ -14,10 +13,10 @@ interface RouteContext {
 
 export async function PUT(request: NextRequest, context: RouteContext) {
   try {
-    const { userId } = await auth();
+    const { user, error, status } = await requireAuth();
 
-    if (!userId) {
-      return NextResponse.json(apiErrors.unauthorized(), { status: 401 });
+    if (error) {
+      return NextResponse.json(error, { status });
     }
 
     const { id } = await context.params;
@@ -28,13 +27,12 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       where: { id },
     });
 
-    const ownershipError = checkResourceOwnership(
-      existingCompany,
-      userId,
-      '会社情報'
-    );
-    if (ownershipError) {
-      return ownershipError;
+    if (!existingCompany) {
+      return NextResponse.json(apiErrors.notFound('会社情報'), { status: 404 });
+    }
+
+    if (existingCompany.userId !== user!.id) {
+      return NextResponse.json(apiErrors.forbidden(), { status: 403 });
     }
 
     const filteredData = omitUndefined(validatedData);
@@ -59,10 +57,10 @@ export async function PUT(request: NextRequest, context: RouteContext) {
 
 export async function DELETE(_request: NextRequest, context: RouteContext) {
   try {
-    const { userId } = await auth();
+    const { user, error, status } = await requireAuth();
 
-    if (!userId) {
-      return NextResponse.json(apiErrors.unauthorized(), { status: 401 });
+    if (error) {
+      return NextResponse.json(error, { status });
     }
 
     const { id } = await context.params;
@@ -71,13 +69,12 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
       where: { id },
     });
 
-    const ownershipError = checkResourceOwnership(
-      existingCompany,
-      userId,
-      '会社情報'
-    );
-    if (ownershipError) {
-      return ownershipError;
+    if (!existingCompany) {
+      return NextResponse.json(apiErrors.notFound('会社情報'), { status: 404 });
+    }
+
+    if (existingCompany.userId !== user!.id) {
+      return NextResponse.json(apiErrors.forbidden(), { status: 403 });
     }
 
     await prisma.company.delete({

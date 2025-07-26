@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { auth } from '@clerk/nextjs/server';
 import { z } from 'zod';
 
 import { clientSchemas } from '@/lib/domains/clients/schemas';
@@ -10,7 +9,7 @@ import {
 } from '@/lib/domains/clients/utils';
 import { apiErrors } from '@/lib/shared/forms';
 import { prisma } from '@/lib/shared/prisma';
-import { checkResourceOwnership } from '@/lib/shared/utils/auth';
+import { requireAuth } from '@/lib/shared/utils/auth';
 import { omitUndefined } from '@/lib/shared/utils/objects';
 
 interface RouteContext {
@@ -19,10 +18,10 @@ interface RouteContext {
 
 export async function GET(request: NextRequest, context: RouteContext) {
   try {
-    const { userId } = await auth();
+    const { user, error, status } = await requireAuth();
 
-    if (!userId) {
-      return NextResponse.json(apiErrors.unauthorized(), { status: 401 });
+    if (error) {
+      return NextResponse.json(error, { status });
     }
 
     const { id } = await context.params;
@@ -50,9 +49,12 @@ export async function GET(request: NextRequest, context: RouteContext) {
       include: includeRelations,
     });
 
-    const ownershipError = checkResourceOwnership(client, userId, '取引先');
-    if (ownershipError) {
-      return ownershipError;
+    if (!client) {
+      return NextResponse.json(apiErrors.notFound('取引先'), { status: 404 });
+    }
+
+    if (client.userId !== user!.id) {
+      return NextResponse.json(apiErrors.forbidden(), { status: 403 });
     }
 
     return NextResponse.json(client);
@@ -64,10 +66,10 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
 export async function PUT(request: NextRequest, context: RouteContext) {
   try {
-    const { userId } = await auth();
+    const { user, error, status } = await requireAuth();
 
-    if (!userId) {
-      return NextResponse.json(apiErrors.unauthorized(), { status: 401 });
+    if (error) {
+      return NextResponse.json(error, { status });
     }
 
     const { id } = await context.params;
@@ -78,13 +80,12 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       where: { id },
     });
 
-    const ownershipError = checkResourceOwnership(
-      existingClient,
-      userId,
-      '取引先'
-    );
-    if (ownershipError) {
-      return ownershipError;
+    if (!existingClient) {
+      return NextResponse.json(apiErrors.notFound('取引先'), { status: 404 });
+    }
+
+    if (existingClient.userId !== user!.id) {
+      return NextResponse.json(apiErrors.forbidden(), { status: 403 });
     }
 
     // undefinedの値を除外してPrismaに渡す
@@ -110,10 +111,10 @@ export async function PUT(request: NextRequest, context: RouteContext) {
 
 export async function DELETE(_request: NextRequest, context: RouteContext) {
   try {
-    const { userId } = await auth();
+    const { user, error, status } = await requireAuth();
 
-    if (!userId) {
-      return NextResponse.json(apiErrors.unauthorized(), { status: 401 });
+    if (error) {
+      return NextResponse.json(error, { status });
     }
 
     const { id } = await context.params;
@@ -122,13 +123,12 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
       where: { id },
     });
 
-    const ownershipError = checkResourceOwnership(
-      existingClient,
-      userId,
-      '取引先'
-    );
-    if (ownershipError) {
-      return ownershipError;
+    if (!existingClient) {
+      return NextResponse.json(apiErrors.notFound('取引先'), { status: 404 });
+    }
+
+    if (existingClient.userId !== user!.id) {
+      return NextResponse.json(apiErrors.forbidden(), { status: 403 });
     }
 
     // 関連データの存在チェック（削除前に確認）
