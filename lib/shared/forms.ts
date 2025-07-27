@@ -1,3 +1,6 @@
+import { NextResponse } from 'next/server';
+
+import { Prisma } from '@prisma/client';
 import { z } from 'zod';
 
 /**
@@ -81,12 +84,18 @@ const baseCompanyFields = {
   bankAccountHolder: z.string().optional(),
 };
 
+// 会社フォーム用の型（userId等は除外）
+type CompanyFormInput = Omit<
+  Prisma.CompanyUncheckedCreateInput,
+  'id' | 'createdAt' | 'updatedAt' | 'userId'
+>;
+
 export const companySchemas = {
-  create: z.object(baseCompanyFields),
+  create: z.object(baseCompanyFields) satisfies z.ZodType<CompanyFormInput>,
   update: z.object({
     ...baseCompanyFields,
     companyName: z.string().min(1, '会社名は必須です').optional(),
-  }),
+  }) satisfies z.ZodType<Partial<CompanyFormInput>>,
 };
 
 // API エラーレスポンス共通ユーティリティ
@@ -101,3 +110,15 @@ export const apiErrors = {
   }),
   internal: () => ({ error: 'サーバーエラーが発生しました' }),
 };
+
+// API エラーハンドリング共通ロジック
+export function handleApiError(error: unknown, context: string) {
+  if (error instanceof z.ZodError) {
+    return NextResponse.json(apiErrors.validation(error.issues), {
+      status: 400,
+    });
+  }
+
+  console.error(`${context} error:`, error);
+  return NextResponse.json(apiErrors.internal(), { status: 500 });
+}

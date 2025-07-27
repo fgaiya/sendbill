@@ -17,4 +17,4 @@ export const DEFAULT_FORM_VALUES: CompanyFormData = {
   bankBranch: '',
   bankAccountNumber: '',
   bankAccountHolder: '',
-};
+} as const;

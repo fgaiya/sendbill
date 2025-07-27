@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 import { currentUser } from '@clerk/nextjs/server';
 
 import { APP_CONFIG } from '@/lib/shared/config';
@@ -32,12 +34,12 @@ export default async function DashboardPage() {
               <p className="text-gray-600 mb-4">
                 請求書や見積書に表示される会社の基本情報を管理します
               </p>
-              <a
+              <Link
                 href="/dashboard/company"
                 className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors"
               >
                 設定する
-              </a>
+              </Link>
             </div>
 
             {/* 取引先管理カード */}

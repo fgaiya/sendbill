@@ -4,6 +4,7 @@ import React from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Spinner } from '@/components/ui/spinner';
 import { useCompanyForm } from '@/lib/features/settings/company';
 
 import { CompanyFormFields } from './CompanyFormFields';
@@ -27,7 +28,7 @@ export function CompanyForm() {
     return (
       <Card className="p-6">
         <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+          <Spinner size="lg" />
           <span className="ml-2 text-gray-600">読み込み中...</span>
         </div>
       </Card>
@@ -81,7 +82,7 @@ export function CompanyForm() {
             className={isSubmitting ? 'cursor-wait' : ''}
           >
             {isSubmitting && (
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+              <Spinner size="sm" color="white" className="mr-2" />
             )}
             {isSubmitting ? '保存中...' : existingCompany ? '更新' : '保存'}
           </Button>

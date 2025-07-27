@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { z } from 'zod';
-
 import { clientSchemas } from '@/lib/domains/clients/schemas';
 import {
   paginationSchema,
@@ -13,36 +11,14 @@ import {
 import { apiErrors } from '@/lib/shared/forms';
 import { prisma } from '@/lib/shared/prisma';
 import { requireAuth } from '@/lib/shared/utils/auth';
+import { createResource } from '@/lib/shared/utils/crud';
 
 export async function POST(request: NextRequest) {
-  try {
-    const { user, error, status } = await requireAuth();
-
-    if (error) {
-      return NextResponse.json(error, { status });
-    }
-
-    const body = await request.json();
-    const validatedData = clientSchemas.create.parse(body);
-
-    const client = await prisma.client.create({
-      data: {
-        ...validatedData,
-        userId: user!.id,
-      },
-    });
-
-    return NextResponse.json(client, { status: 201 });
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(apiErrors.validation(error.issues), {
-        status: 400,
-      });
-    }
-
-    console.error('Client creation error:', error);
-    return NextResponse.json(apiErrors.internal(), { status: 500 });
-  }
+  return createResource(request, {
+    model: prisma.client,
+    schemas: clientSchemas,
+    resourceName: '取引先',
+  });
 }
 
 export async function GET(request: NextRequest) {
