@@ -47,14 +47,19 @@ interface CrudOptions<D extends DelegateLike, TCreateSchema, TUpdateSchema> {
 }
 
 /**
- * 基本的なCRUD作成処理
+ * CRUD作成処理の内部共通関数
+ * 認証関数の違いによる重複を排除
  */
-export async function createResource<
+async function createResourceInternal<
   D extends DelegateLike,
   TCreateSchema extends z.ZodSchema,
->(request: NextRequest, options: CrudOptions<D, TCreateSchema, z.ZodSchema>) {
+>(
+  request: NextRequest,
+  options: CrudOptions<D, TCreateSchema, z.ZodSchema>,
+  authFunction: typeof requireAuth | typeof requireAuthOrCreate
+) {
   try {
-    const { user, error, status } = await requireAuth();
+    const { user, error, status } = await authFunction();
     if (error) {
       return NextResponse.json(error, { status });
     }
@@ -89,17 +94,29 @@ export async function createResource<
 }
 
 /**
- * 基本的なCRUD取得処理（一覧）
+ * 基本的なCRUD作成処理
  */
-export async function getResources<D extends DelegateLike>(
+export async function createResource<
+  D extends DelegateLike,
+  TCreateSchema extends z.ZodSchema,
+>(request: NextRequest, options: CrudOptions<D, TCreateSchema, z.ZodSchema>) {
+  return createResourceInternal(request, options, requireAuth);
+}
+
+/**
+ * CRUD取得処理（一覧）の内部共通関数
+ * 認証関数の違いによる重複を排除
+ */
+async function getResourcesInternal<D extends DelegateLike>(
   options: Pick<
     CrudOptions<D, z.ZodSchema, z.ZodSchema>,
     'model' | 'resourceName'
   >,
-  whereOptions?: Record<string, unknown>
+  whereOptions: Record<string, unknown> | undefined,
+  authFunction: typeof requireAuth | typeof requireAuthOrCreate
 ) {
   try {
-    const { user, error, status } = await requireAuth();
+    const { user, error, status } = await authFunction();
     if (error) {
       return NextResponse.json(error, { status });
     }
@@ -112,6 +129,19 @@ export async function getResources<D extends DelegateLike>(
   } catch (error) {
     return handleApiError(error, `${options.resourceName} fetch`);
   }
+}
+
+/**
+ * 基本的なCRUD取得処理（一覧）
+ */
+export async function getResources<D extends DelegateLike>(
+  options: Pick<
+    CrudOptions<D, z.ZodSchema, z.ZodSchema>,
+    'model' | 'resourceName'
+  >,
+  whereOptions?: Record<string, unknown>
+) {
+  return getResourcesInternal(options, whereOptions, requireAuth);
 }
 
 /**
@@ -244,39 +274,7 @@ export async function createResourceWithAutoUser<
   D extends DelegateLike,
   TCreateSchema extends z.ZodSchema,
 >(request: NextRequest, options: CrudOptions<D, TCreateSchema, z.ZodSchema>) {
-  try {
-    const { user, error, status } = await requireAuthOrCreate();
-    if (error) {
-      return NextResponse.json(error, { status });
-    }
-
-    const body = await request.json();
-    const validatedData = options.schemas.create.parse(
-      body
-    ) as z.infer<TCreateSchema>;
-
-    // 一意制約チェック（オプション）
-    if (options.uniqueConstraint) {
-      const existing = await options.model.findUnique({
-        where: options.uniqueConstraint(user!.id),
-      } as { where: WhereArg<D> });
-
-      if (existing) {
-        return NextResponse.json(
-          apiErrors.conflict(`${options.resourceName}は既に登録されています`),
-          { status: 409 }
-        );
-      }
-    }
-
-    const entity = await options.model.create({
-      data: { ...(validatedData as Record<string, unknown>), userId: user!.id },
-    });
-
-    return NextResponse.json(entity, { status: 201 });
-  } catch (error) {
-    return handleApiError(error, `${options.resourceName} creation`);
-  }
+  return createResourceInternal(request, options, requireAuthOrCreate);
 }
 
 /**
@@ -289,18 +287,5 @@ export async function getResourcesWithAutoUser<D extends DelegateLike>(
   >,
   whereOptions?: Record<string, unknown>
 ) {
-  try {
-    const { user, error, status } = await requireAuthOrCreate();
-    if (error) {
-      return NextResponse.json(error, { status });
-    }
-
-    const entities = await options.model.findMany({
-      where: { userId: user!.id, ...whereOptions },
-    });
-
-    return NextResponse.json(entities);
-  } catch (error) {
-    return handleApiError(error, `${options.resourceName} fetch`);
-  }
+  return getResourcesInternal(options, whereOptions, requireAuthOrCreate);
 }
