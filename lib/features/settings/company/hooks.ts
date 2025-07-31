@@ -6,6 +6,8 @@ import { useForm } from 'react-hook-form';
 
 import { companySchemas } from '@/lib/shared/forms';
 
+import { getCompany, createCompany, updateCompany } from './service';
+
 import {
   CompanyFormData,
   Company,
@@ -40,14 +42,10 @@ export function useCompanyForm() {
       if (!user) return;
 
       try {
-        const response = await fetch('/api/companies');
-        if (response.ok) {
-          const companies = await response.json();
-          if (companies.length > 0) {
-            const company = companies[0];
-            setExistingCompany(company);
-            reset(getFormDataFromCompany(company));
-          }
+        const company = await getCompany();
+        if (company) {
+          setExistingCompany(company);
+          reset(getFormDataFromCompany(company));
         }
       } catch (error) {
         console.error('Company fetch error:', error);
@@ -64,26 +62,10 @@ export function useCompanyForm() {
       setSubmitError(undefined);
       setSubmitSuccess(false);
 
-      const url = existingCompany
-        ? `/api/companies/${existingCompany.id}`
-        : '/api/companies';
+      const savedCompany = existingCompany
+        ? await updateCompany(existingCompany.id, data)
+        : await createCompany(data);
 
-      const method = existingCompany ? 'PUT' : 'POST';
-
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || '保存に失敗しました');
-      }
-
-      const savedCompany = await response.json();
       setExistingCompany(savedCompany);
       setSubmitSuccess(true);
 
