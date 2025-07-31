@@ -57,6 +57,17 @@ export function useCompanyForm() {
     fetchCompany();
   }, [user, reset]);
 
+  // 成功メッセージの自動非表示（メモリリーク対策）
+  useEffect(() => {
+    if (submitSuccess) {
+      const timer = setTimeout(
+        () => setSubmitSuccess(false),
+        SUCCESS_MESSAGE_DURATION
+      );
+      return () => clearTimeout(timer);
+    }
+  }, [submitSuccess]);
+
   const onSubmit = async (data: CompanyFormData) => {
     try {
       setSubmitError(undefined);
@@ -68,9 +79,6 @@ export function useCompanyForm() {
 
       setExistingCompany(savedCompany);
       setSubmitSuccess(true);
-
-      // 成功メッセージを自動で非表示
-      setTimeout(() => setSubmitSuccess(false), SUCCESS_MESSAGE_DURATION);
     } catch (error) {
       const message =
         error instanceof Error ? error.message : '保存中にエラーが発生しました';

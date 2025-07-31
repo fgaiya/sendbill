@@ -4,7 +4,7 @@ export async function getCompany(): Promise<Company | null> {
   try {
     const response = await fetch('/api/companies');
     if (response.ok) {
-      const companies = await response.json();
+      const companies = (await response.json()) as Company[];
       if (companies.length > 0) {
         return companies[0];
       }

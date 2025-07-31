@@ -1,7 +1,7 @@
 ---
 name: バグ報告
 about: 実装済みの機能に不具合がある場合はこちら
-title: '[Bug] '
+title: 'fix: '
 labels: ['bug']
 assignees: ''
 ---

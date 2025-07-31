@@ -41,10 +41,19 @@ export async function POST(request: NextRequest) {
     let evt: ClerkWebhookEvent;
 
     try {
+      const svixId = headerPayload.get('svix-id');
+      const svixTimestamp = headerPayload.get('svix-timestamp');
+      const svixSignature = headerPayload.get('svix-signature');
+
+      if (!svixId || !svixTimestamp || !svixSignature) {
+        console.error('Missing required webhook headers');
+        return NextResponse.json({ error: 'Missing headers' }, { status: 400 });
+      }
+
       evt = wh.verify(payload, {
-        'svix-id': headerPayload.get('svix-id')!,
-        'svix-timestamp': headerPayload.get('svix-timestamp')!,
-        'svix-signature': headerPayload.get('svix-signature')!,
+        'svix-id': svixId,
+        'svix-timestamp': svixTimestamp,
+        'svix-signature': svixSignature,
       }) as ClerkWebhookEvent;
     } catch (err) {
       console.error('Webhook signature verification failed:', err);
@@ -93,8 +102,11 @@ async function handleUserCreated(data: ClerkUserData) {
       return;
     }
 
-    await prisma.user.create({
-      data: {
+    // upsertを使用して冪等性を確保
+    await prisma.user.upsert({
+      where: { clerkId: data.id },
+      update: { email: primaryEmail },
+      create: {
         clerkId: data.id,
         email: primaryEmail,
       },
@@ -103,7 +115,6 @@ async function handleUserCreated(data: ClerkUserData) {
     console.log('User created successfully:', data.id);
   } catch (error) {
     console.error('Failed to create user:', error);
-    throw error;
   }
 }
 
@@ -119,9 +130,12 @@ async function handleUserUpdated(data: ClerkUserData) {
       return;
     }
 
-    await prisma.user.update({
+    // upsertを使用してユーザーが存在しない場合も対応
+    await prisma.user.upsert({
       where: { clerkId: data.id },
-      data: {
+      update: { email: primaryEmail },
+      create: {
+        clerkId: data.id,
         email: primaryEmail,
       },
     });
@@ -129,20 +143,26 @@ async function handleUserUpdated(data: ClerkUserData) {
     console.log('User updated successfully:', data.id);
   } catch (error) {
     console.error('Failed to update user:', error);
-    throw error;
   }
 }
 
 // ユーザー削除処理
 async function handleUserDeleted(data: ClerkUserData) {
   try {
-    await prisma.user.delete({
+    // 冪等性を確保するため、存在チェック後削除
+    const existingUser = await prisma.user.findUnique({
       where: { clerkId: data.id },
     });
 
-    console.log('User deleted successfully:', data.id);
+    if (existingUser) {
+      await prisma.user.delete({
+        where: { clerkId: data.id },
+      });
+      console.log('User deleted successfully:', data.id);
+    } else {
+      console.log('User not found, already deleted:', data.id);
+    }
   } catch (error) {
     console.error('Failed to delete user:', error);
-    throw error;
   }
 }

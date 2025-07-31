@@ -1,8 +1,8 @@
 ---
 name: 作業タスク
 about: 実装以外の作業（設計、リファクタリング、CI設定、UI調整など）のタスク用
-title: '[Task] '
-labels: ['task']
+title: ''
+labels: []
 assignees: ''
 ---
 

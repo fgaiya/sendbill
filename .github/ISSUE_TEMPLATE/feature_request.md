@@ -1,8 +1,8 @@
 ---
 name: 機能追加リクエスト
 about: 新しい機能や改善要望を提案する場合はこちら
-title: '[Feature] '
-labels: ['feature']
+title: 'feat: '
+labels: []
 assignees: ''
 ---
 
