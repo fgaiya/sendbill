@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { auth } from '@clerk/nextjs/server';
-import { z } from 'zod';
-
 import { clientSchemas } from '@/lib/domains/clients/schemas';
 import {
   paginationSchema,
@@ -13,44 +10,23 @@ import {
 } from '@/lib/domains/clients/utils';
 import { apiErrors } from '@/lib/shared/forms';
 import { prisma } from '@/lib/shared/prisma';
+import { requireAuth } from '@/lib/shared/utils/auth';
+import { createResource } from '@/lib/shared/utils/crud';
 
 export async function POST(request: NextRequest) {
-  try {
-    const { userId } = await auth();
-
-    if (!userId) {
-      return NextResponse.json(apiErrors.unauthorized(), { status: 401 });
-    }
-
-    const body = await request.json();
-    const validatedData = clientSchemas.create.parse(body);
-
-    const client = await prisma.client.create({
-      data: {
-        ...validatedData,
-        userId,
-      },
-    });
-
-    return NextResponse.json(client, { status: 201 });
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(apiErrors.validation(error.issues), {
-        status: 400,
-      });
-    }
-
-    console.error('Client creation error:', error);
-    return NextResponse.json(apiErrors.internal(), { status: 500 });
-  }
+  return createResource(request, {
+    model: prisma.client,
+    schemas: clientSchemas,
+    resourceName: '取引先',
+  });
 }
 
 export async function GET(request: NextRequest) {
   try {
-    const { userId } = await auth();
+    const { user, error, status } = await requireAuth();
 
-    if (!userId) {
-      return NextResponse.json(apiErrors.unauthorized(), { status: 401 });
+    if (error) {
+      return NextResponse.json(error, { status });
     }
 
     const { searchParams } = new URL(request.url);
@@ -81,7 +57,7 @@ export async function GET(request: NextRequest) {
     const { q, sort, include } = searchResult.data;
 
     // 検索条件とソート条件、関連データ取得設定の構築
-    const where = buildClientSearchWhere(userId, q);
+    const where = buildClientSearchWhere(user!.id, q);
     const orderBy = buildOrderBy(sort);
     const includeRelations = buildIncludeRelations(include);
 

@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { FormFieldWrapper } from '@/components/ui/form-field';
 import { Input } from '@/components/ui/input';
+import { Spinner } from '@/components/ui/spinner';
 import { commonValidationSchemas } from '@/lib/shared/forms';
 
 // フォームのバリデーションスキーマ
@@ -230,7 +231,7 @@ export default function FormDemoPage() {
                 className={isSubmitting ? 'cursor-wait' : ''}
               >
                 {isSubmitting && (
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                  <Spinner size="sm" color="white" className="mr-2" />
                 )}
                 {isSubmitting ? '送信中...' : '送信'}
               </Button>

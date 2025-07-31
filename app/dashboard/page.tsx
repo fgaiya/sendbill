@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 import { currentUser } from '@clerk/nextjs/server';
 
 import { APP_CONFIG } from '@/lib/shared/config';
@@ -23,28 +25,64 @@ export default async function DashboardPage() {
             <p className="mt-2 text-gray-600">SendBillの管理画面へようこそ</p>
           </div>
 
-          <div className="border-4 border-dashed border-gray-200 rounded-lg h-96 p-8">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-              こんにちは、{user?.firstName || 'ユーザー'}さん！
-            </h2>
-            <p className="text-gray-600">
-              SendBillへようこそ。認証システムが正常に動作しています。
-            </p>
-            <div className="mt-6 bg-green-50 border border-green-200 rounded-md p-4">
-              <h3 className="text-sm font-medium text-green-800">認証情報</h3>
-              <dl className="mt-2 text-sm text-green-700">
-                <div>
-                  <dt className="inline font-medium">ユーザーID: </dt>
-                  <dd className="inline">{user?.id}</dd>
-                </div>
-                <div>
-                  <dt className="inline font-medium">メールアドレス: </dt>
-                  <dd className="inline">
-                    {user?.emailAddresses[0]?.emailAddress || '未設定'}
-                  </dd>
-                </div>
-              </dl>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {/* 会社情報カード */}
+            <div className="bg-white rounded-lg border border-gray-200 p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                会社情報
+              </h3>
+              <p className="text-gray-600 mb-4">
+                請求書や見積書に表示される会社の基本情報を管理します
+              </p>
+              <Link
+                href="/dashboard/company"
+                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors"
+              >
+                設定する
+              </Link>
             </div>
+
+            {/* 取引先管理カード */}
+            <div className="bg-white rounded-lg border border-gray-200 p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                取引先管理
+              </h3>
+              <p className="text-gray-600 mb-4">
+                請求先となる取引先の情報を管理します
+              </p>
+              <button className="inline-flex items-center px-4 py-2 bg-gray-300 text-gray-600 text-sm font-medium rounded-md cursor-not-allowed">
+                準備中
+              </button>
+            </div>
+
+            {/* 請求書管理カード */}
+            <div className="bg-white rounded-lg border border-gray-200 p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                請求書管理
+              </h3>
+              <p className="text-gray-600 mb-4">
+                請求書の作成・送信・管理を行います
+              </p>
+              <button className="inline-flex items-center px-4 py-2 bg-gray-300 text-gray-600 text-sm font-medium rounded-md cursor-not-allowed">
+                準備中
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-8 bg-green-50 border border-green-200 rounded-md p-4">
+            <h3 className="text-sm font-medium text-green-800">認証情報</h3>
+            <dl className="mt-2 text-sm text-green-700">
+              <div>
+                <dt className="inline font-medium">ユーザー名: </dt>
+                <dd className="inline">{user?.firstName || 'ユーザー'}さん</dd>
+              </div>
+              <div>
+                <dt className="inline font-medium">メールアドレス: </dt>
+                <dd className="inline">
+                  {user?.emailAddresses[0]?.emailAddress || '未設定'}
+                </dd>
+              </div>
+            </dl>
           </div>
         </div>
       </div>

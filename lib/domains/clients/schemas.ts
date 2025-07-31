@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import { z } from 'zod';
 
 import { commonValidationSchemas } from '@/lib/shared/forms';
@@ -14,10 +15,16 @@ const baseClientFields = {
   phone: commonValidationSchemas.phoneNumber,
 };
 
+// 顧客フォーム用の型（userId等は除外）
+type ClientFormInput = Omit<
+  Prisma.ClientUncheckedCreateInput,
+  'id' | 'createdAt' | 'updatedAt' | 'userId'
+>;
+
 export const clientSchemas = {
-  create: z.object(baseClientFields),
+  create: z.object(baseClientFields) satisfies z.ZodType<ClientFormInput>,
   update: z.object({
     ...baseClientFields,
     name: z.string().min(1, '取引先名を空にすることはできません').optional(),
-  }),
+  }) satisfies z.ZodType<Partial<ClientFormInput>>,
 };

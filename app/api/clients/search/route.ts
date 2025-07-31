@@ -7,7 +7,7 @@ import {
   buildIncludeRelations,
   buildClientSearchWhere,
 } from '@/lib/domains/clients/utils';
-import { apiErrors } from '@/lib/shared/forms';
+import { apiErrors, handleApiError } from '@/lib/shared/forms';
 import { prisma } from '@/lib/shared/prisma';
 
 export async function GET(request: NextRequest) {
@@ -61,7 +61,6 @@ export async function GET(request: NextRequest) {
       query: q, // 検索キーワードは追加情報として保持
     });
   } catch (error) {
-    console.error('Client search error:', error);
-    return NextResponse.json(apiErrors.internal(), { status: 500 });
+    return handleApiError(error, 'Client search');
   }
 }

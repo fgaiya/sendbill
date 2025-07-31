@@ -1,17 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { auth } from '@clerk/nextjs/server';
-import { z } from 'zod';
-
 import { clientSchemas } from '@/lib/domains/clients/schemas';
 import {
   includeSchema,
   buildIncludeRelations,
 } from '@/lib/domains/clients/utils';
-import { apiErrors } from '@/lib/shared/forms';
+import { apiErrors, handleApiError } from '@/lib/shared/forms';
 import { prisma } from '@/lib/shared/prisma';
-import { checkResourceOwnership } from '@/lib/shared/utils/auth';
-import { omitUndefined } from '@/lib/shared/utils/objects';
+import { requireResourceAccess } from '@/lib/shared/utils/auth';
+import { updateResource, deleteResource } from '@/lib/shared/utils/crud';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -19,12 +16,6 @@ interface RouteContext {
 
 export async function GET(request: NextRequest, context: RouteContext) {
   try {
-    const { userId } = await auth();
-
-    if (!userId) {
-      return NextResponse.json(apiErrors.unauthorized(), { status: 401 });
-    }
-
     const { id } = await context.params;
     const { searchParams } = new URL(request.url);
 
@@ -45,93 +36,42 @@ export async function GET(request: NextRequest, context: RouteContext) {
     // 関連データ取得設定
     const includeRelations = buildIncludeRelations(include);
 
-    const client = await prisma.client.findUnique({
-      where: { id },
-      include: includeRelations,
-    });
-
-    const ownershipError = checkResourceOwnership(client, userId, '取引先');
-    if (ownershipError) {
-      return ownershipError;
+    const {
+      error,
+      status,
+      resource: client,
+    } = await requireResourceAccess(
+      await prisma.client.findUnique({
+        where: { id },
+        include: includeRelations,
+      }),
+      '取引先'
+    );
+    if (error) {
+      return NextResponse.json(error, { status });
     }
 
     return NextResponse.json(client);
   } catch (error) {
-    console.error('Client fetch error:', error);
-    return NextResponse.json(apiErrors.internal(), { status: 500 });
+    return handleApiError(error, 'Client fetch');
   }
 }
 
 export async function PUT(request: NextRequest, context: RouteContext) {
-  try {
-    const { userId } = await auth();
+  const { id } = await context.params;
 
-    if (!userId) {
-      return NextResponse.json(apiErrors.unauthorized(), { status: 401 });
-    }
-
-    const { id } = await context.params;
-    const body = await request.json();
-    const validatedData = clientSchemas.update.parse(body);
-
-    const existingClient = await prisma.client.findUnique({
-      where: { id },
-    });
-
-    const ownershipError = checkResourceOwnership(
-      existingClient,
-      userId,
-      '取引先'
-    );
-    if (ownershipError) {
-      return ownershipError;
-    }
-
-    // undefinedの値を除外してPrismaに渡す
-    const filteredData = omitUndefined(validatedData);
-
-    const updatedClient = await prisma.client.update({
-      where: { id },
-      data: filteredData,
-    });
-
-    return NextResponse.json(updatedClient);
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(apiErrors.validation(error.issues), {
-        status: 400,
-      });
-    }
-
-    console.error('Client update error:', error);
-    return NextResponse.json(apiErrors.internal(), { status: 500 });
-  }
+  return updateResource(id, request, {
+    model: prisma.client,
+    schemas: clientSchemas,
+    resourceName: '取引先',
+  });
 }
 
 export async function DELETE(_request: NextRequest, context: RouteContext) {
-  try {
-    const { userId } = await auth();
+  const { id } = await context.params;
 
-    if (!userId) {
-      return NextResponse.json(apiErrors.unauthorized(), { status: 401 });
-    }
-
-    const { id } = await context.params;
-
-    const existingClient = await prisma.client.findUnique({
-      where: { id },
-    });
-
-    const ownershipError = checkResourceOwnership(
-      existingClient,
-      userId,
-      '取引先'
-    );
-    if (ownershipError) {
-      return ownershipError;
-    }
-
-    // 関連データの存在チェック（削除前に確認）
+  // 関連データチェックのカスタムバリデーション
+  const validateClientDeletion = async () => {
     const [invoiceCount, quoteCount] = await Promise.all([
       prisma.invoice.count({ where: { clientId: id } }),
       prisma.quote.count({ where: { clientId: id } }),
@@ -146,16 +86,15 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
       );
     }
 
-    await prisma.client.delete({
-      where: { id },
-    });
+    return null; // バリデーション成功
+  };
 
-    return NextResponse.json(
-      { message: '取引先を削除しました' },
-      { status: 200 }
-    );
-  } catch (error) {
-    console.error('Client delete error:', error);
-    return NextResponse.json(apiErrors.internal(), { status: 500 });
-  }
+  return deleteResource(
+    id,
+    {
+      model: prisma.client,
+      resourceName: '取引先',
+    },
+    validateClientDeletion
+  );
 }

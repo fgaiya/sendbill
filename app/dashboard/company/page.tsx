@@ -1,0 +1,14 @@
+'use client';
+
+import { CompanyForm } from '@/components/features/settings/company';
+
+export default function CompanyPage() {
+  return (
+    <main className="min-h-screen bg-gray-50 py-12">
+      <div className="max-w-2xl mx-auto">
+        <h1 className="sr-only">会社基本情報設定</h1>
+        <CompanyForm />
+      </div>
+    </main>
+  );
+}
