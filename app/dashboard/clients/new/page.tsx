@@ -9,9 +9,11 @@ export const metadata: Metadata = {
 
 export default function NewClientPage() {
   return (
-    <>
-      <h1 className="text-2xl font-semibold mb-6">新規取引先登録</h1>
-      <ClientForm />
-    </>
+    <main className="min-h-screen bg-gray-50 py-12">
+      <div className="max-w-2xl mx-auto">
+        <h1 className="sr-only">新規取引先登録</h1>
+        <ClientForm />
+      </div>
+    </main>
   );
 }
