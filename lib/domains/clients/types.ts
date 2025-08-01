@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import { clientSchemas } from './schemas';
 
+import type { UseFormReturn } from 'react-hook-form';
 /**
  * 取引先ドメイン型定義
  */
@@ -18,14 +19,14 @@ export interface ClientFormState {
 
 // フォーム操作
 export interface ClientFormActions {
-  onSubmit: (data: ClientFormData) => Promise<void>;
+  onSubmit: (e?: React.BaseSyntheticEvent) => Promise<void>;
   onReset: () => void;
   clearMessages: () => void;
 }
 
 // useClientForm フックの戻り値型
 export interface UseClientFormReturn {
-  form: ReturnType<typeof import('react-hook-form').useForm<ClientFormData>>;
+  form: UseFormReturn<ClientFormData>;
   state: ClientFormState;
   actions: ClientFormActions;
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 import { useRouter } from 'next/navigation';
 
@@ -15,7 +15,6 @@ export function useClientForm(): UseClientFormReturn {
   const router = useRouter();
   const [submitError, setSubmitError] = useState<string>();
   const [submitSuccess, setSubmitSuccess] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<ClientFormData>({
     resolver: zodResolver(clientSchemas.create),
@@ -31,7 +30,6 @@ export function useClientForm(): UseClientFormReturn {
 
   const onSubmit = async (data: ClientFormData) => {
     try {
-      setIsSubmitting(true);
       setSubmitError(undefined);
       setSubmitSuccess(false);
 
@@ -44,22 +42,21 @@ export function useClientForm(): UseClientFormReturn {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || '取引先の登録に失敗しました');
+        let errorMessage = '取引先の登録に失敗しました';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch {
+          // JSON以外のレスポンスの場合はデフォルトメッセージを使用
+        }
+        throw new Error(errorMessage);
       }
 
       setSubmitSuccess(true);
-
-      // 3秒後にダッシュボードにリダイレクト
-      setTimeout(() => {
-        router.push('/dashboard');
-      }, 3000);
     } catch (error) {
       const message =
         error instanceof Error ? error.message : '取引先の登録に失敗しました';
       setSubmitError(message);
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -80,15 +77,26 @@ export function useClientForm(): UseClientFormReturn {
     setSubmitSuccess(false);
   };
 
+  // 成功時の自動リダイレクト（useEffectで自動クリーンアップ）
+  useEffect(() => {
+    if (submitSuccess) {
+      const timeoutId = setTimeout(() => {
+        router.push('/dashboard');
+      }, 3000);
+
+      return () => clearTimeout(timeoutId); // 自動クリーンアップ
+    }
+  }, [submitSuccess, router]);
+
   return {
     form,
     state: {
-      isSubmitting,
+      isSubmitting: form.formState.isSubmitting, // react-hook-formの状態を使用
       submitError,
       submitSuccess,
     },
     actions: {
-      onSubmit,
+      onSubmit: form.handleSubmit(onSubmit), // react-hook-formのhandleSubmitでラップ
       onReset,
       clearMessages,
     },

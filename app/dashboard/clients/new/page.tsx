@@ -8,5 +8,10 @@ export const metadata: Metadata = {
 };
 
 export default function NewClientPage() {
-  return <ClientForm />;
+  return (
+    <>
+      <h1 className="text-2xl font-semibold mb-6">新規取引先登録</h1>
+      <ClientForm />
+    </>
+  );
 }

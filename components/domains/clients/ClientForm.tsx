@@ -14,7 +14,6 @@ export function ClientForm() {
 
   const {
     control,
-    handleSubmit,
     formState: { errors, isValid, isDirty },
   } = form;
 
@@ -32,7 +31,7 @@ export function ClientForm() {
             </p>
           </div>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={onSubmit} className="space-y-6">
             <ClientFormFields
               control={control}
               errors={errors}
@@ -69,7 +68,7 @@ export function ClientForm() {
               </Button>
               <Button
                 type="submit"
-                disabled={isSubmitting || !isValid}
+                disabled={isSubmitting}
                 className={isSubmitting ? 'cursor-wait' : ''}
               >
                 {isSubmitting && (
