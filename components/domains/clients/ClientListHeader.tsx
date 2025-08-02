@@ -6,14 +6,13 @@ import Link from 'next/link';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { ClientSortOption } from '@/lib/domains/clients/types';
 
 interface ClientListHeaderProps {
   totalCount: number;
   onSearch: (query: string) => void;
-  onSort: (
-    sort: 'name_asc' | 'name_desc' | 'created_asc' | 'created_desc'
-  ) => void;
-  currentSort: 'name_asc' | 'name_desc' | 'created_asc' | 'created_desc';
+  onSort: (sort: ClientSortOption) => void;
+  currentSort: ClientSortOption;
 }
 
 export function ClientListHeader({

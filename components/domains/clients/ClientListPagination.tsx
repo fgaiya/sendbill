@@ -1,3 +1,5 @@
+import { useMemo } from 'react';
+
 import { Button } from '@/components/ui/button';
 
 interface ClientListPaginationProps {
@@ -15,14 +17,10 @@ export function ClientListPagination({
   limit,
   onPageChange,
 }: ClientListPaginationProps) {
-  if (totalPages <= 1) {
-    return null;
-  }
-
   const startItem = (currentPage - 1) * limit + 1;
   const endItem = Math.min(currentPage * limit, total);
 
-  const getPageNumbers = () => {
+  const pageNumbers = useMemo(() => {
     const pages: (number | string)[] = [];
     const showPages = 5; // 表示するページ数
     const halfShow = Math.floor(showPages / 2);
@@ -61,7 +59,11 @@ export function ClientListPagination({
     }
 
     return pages;
-  };
+  }, [currentPage, totalPages]);
+
+  if (totalPages <= 1) {
+    return null;
+  }
 
   return (
     <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
@@ -121,7 +123,7 @@ export function ClientListPagination({
               </svg>
             </Button>
 
-            {getPageNumbers().map((page, index) => {
+            {pageNumbers.map((page, index) => {
               if (page === '...') {
                 return (
                   <span

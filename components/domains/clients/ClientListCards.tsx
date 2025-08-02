@@ -2,6 +2,7 @@ import Link from 'next/link';
 
 import { Card } from '@/components/ui/card';
 import { Client } from '@/lib/domains/clients/types';
+import { formatDate } from '@/lib/shared/utils/date';
 
 interface ClientListCardsProps {
   clients: Client[];
@@ -9,14 +10,6 @@ interface ClientListCardsProps {
 }
 
 export function ClientListCards({ clients, isLoading }: ClientListCardsProps) {
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('ja-JP', {
-      year: 'numeric',
-      month: 'numeric',
-      day: 'numeric',
-    });
-  };
-
   if (isLoading) {
     return (
       <div className="md:hidden space-y-4">

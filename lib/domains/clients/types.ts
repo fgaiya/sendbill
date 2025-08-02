@@ -1,5 +1,13 @@
 import { z } from 'zod';
 
+import {
+  PaginatedResponse,
+  PaginationInfo,
+  PaginationParams,
+  SortField,
+  SortParams,
+} from '@/lib/shared/types';
+
 import { clientSchemas } from './schemas';
 
 import type { UseFormReturn } from 'react-hook-form';
@@ -23,23 +31,20 @@ export interface Client {
   userId: string;
 }
 
+// 取引先のソート可能フィールド
+export type ClientSortField = 'name' | 'created';
+
+// 取引先のソートオプション
+export type ClientSortOption = SortField<ClientSortField>;
+
 // 取引先一覧APIレスポンス型
-export interface ClientListResponse {
-  data: Client[];
-  pagination: {
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
-  };
-}
+export type ClientListResponse = PaginatedResponse<Client>;
 
 // 取引先一覧の検索・ソートパラメータ
-export interface ClientListParams {
-  page?: number;
-  limit?: number;
+export interface ClientListParams
+  extends PaginationParams,
+    SortParams<ClientSortField> {
   q?: string;
-  sort?: 'name_asc' | 'name_desc' | 'created_asc' | 'created_desc';
 }
 
 // 取引先一覧の状態
@@ -47,12 +52,7 @@ export interface ClientListState {
   clients: Client[];
   isLoading: boolean;
   error?: string;
-  pagination: {
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
-  };
+  pagination: PaginationInfo;
 }
 
 // 取引先一覧の操作

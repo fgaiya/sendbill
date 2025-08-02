@@ -1,6 +1,7 @@
 import Link from 'next/link';
 
 import { Client } from '@/lib/domains/clients/types';
+import { formatDate } from '@/lib/shared/utils/date';
 
 interface ClientListTableProps {
   clients: Client[];
@@ -8,14 +9,6 @@ interface ClientListTableProps {
 }
 
 export function ClientListTable({ clients, isLoading }: ClientListTableProps) {
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('ja-JP', {
-      year: 'numeric',
-      month: 'numeric',
-      day: 'numeric',
-    });
-  };
-
   if (isLoading) {
     return (
       <div className="hidden md:block">
