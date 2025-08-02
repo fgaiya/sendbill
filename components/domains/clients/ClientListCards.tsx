@@ -1,0 +1,97 @@
+import Link from 'next/link';
+
+import { Card } from '@/components/ui/card';
+import { Client } from '@/lib/domains/clients/types';
+
+interface ClientListCardsProps {
+  clients: Client[];
+  isLoading: boolean;
+}
+
+export function ClientListCards({ clients, isLoading }: ClientListCardsProps) {
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('ja-JP', {
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="md:hidden space-y-4">
+        {[...Array(5)].map((_, index) => (
+          <Card key={index} className="p-4 animate-pulse">
+            <div className="space-y-3">
+              <div className="h-5 bg-gray-200 rounded w-3/4"></div>
+              <div className="space-y-2">
+                <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+                <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="md:hidden space-y-4">
+      {clients.map((client) => (
+        <Card key={client.id} className="p-4">
+          <div className="space-y-3">
+            <div className="flex items-start justify-between">
+              <h3 className="text-lg font-medium text-gray-900 truncate">
+                {client.name}
+              </h3>
+              <Link
+                href={`/dashboard/clients/${client.id}`}
+                className="text-blue-600 hover:text-blue-900 text-sm font-medium whitespace-nowrap ml-2"
+              >
+                詳細 →
+              </Link>
+            </div>
+
+            <div className="space-y-2 text-sm">
+              {client.contactName && (
+                <div className="flex items-center">
+                  <span className="text-gray-500 w-16 shrink-0">担当者:</span>
+                  <span className="text-gray-900">{client.contactName}</span>
+                </div>
+              )}
+
+              {(client.contactEmail || client.phone) && (
+                <div className="flex items-start">
+                  <span className="text-gray-500 w-16 shrink-0">連絡先:</span>
+                  <div className="text-gray-900">
+                    {client.contactEmail && (
+                      <div className="break-all">{client.contactEmail}</div>
+                    )}
+                    {client.phone && <div>{client.phone}</div>}
+                  </div>
+                </div>
+              )}
+
+              {client.address && (
+                <div className="flex items-start">
+                  <span className="text-gray-500 w-16 shrink-0">住所:</span>
+                  <span className="text-gray-900 break-all">
+                    {client.address}
+                  </span>
+                </div>
+              )}
+
+              <div className="flex items-center">
+                <span className="text-gray-500 w-16 shrink-0">登録日:</span>
+                <span className="text-gray-900">
+                  {formatDate(client.createdAt)}
+                </span>
+              </div>
+            </div>
+          </div>
+        </Card>
+      ))}
+    </div>
+  );
+}
