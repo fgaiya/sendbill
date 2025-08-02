@@ -2,9 +2,7 @@
 
 import React from 'react';
 
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Spinner } from '@/components/ui/spinner';
+import { BaseForm } from '@/components/ui/BaseForm';
 import { useClientForm } from '@/lib/domains/clients/hooks';
 
 import { ClientFormFields } from './ClientFormFields';
@@ -23,61 +21,24 @@ export function ClientForm() {
   return (
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="max-w-2xl mx-auto">
-        <Card className="p-6">
-          <div className="mb-6">
-            <h1 className="text-2xl font-bold text-gray-900">取引先登録</h1>
-            <p className="text-gray-600 mt-2">
-              新しい取引先の情報を登録してください
-            </p>
-          </div>
-
-          <form onSubmit={onSubmit} className="space-y-6">
-            <ClientFormFields
-              control={control}
-              errors={errors}
-              isSubmitting={isSubmitting}
-            />
-
-            {/* 送信結果メッセージ */}
-            {submitSuccess && (
-              <div className="p-4 bg-green-50 border border-green-200 rounded-md animate-in fade-in-0 slide-in-from-top-2">
-                <p className="text-green-800 text-sm font-medium">
-                  ✓
-                  取引先が正常に登録されました！3秒後にダッシュボードに戻ります...
-                </p>
-              </div>
-            )}
-
-            {submitError && (
-              <div className="p-4 bg-red-50 border border-red-200 rounded-md animate-in fade-in-0 slide-in-from-top-2">
-                <p className="text-red-800 text-sm font-medium">
-                  ✗ {submitError}
-                </p>
-              </div>
-            )}
-
-            {/* アクション */}
-            <div className="flex justify-end gap-3 pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onReset}
-                disabled={isSubmitting}
-              >
-                リセット
-              </Button>
-              <Button
-                type="submit"
-                disabled={isSubmitting}
-                className={isSubmitting ? 'cursor-wait' : ''}
-              >
-                {isSubmitting && (
-                  <Spinner size="sm" color="white" className="mr-2" />
-                )}
-                {isSubmitting ? '登録中...' : '登録'}
-              </Button>
-            </div>
-          </form>
+        <BaseForm
+          title="取引先登録"
+          description="新しい取引先の情報を登録してください"
+          onSubmit={onSubmit}
+          onReset={onReset}
+          isSubmitting={isSubmitting}
+          isValid={isValid}
+          submitError={submitError}
+          submitSuccess={submitSuccess}
+          successMessage="取引先が正常に登録されました！3秒後にダッシュボードに戻ります..."
+          submitLabel="登録"
+          submittingLabel="登録中..."
+        >
+          <ClientFormFields
+            control={control}
+            errors={errors}
+            isSubmitting={isSubmitting}
+          />
 
           {/* フォーム状態表示（開発用） */}
           {process.env.NODE_ENV === 'development' && (
@@ -92,7 +53,7 @@ export function ClientForm() {
               </ul>
             </div>
           )}
-        </Card>
+        </BaseForm>
       </div>
     </div>
   );
