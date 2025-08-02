@@ -50,9 +50,12 @@ export default async function DashboardPage() {
               <p className="text-gray-600 mb-4">
                 請求先となる取引先の情報を管理します
               </p>
-              <button className="inline-flex items-center px-4 py-2 bg-gray-300 text-gray-600 text-sm font-medium rounded-md cursor-not-allowed">
-                準備中
-              </button>
+              <Link
+                href="/dashboard/clients/new"
+                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors"
+              >
+                新規登録
+              </Link>
             </div>
 
             {/* 請求書管理カード */}

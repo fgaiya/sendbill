@@ -11,10 +11,10 @@ import {
 import { apiErrors } from '@/lib/shared/forms';
 import { prisma } from '@/lib/shared/prisma';
 import { requireAuth } from '@/lib/shared/utils/auth';
-import { createResource } from '@/lib/shared/utils/crud';
+import { createResourceWithAutoUser } from '@/lib/shared/utils/crud';
 
 export async function POST(request: NextRequest) {
-  return createResource(request, {
+  return createResourceWithAutoUser(request, {
     model: prisma.client,
     schemas: clientSchemas,
     resourceName: '取引先',
