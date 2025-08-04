@@ -60,7 +60,13 @@ export function BaseForm({
         <p className="text-gray-600 mt-2">{description}</p>
       </div>
 
-      <form onSubmit={onSubmit} className="space-y-6">
+      <form
+        onSubmit={async (e) => {
+          e.preventDefault();
+          await onSubmit(e);
+        }}
+        className="space-y-6"
+      >
         {children}
 
         {/* 送信結果メッセージ */}

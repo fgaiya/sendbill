@@ -61,17 +61,23 @@ export function ClientListHeader({
           </form>
 
           {/* ソート */}
-          <select
-            value={currentSort}
-            onChange={(e) => onSort(e.target.value as typeof currentSort)}
-            className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          >
-            {sortOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+          <div>
+            <label htmlFor="client-sort-select" className="sr-only">
+              並び順
+            </label>
+            <select
+              id="client-sort-select"
+              value={currentSort}
+              onChange={(e) => onSort(e.target.value as typeof currentSort)}
+              className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              {sortOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
 
           {/* 新規登録ボタン */}
           <Link href="/dashboard/clients/new">

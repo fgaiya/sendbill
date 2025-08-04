@@ -174,13 +174,7 @@ export function useClientList(
         const message =
           err instanceof Error ? err.message : '取引先の取得に失敗しました';
         setError(message);
-        setClients([]);
-        setPagination({
-          total: 0,
-          page: 1,
-          limit: 20,
-          totalPages: 0,
-        });
+        // エラー時は既存のクライアントデータとページネーション状態を保持
       } finally {
         setIsLoading(false);
       }
@@ -215,8 +209,8 @@ export function useClientList(
 
   // 初回読み込み
   useEffect(() => {
-    fetchClients();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    void fetchClients();
+  }, [fetchClients]);
 
   return {
     state: {

@@ -78,7 +78,7 @@ export function ClientListCards({ clients, isLoading }: ClientListCardsProps) {
               <div className="flex items-center">
                 <span className="text-gray-500 w-16 shrink-0">登録日:</span>
                 <span className="text-gray-900">
-                  {formatDate(client.createdAt)}
+                  {formatDate(client.createdAt) || '不正な日付'}
                 </span>
               </div>
             </div>

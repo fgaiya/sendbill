@@ -114,7 +114,7 @@ export function ClientListTable({ clients, isLoading }: ClientListTableProps) {
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {formatDate(client.createdAt)}
+                  {formatDate(client.createdAt) || '不正な日付'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <Link
