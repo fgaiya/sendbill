@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
     const { q, sort, include } = searchResult.data;
 
     // 検索条件とソート条件、関連データ取得設定の構築
-    const where = buildClientSearchWhere(user!.id, q);
+    const where = buildClientSearchWhere(user!.id, q || undefined);
     const orderBy = buildOrderBy(sort);
     const includeRelations = buildIncludeRelations(include);
 
