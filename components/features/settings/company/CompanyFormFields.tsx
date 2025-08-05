@@ -6,17 +6,19 @@ import { CompanyBankInfoFields } from './CompanyBankInfoFields';
 import { CompanyBasicInfoFields } from './CompanyBasicInfoFields';
 import { CompanyContactInfoFields } from './CompanyContactInfoFields';
 
-import type { Control, FieldErrors } from 'react-hook-form';
+import type { Control, FieldErrors, UseFormSetValue } from 'react-hook-form';
 interface CompanyFormFieldsProps {
   control: Control<CompanyFormData>;
   errors: FieldErrors<CompanyFormData>;
   isSubmitting: boolean;
+  setValue: UseFormSetValue<CompanyFormData>;
 }
 
 export function CompanyFormFields({
   control,
   errors,
   isSubmitting,
+  setValue,
 }: CompanyFormFieldsProps) {
   return (
     <>
@@ -29,6 +31,7 @@ export function CompanyFormFields({
         control={control}
         errors={errors}
         isSubmitting={isSubmitting}
+        setValue={setValue}
       />
       <CompanyBankInfoFields
         control={control}

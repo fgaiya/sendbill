@@ -13,6 +13,7 @@ export function CompanyForm() {
   const {
     control,
     handleSubmit,
+    setValue,
     errors,
     isSubmitting,
     isValid,
@@ -49,6 +50,7 @@ export function CompanyForm() {
           control={control}
           errors={errors}
           isSubmitting={isSubmitting}
+          setValue={setValue}
         />
 
         {/* 送信結果メッセージ */}

@@ -33,6 +33,7 @@ export function useCompanyForm() {
     control,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors, isSubmitting, isValid },
   } = form;
 
@@ -96,6 +97,7 @@ export function useCompanyForm() {
     // Form state
     control,
     handleSubmit,
+    setValue,
     errors,
     isSubmitting,
     isValid,
