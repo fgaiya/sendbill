@@ -17,7 +17,6 @@ export const getFormDataFromCompany = (
     prefecture: company.prefecture || '',
     city: company.city || '',
     street: company.street || '',
-    address: company.address || '',
     phone: company.phone || '',
     contactEmail: company.contactEmail || '',
     invoiceRegistrationNumber: company.invoiceRegistrationNumber || '',

@@ -12,7 +12,6 @@ export const DEFAULT_FORM_VALUES: CompanyFormData = {
   prefecture: '',
   city: '',
   street: '',
-  address: '',
   phone: '',
   contactEmail: '',
   invoiceRegistrationNumber: '',

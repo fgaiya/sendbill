@@ -23,22 +23,17 @@ export interface ZipCloudResponse {
 }
 
 // レート制限を管理するための状態
-const RATE_LIMIT = {
-  lastRequestTime: 0,
-  minInterval: 100, // 100ms間隔
-};
+let lastRequestPromise: Promise<void> = Promise.resolve();
+const minInterval = 100;
 
 async function withRateLimit<T>(fn: () => Promise<T>): Promise<T> {
-  const now = Date.now();
-  const timeSinceLastRequest = now - RATE_LIMIT.lastRequestTime;
+  const currentPromise = lastRequestPromise.then(async () => {
+    await new Promise((resolve) => setTimeout(resolve, minInterval));
+    return fn();
+  });
 
-  if (timeSinceLastRequest < RATE_LIMIT.minInterval) {
-    const delay = RATE_LIMIT.minInterval - timeSinceLastRequest;
-    await new Promise((resolve) => setTimeout(resolve, delay));
-  }
-
-  RATE_LIMIT.lastRequestTime = Date.now();
-  return fn();
+  lastRequestPromise = currentPromise.then(() => undefined).catch(() => {});
+  return currentPromise;
 }
 
 export async function fetchAddressByPostalCode(

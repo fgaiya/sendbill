@@ -77,7 +77,6 @@ const baseCompanyFields = {
   prefecture: z.string().optional(),
   city: z.string().optional(),
   street: z.string().optional(),
-  address: z.string().optional(),
   phone: commonValidationSchemas.phoneNumber,
   contactEmail: commonValidationSchemas.optionalEmail,
   invoiceRegistrationNumber: z.string().optional(),

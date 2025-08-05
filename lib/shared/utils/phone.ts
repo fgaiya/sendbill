@@ -31,6 +31,6 @@ export function formatPhoneNumber(value: string): string {
     }
   }
 
-  // 11桁を超える場合は切り捨て
-  return cleaned.slice(0, 11);
+  // 11桁を超える場合は切り捨ててからフォーマット
+  return formatPhoneNumber(cleaned.slice(0, 11));
 }
