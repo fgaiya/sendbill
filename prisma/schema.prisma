@@ -30,7 +30,10 @@ model Company {
   companyName               String
   businessName              String?
   logoUrl                   String?
-  address                   String?
+  postalCode                String?
+  prefecture                String?
+  city                      String?
+  street                    String?
   phone                     String?
   contactEmail              String?
   invoiceRegistrationNumber String?
