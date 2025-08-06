@@ -2,6 +2,10 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 
+import { useRouter } from 'next/navigation';
+
+import { toast } from 'sonner';
+
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { useClientDelete } from '@/lib/domains/clients/hooks';
@@ -22,6 +26,7 @@ export function ClientDeleteButton({
   variant = 'outline',
   asTextLink = false,
 }: ClientDeleteButtonProps) {
+  const router = useRouter();
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const { deleteClient, isDeleting, deleteError, clearError } =
     useClientDelete();
@@ -38,7 +43,19 @@ export function ClientDeleteButton({
 
     if (success) {
       setShowConfirmDialog(false);
-      onDeleteSuccess?.();
+
+      // 成功トーストを表示
+      toast.success(`「${client.name}」を削除しました`);
+
+      // カスタムコールバックがある場合は実行、ない場合は取引先一覧にリダイレクト
+      if (onDeleteSuccess) {
+        onDeleteSuccess();
+      } else {
+        router.push('/dashboard/clients');
+      }
+    } else if (deleteError) {
+      // エラートーストを表示
+      toast.error(deleteError);
     }
     // エラーの場合はダイアログを開いたままにして、エラーメッセージを表示
   };

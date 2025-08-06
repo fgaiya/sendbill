@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
+import { toast } from 'sonner';
 
 import { clientSchemas } from './schemas';
 import {
@@ -60,10 +61,17 @@ export function useClientForm(): UseClientFormReturn {
       }
 
       setSubmitSuccess(true);
+
+      // 成功トーストを表示
+      toast.success('取引先が正常に登録されました！');
+
+      // 取引先一覧にリダイレクト
+      router.push('/dashboard/clients');
     } catch (error) {
       const message =
         error instanceof Error ? error.message : '取引先の登録に失敗しました';
       setSubmitError(message);
+      toast.error(message);
     }
   };
 
@@ -83,17 +91,6 @@ export function useClientForm(): UseClientFormReturn {
     setSubmitError(undefined);
     setSubmitSuccess(false);
   };
-
-  // 成功時の自動リダイレクト（useEffectで自動クリーンアップ）
-  useEffect(() => {
-    if (submitSuccess) {
-      const timeoutId = setTimeout(() => {
-        router.push('/dashboard');
-      }, 3000);
-
-      return () => clearTimeout(timeoutId); // 自動クリーンアップ
-    }
-  }, [submitSuccess, router]);
 
   return {
     form,

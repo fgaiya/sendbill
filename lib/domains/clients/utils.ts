@@ -26,19 +26,21 @@ export const CLIENT_SORT_OPTIONS = Object.keys(SORT_MAPPING) as Array<
 
 export const CLIENT_INCLUDE_OPTIONS = ['invoices', 'quotes'] as const;
 
+// 共通のinclude処理関数
+const processIncludeString = (raw: unknown) => {
+  if (typeof raw === 'string' && raw.trim() !== '') {
+    return raw
+      .split(',')
+      .map((s) => s.trim())
+      .filter((s) => s !== '');
+  }
+  return [];
+};
+
 // 共通スキーマ
 export const includeSchema = z.object({
   include: z.preprocess(
-    (raw) => {
-      if (typeof raw === 'string' && raw.trim() !== '') {
-        return raw
-          .split(',')
-          .map((s) => s.trim())
-          .filter((s) => s !== '');
-      }
-      // null / undefined / 空文字 → 空配列
-      return [];
-    },
+    processIncludeString,
     z.array(z.enum(CLIENT_INCLUDE_OPTIONS))
   ),
 });
@@ -60,12 +62,10 @@ export const paginationSchema = z.object({
     .pipe(z.number().min(1).max(100)),
 });
 
-const includeSchemaPart = z
-  .string()
-  .nullable()
-  .optional()
-  .transform((val) => (val ? val.split(',') : []))
-  .pipe(z.array(z.enum(CLIENT_INCLUDE_OPTIONS)));
+const includeSchemaPart = z.preprocess(
+  processIncludeString,
+  z.array(z.enum(CLIENT_INCLUDE_OPTIONS))
+);
 
 export const clientSearchSchema = z.object({
   q: z.string().nullable().optional(),

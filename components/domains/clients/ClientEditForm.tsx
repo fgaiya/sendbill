@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
+import { toast } from 'sonner';
 
 import { BaseForm } from '@/components/ui/BaseForm';
 import { Button } from '@/components/ui/button';
@@ -112,11 +113,16 @@ export function ClientEditForm({ clientId }: ClientEditFormProps) {
 
       setSubmitSuccess(true);
 
+      // 成功トーストを表示
+      toast.success('取引先が正常に更新されました！');
+
+      // 詳細ページにリダイレクト
       router.push(`/dashboard/clients/${clientId}`);
     } catch (error) {
       const message =
         error instanceof Error ? error.message : '取引先の更新に失敗しました';
       setSubmitError(message);
+      toast.error(message);
     }
   };
 
