@@ -28,11 +28,19 @@ export const CLIENT_INCLUDE_OPTIONS = ['invoices', 'quotes'] as const;
 
 // 共通スキーマ
 export const includeSchema = z.object({
-  include: z
-    .string()
-    .optional()
-    .transform((val) => (val ? val.split(',') : []))
-    .pipe(z.array(z.enum(CLIENT_INCLUDE_OPTIONS))),
+  include: z.preprocess(
+    (raw) => {
+      if (typeof raw === 'string' && raw.trim() !== '') {
+        return raw
+          .split(',')
+          .map((s) => s.trim())
+          .filter((s) => s !== '');
+      }
+      // null / undefined / 空文字 → 空配列
+      return [];
+    },
+    z.array(z.enum(CLIENT_INCLUDE_OPTIONS))
+  ),
 });
 
 export const paginationSchema = z.object({

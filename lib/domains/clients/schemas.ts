@@ -1,30 +1,23 @@
-import { Prisma } from '@prisma/client';
 import { z } from 'zod';
 
-import { commonValidationSchemas } from '@/lib/shared/forms';
-
-/**
- * 取引先ドメインバリデーションスキーマ
- */
-
-const baseClientFields = {
-  name: commonValidationSchemas.requiredString('取引先名'),
+export const baseClientSchema = z.object({
+  name: z.string().min(1, '取引先名は必須です'),
   contactName: z.string().optional(),
-  contactEmail: commonValidationSchemas.optionalEmail,
+  contactEmail: z
+    .email({ message: 'メールアドレスの形式が不正です' })
+    .optional(),
   address: z.string().optional(),
-  phone: commonValidationSchemas.phoneNumber,
-};
+  phone: z.string().optional(),
+});
 
-// 顧客フォーム用の型（userId等は除外）
-type ClientFormInput = Omit<
-  Prisma.ClientUncheckedCreateInput,
-  'id' | 'createdAt' | 'updatedAt' | 'userId'
->;
+export const createClientSchema = baseClientSchema;
+
+export const updateClientSchema = baseClientSchema.partial();
+
+export type ClientFormData = z.infer<typeof createClientSchema>;
+export type ClientUpdateData = z.infer<typeof updateClientSchema>;
 
 export const clientSchemas = {
-  create: z.object(baseClientFields) satisfies z.ZodType<ClientFormInput>,
-  update: z.object({
-    ...baseClientFields,
-    name: z.string().min(1, '取引先名を空にすることはできません').optional(),
-  }) satisfies z.ZodType<Partial<ClientFormInput>>,
+  create: createClientSchema,
+  update: updateClientSchema,
 };

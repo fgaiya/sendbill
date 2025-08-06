@@ -7,17 +7,14 @@ import { useRouter } from 'next/navigation';
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
-import { z } from 'zod';
 
 import { BaseForm } from '@/components/ui/BaseForm';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
-import { clientSchemas } from '@/lib/domains/clients/schemas';
+import { ClientUpdateData, clientSchemas } from '@/lib/domains/clients/schemas';
 import { Client } from '@/lib/domains/clients/types';
 
 import { ClientFormFields } from './ClientFormFields';
-
-type ClientUpdateData = z.infer<typeof clientSchemas.update>;
 
 interface ClientEditFormProps {
   clientId: string;
@@ -33,13 +30,6 @@ export function ClientEditForm({ clientId }: ClientEditFormProps) {
 
   const form = useForm<ClientUpdateData>({
     resolver: zodResolver(clientSchemas.update),
-    defaultValues: {
-      name: '',
-      contactName: '',
-      contactEmail: '',
-      address: '',
-      phone: '',
-    },
     mode: 'onBlur',
   });
 
