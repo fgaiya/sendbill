@@ -112,10 +112,7 @@ export function ClientEditForm({ clientId }: ClientEditFormProps) {
 
       setSubmitSuccess(true);
 
-      // 成功時は詳細ページに戻る
-      setTimeout(() => {
-        router.push(`/dashboard/clients/${clientId}`);
-      }, 2000);
+      router.push(`/dashboard/clients/${clientId}`);
     } catch (error) {
       const message =
         error instanceof Error ? error.message : '取引先の更新に失敗しました';
@@ -207,7 +204,7 @@ export function ClientEditForm({ clientId }: ClientEditFormProps) {
           isValid={isValid}
           submitError={submitError}
           submitSuccess={submitSuccess}
-          successMessage="取引先が正常に更新されました！詳細ページに戻ります..."
+          successMessage="取引先が正常に更新されました！"
           submitLabel="更新"
           submittingLabel="更新中..."
           resetLabel="元に戻す"

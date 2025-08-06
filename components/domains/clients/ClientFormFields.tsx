@@ -25,13 +25,13 @@ export function ClientFormFields<T extends ClientFieldsShape = ClientFormData>({
   return (
     <div className="space-y-6">
       <ClientBasicInfoFields
-        control={control as Control<ClientFormData>}
-        errors={errors as FieldErrors<ClientFormData>}
+        control={control}
+        errors={errors}
         isSubmitting={isSubmitting}
       />
       <ClientContactInfoFields
-        control={control as Control<ClientFormData>}
-        errors={errors as FieldErrors<ClientFormData>}
+        control={control}
+        errors={errors}
         isSubmitting={isSubmitting}
       />
     </div>

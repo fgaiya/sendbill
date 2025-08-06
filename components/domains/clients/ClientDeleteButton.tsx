@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
@@ -25,6 +25,8 @@ export function ClientDeleteButton({
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const { deleteClient, isDeleting, deleteError, clearError } =
     useClientDelete();
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const cancelButtonRef = useRef<HTMLButtonElement>(null);
 
   const handleDeleteClick = () => {
     clearError();
@@ -41,10 +43,44 @@ export function ClientDeleteButton({
     // エラーの場合はダイアログを開いたままにして、エラーメッセージを表示
   };
 
-  const handleCancelDelete = () => {
+  const handleCancelDelete = useCallback(() => {
     clearError();
     setShowConfirmDialog(false);
-  };
+  }, [clearError]);
+
+  // ESCキーでダイアログを閉じる
+  useEffect(() => {
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && showConfirmDialog) {
+        handleCancelDelete();
+      }
+    };
+
+    if (showConfirmDialog) {
+      document.addEventListener('keydown', handleEscapeKey);
+      // フォーカスをキャンセルボタンに設定
+      setTimeout(() => {
+        cancelButtonRef.current?.focus();
+      }, 0);
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscapeKey);
+    };
+  }, [showConfirmDialog, handleCancelDelete]);
+
+  // ダイアログが開いている間、背景のスクロールを無効化
+  useEffect(() => {
+    if (showConfirmDialog) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [showConfirmDialog]);
 
   return (
     <>
@@ -77,8 +113,18 @@ export function ClientDeleteButton({
 
       {/* 削除確認ダイアログ */}
       {showConfirmDialog && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+        <div
+          className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50"
+          onClick={handleCancelDelete}
+        >
+          <div
+            ref={dialogRef}
+            className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-dialog-title"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="p-6">
               <div className="flex items-center mb-4">
                 <div className="flex-shrink-0 w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
@@ -97,7 +143,10 @@ export function ClientDeleteButton({
                   </svg>
                 </div>
                 <div className="ml-4">
-                  <h3 className="text-lg font-medium text-gray-900">
+                  <h3
+                    id="delete-dialog-title"
+                    className="text-lg font-medium text-gray-900"
+                  >
                     取引先を削除
                   </h3>
                 </div>
@@ -117,7 +166,6 @@ export function ClientDeleteButton({
                 <p className="text-sm text-red-600 font-medium">
                   関連する見積書や請求書がある場合は削除できません。
                 </p>
-
                 {deleteError && (
                   <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
                     <p className="text-sm text-red-700">{deleteError}</p>
@@ -127,6 +175,7 @@ export function ClientDeleteButton({
 
               <div className="flex gap-3 justify-end">
                 <Button
+                  ref={cancelButtonRef}
                   type="button"
                   variant="outline"
                   onClick={handleCancelDelete}

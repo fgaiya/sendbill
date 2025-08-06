@@ -2,9 +2,9 @@ import { Metadata } from 'next';
 
 import { ClientEditForm } from '@/components/domains/clients';
 
-interface ClientEditPageProps {
+type ClientEditPageProps = {
   params: Promise<{ id: string }>;
-}
+};
 
 export const metadata: Metadata = {
   title: '取引先編集 | SendBill',
@@ -13,6 +13,5 @@ export const metadata: Metadata = {
 
 export default async function ClientEditPage({ params }: ClientEditPageProps) {
   const { id } = await params;
-
   return <ClientEditForm clientId={id} />;
 }
