@@ -12,6 +12,7 @@ interface ClientDeleteButtonProps {
   onDeleteSuccess?: () => void;
   size?: 'sm' | 'default' | 'lg';
   variant?: 'default' | 'outline' | 'ghost';
+  asTextLink?: boolean;
 }
 
 export function ClientDeleteButton({
@@ -19,6 +20,7 @@ export function ClientDeleteButton({
   onDeleteSuccess,
   size = 'sm',
   variant = 'outline',
+  asTextLink = false,
 }: ClientDeleteButtonProps) {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const { deleteClient, isDeleting, deleteError, clearError } =
@@ -46,22 +48,32 @@ export function ClientDeleteButton({
 
   return (
     <>
-      <Button
-        variant={variant}
-        size={size}
-        onClick={handleDeleteClick}
-        disabled={isDeleting}
-        className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 hover:border-red-300"
-      >
-        {isDeleting ? (
-          <>
-            <Spinner size="sm" className="mr-2" />
-            削除中...
-          </>
-        ) : (
-          '削除'
-        )}
-      </Button>
+      {asTextLink ? (
+        <button
+          onClick={handleDeleteClick}
+          disabled={isDeleting}
+          className="text-red-600 hover:text-red-900 transition-colors disabled:text-red-400"
+        >
+          {isDeleting ? '削除中...' : '削除'}
+        </button>
+      ) : (
+        <Button
+          variant={variant}
+          size={size}
+          onClick={handleDeleteClick}
+          disabled={isDeleting}
+          className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 hover:border-red-300"
+        >
+          {isDeleting ? (
+            <>
+              <Spinner size="sm" className="mr-2" />
+              削除中...
+            </>
+          ) : (
+            '削除'
+          )}
+        </Button>
+      )}
 
       {/* 削除確認ダイアログ */}
       {showConfirmDialog && (

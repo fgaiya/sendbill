@@ -4,12 +4,19 @@ import { Card } from '@/components/ui/card';
 import { Client } from '@/lib/domains/clients/types';
 import { formatDate } from '@/lib/shared/utils/date';
 
+import { ClientDeleteButton } from './ClientDeleteButton';
+
 interface ClientListCardsProps {
   clients: Client[];
   isLoading: boolean;
+  onClientDeleted?: () => void;
 }
 
-export function ClientListCards({ clients, isLoading }: ClientListCardsProps) {
+export function ClientListCards({
+  clients,
+  isLoading,
+  onClientDeleted,
+}: ClientListCardsProps) {
   if (isLoading) {
     return (
       <div className="md:hidden space-y-4">
@@ -52,6 +59,12 @@ export function ClientListCards({ clients, isLoading }: ClientListCardsProps) {
                 >
                   編集
                 </Link>
+                <span className="text-gray-300">|</span>
+                <ClientDeleteButton
+                  client={client}
+                  onDeleteSuccess={onClientDeleted}
+                  asTextLink={true}
+                />
               </div>
             </div>
 

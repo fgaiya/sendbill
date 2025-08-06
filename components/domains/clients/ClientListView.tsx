@@ -25,7 +25,7 @@ export function ClientListView({
   params,
 }: ClientListViewProps) {
   const { clients, isLoading, pagination } = state;
-  const { setPage, setSort, setSearch } = actions;
+  const { setPage, setSort, setSearch, refresh } = actions;
 
   const handleReset = () => {
     setSearch('');
@@ -53,10 +53,18 @@ export function ClientListView({
           ) : (
             <>
               {/* デスクトップ用テーブル */}
-              <ClientListTable clients={clients} isLoading={isLoading} />
+              <ClientListTable
+                clients={clients}
+                isLoading={isLoading}
+                onClientDeleted={refresh}
+              />
 
               {/* モバイル用カード */}
-              <ClientListCards clients={clients} isLoading={isLoading} />
+              <ClientListCards
+                clients={clients}
+                isLoading={isLoading}
+                onClientDeleted={refresh}
+              />
 
               {/* ページネーション */}
               {!isLoading && (

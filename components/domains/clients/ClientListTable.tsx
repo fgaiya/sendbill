@@ -3,12 +3,19 @@ import Link from 'next/link';
 import { Client } from '@/lib/domains/clients/types';
 import { formatDate } from '@/lib/shared/utils/date';
 
+import { ClientDeleteButton } from './ClientDeleteButton';
+
 interface ClientListTableProps {
   clients: Client[];
   isLoading: boolean;
+  onClientDeleted?: () => void;
 }
 
-export function ClientListTable({ clients, isLoading }: ClientListTableProps) {
+export function ClientListTable({
+  clients,
+  isLoading,
+  onClientDeleted,
+}: ClientListTableProps) {
   if (isLoading) {
     return (
       <div className="hidden md:block">
@@ -131,6 +138,12 @@ export function ClientListTable({ clients, isLoading }: ClientListTableProps) {
                     >
                       編集
                     </Link>
+                    <span className="text-gray-300">|</span>
+                    <ClientDeleteButton
+                      client={client}
+                      onDeleteSuccess={onClientDeleted}
+                      asTextLink={true}
+                    />
                   </div>
                 </td>
               </tr>
