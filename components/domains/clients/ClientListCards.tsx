@@ -38,12 +38,21 @@ export function ClientListCards({ clients, isLoading }: ClientListCardsProps) {
               <h3 className="text-lg font-medium text-gray-900 truncate">
                 {client.name}
               </h3>
-              <Link
-                href={`/dashboard/clients/${client.id}`}
-                className="text-blue-600 hover:text-blue-900 text-sm font-medium whitespace-nowrap ml-2"
-              >
-                詳細 →
-              </Link>
+              <div className="flex items-center gap-2 text-sm font-medium whitespace-nowrap ml-2">
+                <Link
+                  href={`/dashboard/clients/${client.id}`}
+                  className="text-blue-600 hover:text-blue-900 transition-colors"
+                >
+                  詳細
+                </Link>
+                <span className="text-gray-300">|</span>
+                <Link
+                  href={`/dashboard/clients/${client.id}/edit`}
+                  className="text-green-600 hover:text-green-900 transition-colors"
+                >
+                  編集
+                </Link>
+              </div>
             </div>
 
             <div className="space-y-2 text-sm">

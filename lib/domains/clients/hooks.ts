@@ -12,6 +12,7 @@ import {
   ClientListParams,
   ClientListResponse,
   UseClientListReturn,
+  Client,
 } from './types';
 
 /**
@@ -227,5 +228,55 @@ export function useClientList(
       refresh,
     },
     params,
+  };
+}
+
+/**
+ * 取引先削除管理フック
+ */
+export function useClientDelete() {
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string>();
+
+  const deleteClient = useCallback(async (client: Client): Promise<boolean> => {
+    try {
+      setIsDeleting(true);
+      setDeleteError(undefined);
+
+      const response = await fetch(`/api/clients/${client.id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        let errorMessage = '取引先の削除に失敗しました';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch {
+          // JSON以外のレスポンスの場合はデフォルトメッセージを使用
+        }
+        throw new Error(errorMessage);
+      }
+
+      return true;
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : '取引先の削除に失敗しました';
+      setDeleteError(message);
+      return false;
+    } finally {
+      setIsDeleting(false);
+    }
+  }, []);
+
+  const clearError = useCallback(() => {
+    setDeleteError(undefined);
+  }, []);
+
+  return {
+    deleteClient,
+    isDeleting,
+    deleteError,
+    clearError,
   };
 }

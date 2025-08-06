@@ -11,3 +11,6 @@ export { ClientListTable } from './ClientListTable';
 export { ClientListCards } from './ClientListCards';
 export { ClientListPagination } from './ClientListPagination';
 export { ClientListEmpty } from './ClientListEmpty';
+export { ClientDetail } from './ClientDetail';
+export { ClientEditForm } from './ClientEditForm';
+export { ClientDeleteButton } from './ClientDeleteButton';
