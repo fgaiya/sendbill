@@ -4,12 +4,19 @@ import { Card } from '@/components/ui/card';
 import { Client } from '@/lib/domains/clients/types';
 import { formatDate } from '@/lib/shared/utils/date';
 
+import { ClientDeleteButton } from './ClientDeleteButton';
+
 interface ClientListCardsProps {
   clients: Client[];
   isLoading: boolean;
+  onClientDeleted?: () => void;
 }
 
-export function ClientListCards({ clients, isLoading }: ClientListCardsProps) {
+export function ClientListCards({
+  clients,
+  isLoading,
+  onClientDeleted,
+}: ClientListCardsProps) {
   if (isLoading) {
     return (
       <div className="md:hidden space-y-4">
@@ -38,12 +45,27 @@ export function ClientListCards({ clients, isLoading }: ClientListCardsProps) {
               <h3 className="text-lg font-medium text-gray-900 truncate">
                 {client.name}
               </h3>
-              <Link
-                href={`/dashboard/clients/${client.id}`}
-                className="text-blue-600 hover:text-blue-900 text-sm font-medium whitespace-nowrap ml-2"
-              >
-                詳細 →
-              </Link>
+              <div className="flex items-center gap-2 text-sm font-medium whitespace-nowrap ml-2">
+                <Link
+                  href={`/dashboard/clients/${client.id}`}
+                  className="text-blue-600 hover:text-blue-900 transition-colors"
+                >
+                  詳細
+                </Link>
+                <span className="text-gray-300">|</span>
+                <Link
+                  href={`/dashboard/clients/${client.id}/edit`}
+                  className="text-green-600 hover:text-green-900 transition-colors"
+                >
+                  編集
+                </Link>
+                <span className="text-gray-300">|</span>
+                <ClientDeleteButton
+                  client={client}
+                  onDeleteSuccess={onClientDeleted}
+                  asTextLink={true}
+                />
+              </div>
             </div>
 
             <div className="space-y-2 text-sm">

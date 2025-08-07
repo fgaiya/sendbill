@@ -4,7 +4,7 @@ import Link from 'next/link';
 
 import { useAuth, UserButton } from '@clerk/nextjs';
 
-import { Navigation } from '@/components/domains/navigation';
+import Navigation from '@/components/domains/navigation/Navigation';
 import {
   useMenuState,
   useKeyboardNavigation,

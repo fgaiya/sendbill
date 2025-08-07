@@ -85,9 +85,21 @@ export interface ClientFormActions {
   clearMessages: () => void;
 }
 
-// useClientForm フックの戻り値型
+// useClientForm フックのオプション
+export interface UseClientFormOptions {
+  clientId?: string;
+}
+
+// 拡張されたフォーム状態（データ取得状態を含む）
+export interface ExtendedClientFormState extends ClientFormState {
+  isLoading: boolean;
+  fetchError?: string;
+  client?: Client;
+}
+
+// useClientForm フックの戻り値型（新規・編集両対応）
 export interface UseClientFormReturn {
   form: UseFormReturn<ClientFormData>;
-  state: ClientFormState;
+  state: ExtendedClientFormState;
   actions: ClientFormActions;
 }

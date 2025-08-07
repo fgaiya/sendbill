@@ -4,7 +4,7 @@ import Link from 'next/link';
 
 import { useAuth, UserButton } from '@clerk/nextjs';
 
-import { Navigation } from '@/components/domains/navigation';
+import Navigation from '@/components/domains/navigation/Navigation';
 import { KeyboardEventHandler } from '@/lib/domains/navigation/types';
 import { APP_CONFIG } from '@/lib/shared/config';
 import { cn } from '@/lib/shared/utils/ui';

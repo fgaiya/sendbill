@@ -6,21 +6,20 @@ import { Controller } from 'react-hook-form';
 
 import { FormFieldWrapper } from '@/components/ui/form-field';
 import { Input } from '@/components/ui/input';
-import { ClientFormData } from '@/lib/domains/clients/types';
 
-import type { Control, FieldErrors } from 'react-hook-form';
+import type { Control, FieldValues, Path, FieldErrors } from 'react-hook-form';
 
-interface ClientContactInfoFieldsProps {
-  control: Control<ClientFormData>;
-  errors: FieldErrors<ClientFormData>;
+interface ClientContactInfoFieldsProps<T extends FieldValues> {
+  control: Control<T>;
+  errors: FieldErrors<T>;
   isSubmitting: boolean;
 }
 
-export function ClientContactInfoFields({
+export function ClientContactInfoFields<T extends FieldValues>({
   control,
   errors,
   isSubmitting,
-}: ClientContactInfoFieldsProps) {
+}: ClientContactInfoFieldsProps<T>) {
   return (
     <div className="space-y-4">
       <h3 className="text-lg font-semibold text-gray-900">
@@ -30,15 +29,16 @@ export function ClientContactInfoFields({
       {/* 担当者名 */}
       <Controller
         control={control}
-        name="contactName"
+        name={'contactName' as Path<T>}
         render={({ field }) => (
           <FormFieldWrapper
             label="担当者名"
             id="contactName"
-            error={errors.contactName?.message}
+            error={errors.contactName?.message as string}
           >
             <Input
               {...field}
+              value={field.value || ''}
               id="contactName"
               placeholder="田中太郎"
               disabled={isSubmitting}
@@ -50,15 +50,16 @@ export function ClientContactInfoFields({
       {/* 担当者メールアドレス */}
       <Controller
         control={control}
-        name="contactEmail"
+        name={'contactEmail' as Path<T>}
         render={({ field }) => (
           <FormFieldWrapper
             label="担当者メールアドレス"
             id="contactEmail"
-            error={errors.contactEmail?.message}
+            error={errors.contactEmail?.message as string}
           >
             <Input
               {...field}
+              value={field.value || ''}
               id="contactEmail"
               type="email"
               placeholder="tanaka@example.com"
@@ -71,16 +72,17 @@ export function ClientContactInfoFields({
       {/* 電話番号 */}
       <Controller
         control={control}
-        name="phone"
+        name={'phone' as Path<T>}
         render={({ field }) => (
           <FormFieldWrapper
             label="電話番号"
             id="phone"
-            error={errors.phone?.message}
+            error={errors.phone?.message as string}
             description="ハイフンありまたはなしで入力してください"
           >
             <Input
               {...field}
+              value={field.value || ''}
               id="phone"
               placeholder="03-1234-5678"
               disabled={isSubmitting}

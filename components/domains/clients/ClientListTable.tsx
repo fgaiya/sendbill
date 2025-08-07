@@ -3,12 +3,19 @@ import Link from 'next/link';
 import { Client } from '@/lib/domains/clients/types';
 import { formatDate } from '@/lib/shared/utils/date';
 
+import { ClientDeleteButton } from './ClientDeleteButton';
+
 interface ClientListTableProps {
   clients: Client[];
   isLoading: boolean;
+  onClientDeleted?: () => void;
 }
 
-export function ClientListTable({ clients, isLoading }: ClientListTableProps) {
+export function ClientListTable({
+  clients,
+  isLoading,
+  onClientDeleted,
+}: ClientListTableProps) {
   if (isLoading) {
     return (
       <div className="hidden md:block">
@@ -117,12 +124,27 @@ export function ClientListTable({ clients, isLoading }: ClientListTableProps) {
                   {formatDate(client.createdAt) || '不正な日付'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <Link
-                    href={`/dashboard/clients/${client.id}`}
-                    className="text-blue-600 hover:text-blue-900"
-                  >
-                    詳細
-                  </Link>
+                  <div className="flex items-center justify-end gap-2">
+                    <Link
+                      href={`/dashboard/clients/${client.id}`}
+                      className="text-blue-600 hover:text-blue-900 transition-colors"
+                    >
+                      詳細
+                    </Link>
+                    <span className="text-gray-300">|</span>
+                    <Link
+                      href={`/dashboard/clients/${client.id}/edit`}
+                      className="text-green-600 hover:text-green-900 transition-colors"
+                    >
+                      編集
+                    </Link>
+                    <span className="text-gray-300">|</span>
+                    <ClientDeleteButton
+                      client={client}
+                      onDeleteSuccess={onClientDeleted}
+                      asTextLink={true}
+                    />
+                  </div>
                 </td>
               </tr>
             ))}
