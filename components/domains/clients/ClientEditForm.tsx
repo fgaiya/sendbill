@@ -1,19 +1,13 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
-import { toast } from 'sonner';
 
 import { BaseForm } from '@/components/ui/BaseForm';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
-import { ClientUpdateData, clientSchemas } from '@/lib/domains/clients/schemas';
-import { Client } from '@/lib/domains/clients/types';
+import { useClientForm } from '@/lib/domains/clients/hooks';
 
 import { ClientFormFields } from './ClientFormFields';
 
@@ -22,123 +16,22 @@ interface ClientEditFormProps {
 }
 
 export function ClientEditForm({ clientId }: ClientEditFormProps) {
-  const router = useRouter();
-  const [client, setClient] = useState<Client | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string>();
-  const [submitError, setSubmitError] = useState<string>();
-  const [submitSuccess, setSubmitSuccess] = useState(false);
-
-  const form = useForm<ClientUpdateData>({
-    resolver: zodResolver(clientSchemas.update),
-    mode: 'onBlur',
-  });
+  const { form, state, actions } = useClientForm({ clientId });
 
   const {
     control,
-    handleSubmit,
-    reset,
-    formState: { errors, isValid, isDirty, isSubmitting },
+    formState: { errors, isValid, isDirty },
   } = form;
 
-  // 取引先データの取得と初期化
-  useEffect(() => {
-    const fetchClient = async () => {
-      try {
-        setIsLoading(true);
-        setError(undefined);
-
-        const response = await fetch(`/api/clients/${clientId}`);
-
-        if (!response.ok) {
-          if (response.status === 404) {
-            throw new Error('取引先が見つかりません');
-          }
-          let errorMessage = '取引先の取得に失敗しました';
-          try {
-            const errorData = await response.json();
-            errorMessage = errorData.error || errorMessage;
-          } catch {
-            // JSON以外のレスポンスの場合はデフォルトメッセージを使用
-          }
-          throw new Error(errorMessage);
-        }
-
-        const clientData: Client = await response.json();
-        setClient(clientData);
-
-        // フォームの初期値を設定
-        reset({
-          name: clientData.name,
-          contactName: clientData.contactName || '',
-          contactEmail: clientData.contactEmail || '',
-          address: clientData.address || '',
-          phone: clientData.phone || '',
-        });
-      } catch (err) {
-        const message =
-          err instanceof Error ? err.message : '取引先の取得に失敗しました';
-        setError(message);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    void fetchClient();
-  }, [clientId, reset]);
-
-  const onSubmit = async (data: ClientUpdateData) => {
-    try {
-      setSubmitError(undefined);
-      setSubmitSuccess(false);
-
-      const response = await fetch(`/api/clients/${clientId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
-
-      if (!response.ok) {
-        let errorMessage = '取引先の更新に失敗しました';
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.error || errorMessage;
-        } catch {
-          // JSON以外のレスポンスの場合はデフォルトメッセージを使用
-        }
-        throw new Error(errorMessage);
-      }
-
-      setSubmitSuccess(true);
-
-      // 成功トーストを表示
-      toast.success('取引先が正常に更新されました！');
-
-      // 詳細ページにリダイレクト
-      router.push(`/dashboard/clients/${clientId}`);
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : '取引先の更新に失敗しました';
-      setSubmitError(message);
-      toast.error(message);
-    }
-  };
-
-  const onReset = () => {
-    if (client) {
-      reset({
-        name: client.name,
-        contactName: client.contactName || '',
-        contactEmail: client.contactEmail || '',
-        address: client.address || '',
-        phone: client.phone || '',
-      });
-    }
-    setSubmitError(undefined);
-    setSubmitSuccess(false);
-  };
+  const {
+    isLoading,
+    isSubmitting,
+    fetchError,
+    submitError,
+    submitSuccess,
+    client,
+  } = state;
+  const { onSubmit, onReset } = actions;
 
   if (isLoading) {
     return (
@@ -148,12 +41,12 @@ export function ClientEditForm({ clientId }: ClientEditFormProps) {
     );
   }
 
-  if (error) {
+  if (fetchError) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-900 mb-4">エラー</h1>
-          <p className="text-gray-600 mb-8">{error}</p>
+          <p className="text-gray-600 mb-8">{fetchError}</p>
           <Link href="/dashboard/clients">
             <Button>取引先一覧に戻る</Button>
           </Link>
@@ -204,7 +97,7 @@ export function ClientEditForm({ clientId }: ClientEditFormProps) {
         <BaseForm
           title={`${client.name} の編集`}
           description="取引先の情報を更新してください"
-          onSubmit={handleSubmit(onSubmit)}
+          onSubmit={onSubmit}
           onReset={onReset}
           isSubmitting={isSubmitting}
           isValid={isValid}
