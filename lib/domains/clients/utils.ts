@@ -103,9 +103,10 @@ export function buildIncludeRelations(
 /**
  * クライアント検索WHERE条件を構築
  */
-export function buildClientSearchWhere(userId: string, query?: string) {
+export function buildClientSearchWhere(companyId: string, query?: string) {
   return {
-    userId,
+    companyId,
+    deletedAt: null, // 論理削除されていないレコードのみ
     ...(query && {
       OR: CLIENT_SEARCH_FIELDS.map((field) => ({
         [field]: { contains: query, mode: 'insensitive' as const },

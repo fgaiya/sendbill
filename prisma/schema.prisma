@@ -8,24 +8,20 @@ datasource db {
 }
 
 model User {
-  id        String    @id @default(cuid())
-  clerkId   String    @unique
-  email     String    @unique
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id        String   @id @default(cuid())
+  clerkId   String   @unique
+  email     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  company   Company?
-
-  clients   Client[]
-  quotes    Quote[]
-  invoices  Invoice[]
+  company Company?
 
   @@map("users")
 }
 
 model Company {
   id                        String   @id @default(cuid())
-  user                      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                      User     @relation(fields: [userId], references: [id], onDelete: Restrict)
   userId                    String   @unique
   companyName               String
   businessName              String?
@@ -45,13 +41,25 @@ model Company {
   createdAt                 DateTime @default(now())
   updatedAt                 DateTime @updatedAt
 
+  priceIncludesTax Boolean @default(false)
+  standardTaxRate  Decimal @default(10.00) @db.Decimal(5, 2)
+  reducedTaxRate   Decimal @default(8.00) @db.Decimal(5, 2)
+
+  quoteNumberSeq   Int @default(1)
+  invoiceNumberSeq Int @default(1)
+
+  clients  Client[]
+  quotes   Quote[]
+  invoices Invoice[]
+
   @@map("companies")
 }
 
 model Client {
-  id           String    @id @default(cuid())
-  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId       String
+  id        String  @id @default(cuid())
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  companyId String
+
   name         String
   contactName  String?
   contactEmail String?
@@ -59,90 +67,124 @@ model Client {
   phone        String?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
-  invoices     Invoice[]
-  quotes       Quote[]
+  deletedAt    DateTime?
 
-  @@index([userId])
+  invoices Invoice[]
+  quotes   Quote[]
+
+  @@index([companyId])
+  @@index([companyId, createdAt])
+  @@index([companyId, deletedAt])
   @@map("clients")
 }
 
 model Quote {
-  id          String      @id @default(cuid())
-  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId      String
-  client      Client      @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  clientId    String
+  id        String  @id @default(cuid())
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  companyId String
+  client    Client  @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  clientId  String
+
   quoteNumber String
   issueDate   DateTime
   expiryDate  DateTime?
   status      QuoteStatus @default(DRAFT)
   notes       String?
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  
-  items       QuoteItem[]
-  invoices    Invoice[]
 
-  @@index([clientId])
-  @@index([userId])
-  @@index([status])
-  @@unique([userId, quoteNumber])
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  items    QuoteItem[]
+  invoices Invoice[]
+
+  @@unique([companyId, quoteNumber])
+  @@index([companyId, clientId, status])
+  @@index([companyId, status, issueDate])
+  @@index([companyId, deletedAt])
   @@map("quotes")
 }
 
 model QuoteItem {
-  id          String   @id @default(cuid())
-  quote       Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
-  quoteId     String
+  id      String @id @default(cuid())
+  quote   Quote  @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  quoteId String
+
   description String
-  quantity    Decimal  @db.Decimal(10, 2)
-  unitPrice   Decimal  @db.Decimal(10, 2)
-  taxRate     Decimal? @db.Decimal(5, 2)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  quantity    Decimal     @db.Decimal(10, 3)
+  unitPrice   Decimal     @db.Decimal(10, 2)
+  taxCategory TaxCategory @default(STANDARD)
+  taxRate     Decimal?    @db.Decimal(5, 2)
+
+  discountAmount Decimal @default(0) @db.Decimal(10, 2)
+  unit           String?
+  sku            String?
+  sortOrder      Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([quoteId])
   @@map("quote_items")
 }
 
 model Invoice {
-  id            String        @id @default(cuid())
-  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId        String
-  client        Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  clientId      String
-  quote         Quote?        @relation(fields: [quoteId], references: [id], onDelete: Restrict)
-  quoteId       String?
+  id        String  @id @default(cuid())
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  companyId String
+  client    Client  @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  clientId  String
+  quote     Quote?  @relation(fields: [quoteId], references: [id], onDelete: Restrict)
+  quoteId   String?
+
   invoiceNumber String
   issueDate     DateTime
   dueDate       DateTime?
   status        InvoiceStatus @default(DRAFT)
   notes         String?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  items         InvoiceItem[]
 
-  @@index([clientId])
-  @@index([quoteId])
-  @@index([userId])
-  @@index([status])
-  @@unique([userId, invoiceNumber])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  paymentDate DateTime?
+
+  items InvoiceItem[]
+
+  @@unique([companyId, invoiceNumber])
+  @@index([companyId, clientId, status, quoteId])
+  @@index([companyId, status, issueDate])
+  @@index([companyId, deletedAt])
   @@map("invoices")
 }
 
 model InvoiceItem {
-  id          String   @id @default(cuid())
-  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  invoiceId   String
+  id        String  @id @default(cuid())
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoiceId String
+
   description String
-  quantity    Decimal  @db.Decimal(10, 2)
-  unitPrice   Decimal  @db.Decimal(10, 2)
-  taxRate     Decimal? @db.Decimal(5, 2)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  quantity    Decimal     @db.Decimal(10, 3)
+  unitPrice   Decimal     @db.Decimal(10, 2)
+  taxCategory TaxCategory @default(STANDARD)
+  taxRate     Decimal?    @db.Decimal(5, 2) // null時はCompanyの標準/軽減税率を適用
+
+  discountAmount Decimal @default(0) @db.Decimal(10, 2)
+  unit           String?
+  sku            String?
+  sortOrder      Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([invoiceId])
   @@map("invoice_items")
+}
+
+enum TaxCategory {
+  STANDARD // 標準税率（日本なら10%）
+  REDUCED // 軽減税率（日本なら8%）
+  EXEMPT // 非課税
+  NON_TAX // 不課税・対象外
 }
 
 enum QuoteStatus {

@@ -8,7 +8,7 @@ import {
 import { apiErrors, handleApiError } from '@/lib/shared/forms';
 import { prisma } from '@/lib/shared/prisma';
 import { requireResourceAccess } from '@/lib/shared/utils/auth';
-import { updateResource, deleteResource } from '@/lib/shared/utils/crud';
+import { updateResource } from '@/lib/shared/utils/crud';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -51,6 +51,11 @@ export async function GET(request: NextRequest, context: RouteContext) {
       return NextResponse.json(error, { status });
     }
 
+    // 削除済みの取引先は404を返す
+    if (client.deletedAt) {
+      return NextResponse.json(apiErrors.notFound('取引先'), { status: 404 });
+    }
+
     return NextResponse.json(client);
   } catch (error) {
     return handleApiError(error, 'Client fetch');
@@ -70,31 +75,36 @@ export async function PUT(request: NextRequest, context: RouteContext) {
 export async function DELETE(_request: NextRequest, context: RouteContext) {
   const { id } = await context.params;
 
-  // 関連データチェックのカスタムバリデーション
-  const validateClientDeletion = async () => {
-    const [invoiceCount, quoteCount] = await Promise.all([
-      prisma.invoice.count({ where: { clientId: id } }),
-      prisma.quote.count({ where: { clientId: id } }),
-    ]);
+  try {
+    const {
+      error,
+      status,
+      resource: client,
+    } = await requireResourceAccess(
+      await prisma.client.findUnique({ where: { id } }),
+      '取引先'
+    );
+    if (error) {
+      return NextResponse.json(error, { status });
+    }
 
-    if (invoiceCount > 0 || quoteCount > 0) {
+    if (client?.deletedAt) {
       return NextResponse.json(
-        apiErrors.conflict(
-          '関連する請求書または見積書が存在するため削除できません'
-        ),
-        { status: 409 }
+        { message: '既に削除済みです' },
+        { status: 200 }
       );
     }
 
-    return null; // バリデーション成功
-  };
+    await prisma.client.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
 
-  return deleteResource(
-    id,
-    {
-      model: prisma.client,
-      resourceName: '取引先',
-    },
-    validateClientDeletion
-  );
+    return NextResponse.json(
+      { message: '取引先を削除しました' },
+      { status: 200 }
+    );
+  } catch (error) {
+    return handleApiError(error, 'Client soft delete');
+  }
 }

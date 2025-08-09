@@ -102,19 +102,34 @@ async function handleUserCreated(data: ClerkUserData) {
       return;
     }
 
-    // upsertを使用して冪等性を確保
-    await prisma.user.upsert({
-      where: { clerkId: data.id },
-      update: { email: primaryEmail },
-      create: {
-        clerkId: data.id,
-        email: primaryEmail,
-      },
+    // トランザクション内でUser作成とCompany作成を同時実行
+    await prisma.$transaction(async (tx) => {
+      // upsertを使用して冪等性を確保
+      const user = await tx.user.upsert({
+        where: { clerkId: data.id },
+        update: { email: primaryEmail },
+        create: {
+          clerkId: data.id,
+          email: primaryEmail,
+        },
+      });
+
+      // 既存のCompanyがない場合のみ作成
+      await tx.company.upsert({
+        where: { userId: user.id },
+        update: {},
+        create: {
+          userId: user.id,
+          companyName: `${primaryEmail}の会社`, // デフォルト名
+        },
+      });
+      console.log('Company ensured (created or existed):', data.id);
     });
 
-    console.log('User created successfully:', data.id);
+    console.log('User and Company created successfully:', data.id);
   } catch (error) {
-    console.error('Failed to create user:', error);
+    console.error('Failed to create user and company:', error);
+    throw error;
   }
 }
 
@@ -143,6 +158,7 @@ async function handleUserUpdated(data: ClerkUserData) {
     console.log('User updated successfully:', data.id);
   } catch (error) {
     console.error('Failed to update user:', error);
+    throw error;
   }
 }
 
@@ -164,5 +180,6 @@ async function handleUserDeleted(data: ClerkUserData) {
     }
   } catch (error) {
     console.error('Failed to delete user:', error);
+    throw error;
   }
 }

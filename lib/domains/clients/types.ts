@@ -21,6 +21,7 @@ export type ClientFormData = z.infer<typeof clientSchemas.create>;
 // 取引先データ型（APIレスポンス）
 export interface Client {
   id: string;
+  companyId: string;
   name: string;
   contactName?: string;
   contactEmail?: string;
@@ -28,7 +29,7 @@ export interface Client {
   phone?: string;
   createdAt: string;
   updatedAt: string;
-  userId: string;
+  deletedAt?: string | null;
 }
 
 // 取引先のソート可能フィールド

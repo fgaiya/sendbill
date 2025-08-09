@@ -4,9 +4,8 @@ import { z } from 'zod';
 
 import { apiErrors, handleApiError } from '@/lib/shared/forms';
 import {
-  requireAuth,
-  requireAuthOrCreate,
   requireResourceAccess,
+  requireUserCompany,
 } from '@/lib/shared/utils/auth';
 import { omitUndefined } from '@/lib/shared/utils/objects';
 
@@ -36,14 +35,18 @@ type WhereArg<D extends DelegateLike> = Parameters<D['findUnique']>[0]['where'];
  * 汎用 CRUD オプション型
  * UncheckedCreateInput使用で型制約を緩和
  */
-interface CrudOptions<D extends DelegateLike, TCreateSchema, TUpdateSchema> {
+interface CrudOptions<
+  D extends DelegateLike,
+  TCreateSchema extends z.ZodSchema,
+  TUpdateSchema extends z.ZodSchema,
+> {
   model: D;
   schemas: {
     create: TCreateSchema;
     update: TUpdateSchema;
   };
   resourceName: string;
-  uniqueConstraint?: (userId: string) => WhereArg<D>;
+  uniqueConstraint?: (companyId: string) => WhereArg<D>;
 }
 
 /**
@@ -53,13 +56,9 @@ interface CrudOptions<D extends DelegateLike, TCreateSchema, TUpdateSchema> {
 async function createResourceInternal<
   D extends DelegateLike,
   TCreateSchema extends z.ZodSchema,
->(
-  request: NextRequest,
-  options: CrudOptions<D, TCreateSchema, z.ZodSchema>,
-  authFunction: typeof requireAuth | typeof requireAuthOrCreate
-) {
+>(request: NextRequest, options: CrudOptions<D, TCreateSchema, z.ZodSchema>) {
   try {
-    const { user, error, status } = await authFunction();
+    const { company, error, status } = await requireUserCompany();
     if (error) {
       return NextResponse.json(error, { status });
     }
@@ -72,7 +71,7 @@ async function createResourceInternal<
     // 一意制約チェック（オプション）
     if (options.uniqueConstraint) {
       const existing = await options.model.findUnique({
-        where: options.uniqueConstraint(user!.id),
+        where: options.uniqueConstraint(company!.id),
       } as { where: WhereArg<D> });
 
       if (existing) {
@@ -84,7 +83,10 @@ async function createResourceInternal<
     }
 
     const entity = await options.model.create({
-      data: { ...(validatedData as Record<string, unknown>), userId: user!.id },
+      data: {
+        ...(validatedData as Record<string, unknown>),
+        companyId: company!.id,
+      },
     });
 
     return NextResponse.json(entity, { status: 201 });
@@ -100,7 +102,7 @@ export async function createResource<
   D extends DelegateLike,
   TCreateSchema extends z.ZodSchema,
 >(request: NextRequest, options: CrudOptions<D, TCreateSchema, z.ZodSchema>) {
-  return createResourceInternal(request, options, requireAuth);
+  return createResourceInternal(request, options);
 }
 
 /**
@@ -112,17 +114,19 @@ async function getResourcesInternal<D extends DelegateLike>(
     CrudOptions<D, z.ZodSchema, z.ZodSchema>,
     'model' | 'resourceName'
   >,
-  whereOptions: Record<string, unknown> | undefined,
-  authFunction: typeof requireAuth | typeof requireAuthOrCreate
+  whereOptions: Record<string, unknown> | undefined
 ) {
   try {
-    const { user, error, status } = await authFunction();
+    const { company, error, status } = await requireUserCompany();
     if (error) {
       return NextResponse.json(error, { status });
     }
 
     const entities = await options.model.findMany({
-      where: { userId: user!.id, ...whereOptions },
+      where: {
+        ...whereOptions,
+        companyId: company!.id,
+      },
     });
 
     return NextResponse.json(entities);
@@ -141,7 +145,7 @@ export async function getResources<D extends DelegateLike>(
   >,
   whereOptions?: Record<string, unknown>
 ) {
-  return getResourcesInternal(options, whereOptions, requireAuth);
+  return getResourcesInternal(options, whereOptions);
 }
 
 /**
@@ -171,6 +175,18 @@ export async function updateResource<
     );
     if (error) {
       return NextResponse.json(error, { status });
+    }
+
+    // ソフト削除済みは更新不可（deletedAtプロパティが存在する場合に限定）
+    if (
+      _existingEntity &&
+      typeof _existingEntity === 'object' &&
+      'deletedAt' in (_existingEntity as Record<string, unknown>) &&
+      (_existingEntity as Record<string, unknown>)['deletedAt']
+    ) {
+      return NextResponse.json(apiErrors.notFound(options.resourceName), {
+        status: 404,
+      });
     }
 
     const filteredData = omitUndefined(
@@ -274,7 +290,7 @@ export async function createResourceWithAutoUser<
   D extends DelegateLike,
   TCreateSchema extends z.ZodSchema,
 >(request: NextRequest, options: CrudOptions<D, TCreateSchema, z.ZodSchema>) {
-  return createResourceInternal(request, options, requireAuthOrCreate);
+  return createResourceInternal(request, options);
 }
 
 /**
@@ -287,5 +303,5 @@ export async function getResourcesWithAutoUser<D extends DelegateLike>(
   >,
   whereOptions?: Record<string, unknown>
 ) {
-  return getResourcesInternal(options, whereOptions, requireAuthOrCreate);
+  return getResourcesInternal(options, whereOptions);
 }
