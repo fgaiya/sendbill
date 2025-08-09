@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+import { Prisma } from '@prisma/client';
+
 import { companySchemas, apiErrors, handleApiError } from '@/lib/shared/forms';
 import { prisma } from '@/lib/shared/prisma';
 import { requireAuth } from '@/lib/shared/utils/auth';
@@ -11,26 +13,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(error, { status });
     }
 
-    // 既存の会社情報チェック
-    const existingCompany = await prisma.company.findUnique({
-      where: { userId: user!.id },
-    });
-
-    if (existingCompany) {
-      return NextResponse.json(
-        apiErrors.conflict('会社情報は既に登録されています'),
-        { status: 409 }
-      );
-    }
-
     const body = await request.json();
     const validatedData = companySchemas.create.parse(body);
 
-    const company = await prisma.company.create({
-      data: { ...validatedData, userId: user!.id },
-    });
-
-    return NextResponse.json(company, { status: 201 });
+    // 直接作成を試行し、一意制約違反をキャッチ（TOCTOU問題を回避）
+    try {
+      const company = await prisma.company.create({
+        data: { ...validatedData, userId: user!.id },
+      });
+      return NextResponse.json(company, { status: 201 });
+    } catch (e: unknown) {
+      // 一意制約違反（並行リクエストによる重複作成）をキャッチ
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === 'P2002'
+      ) {
+        return NextResponse.json(
+          apiErrors.conflict('会社情報は既に登録されています'),
+          { status: 409 }
+        );
+      }
+      throw e;
+    }
   } catch (error) {
     return handleApiError(error, '会社情報 creation');
   }

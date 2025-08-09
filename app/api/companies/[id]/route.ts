@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+import { Prisma } from '@prisma/client';
+
 import { companySchemas, apiErrors, handleApiError } from '@/lib/shared/forms';
 import { prisma } from '@/lib/shared/prisma';
 import { requireAuth } from '@/lib/shared/utils/auth';
@@ -20,6 +22,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     // 会社情報を取得・所有権確認
     const existingCompany = await prisma.company.findUnique({
       where: { id },
+      select: { userId: true },
     });
 
     if (!existingCompany) {
@@ -69,23 +72,28 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
       return NextResponse.json(apiErrors.forbidden(), { status: 403 });
     }
 
-    // 関連データチェック（クライアント、見積書、請求書）
-    const [clientCount, quoteCount, invoiceCount] = await Promise.all([
-      prisma.client.count({ where: { companyId: id } }),
-      prisma.quote.count({ where: { companyId: id } }),
-      prisma.invoice.count({ where: { companyId: id } }),
-    ]);
-
-    if (clientCount > 0 || quoteCount > 0 || invoiceCount > 0) {
-      return NextResponse.json(
-        apiErrors.conflict('関連するデータが存在するため削除できません'),
-        { status: 409 }
-      );
+    try {
+      await prisma.company.delete({
+        where: { id },
+      });
+    } catch (e: unknown) {
+      // 外部キー制約違反（関連データ存在）をキャッチ
+      if (e instanceof Prisma.PrismaClientKnownRequestError) {
+        if (e.code === 'P2003') {
+          return NextResponse.json(
+            apiErrors.conflict('関連するデータが存在するため削除できません'),
+            { status: 409 }
+          );
+        }
+        if (e.code === 'P2025') {
+          // 競合で既に消えていた
+          return NextResponse.json(apiErrors.notFound('会社情報'), {
+            status: 404,
+          });
+        }
+      }
+      throw e;
     }
-
-    await prisma.company.delete({
-      where: { id },
-    });
 
     return NextResponse.json(
       { message: '会社情報を削除しました' },

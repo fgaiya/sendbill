@@ -29,7 +29,6 @@ export interface Client {
   phone?: string;
   createdAt: string;
   updatedAt: string;
-  userId: string;
   deletedAt?: string | null;
 }
 

@@ -123,7 +123,10 @@ async function getResourcesInternal<D extends DelegateLike>(
     }
 
     const entities = await options.model.findMany({
-      where: { companyId: company!.id, ...whereOptions },
+      where: {
+        ...whereOptions,
+        companyId: company!.id,
+      },
     });
 
     return NextResponse.json(entities);
@@ -172,6 +175,18 @@ export async function updateResource<
     );
     if (error) {
       return NextResponse.json(error, { status });
+    }
+
+    // ソフト削除済みは更新不可（deletedAtプロパティが存在する場合に限定）
+    if (
+      _existingEntity &&
+      typeof _existingEntity === 'object' &&
+      'deletedAt' in (_existingEntity as Record<string, unknown>) &&
+      (_existingEntity as Record<string, unknown>)['deletedAt']
+    ) {
+      return NextResponse.json(apiErrors.notFound(options.resourceName), {
+        status: 404,
+      });
     }
 
     const filteredData = omitUndefined(

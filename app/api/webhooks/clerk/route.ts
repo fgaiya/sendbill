@@ -115,24 +115,21 @@ async function handleUserCreated(data: ClerkUserData) {
       });
 
       // 既存のCompanyがない場合のみ作成
-      const existingCompany = await tx.company.findUnique({
+      await tx.company.upsert({
         where: { userId: user.id },
+        update: {},
+        create: {
+          userId: user.id,
+          companyName: `${primaryEmail}の会社`, // デフォルト名
+        },
       });
-
-      if (!existingCompany) {
-        await tx.company.create({
-          data: {
-            userId: user.id,
-            companyName: `${primaryEmail}の会社`, // デフォルト名（後で変更可能）
-          },
-        });
-        console.log('Company auto-created for user:', data.id);
-      }
+      console.log('Company ensured (created or existed):', data.id);
     });
 
     console.log('User and Company created successfully:', data.id);
   } catch (error) {
     console.error('Failed to create user and company:', error);
+    throw error;
   }
 }
 
@@ -161,6 +158,7 @@ async function handleUserUpdated(data: ClerkUserData) {
     console.log('User updated successfully:', data.id);
   } catch (error) {
     console.error('Failed to update user:', error);
+    throw error;
   }
 }
 
@@ -182,5 +180,6 @@ async function handleUserDeleted(data: ClerkUserData) {
     }
   } catch (error) {
     console.error('Failed to delete user:', error);
+    throw error;
   }
 }
