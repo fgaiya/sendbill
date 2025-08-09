@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { auth } from '@clerk/nextjs/server';
-
 import {
   dedicatedSearchSchema,
   buildIncludeRelations,
@@ -9,13 +7,13 @@ import {
 } from '@/lib/domains/clients/utils';
 import { apiErrors, handleApiError } from '@/lib/shared/forms';
 import { prisma } from '@/lib/shared/prisma';
+import { requireUserCompany } from '@/lib/shared/utils/auth';
 
 export async function GET(request: NextRequest) {
   try {
-    const { userId } = await auth();
-
-    if (!userId) {
-      return NextResponse.json(apiErrors.unauthorized(), { status: 401 });
+    const { company, error, status } = await requireUserCompany();
+    if (error) {
+      return NextResponse.json(error, { status });
     }
 
     const { searchParams } = new URL(request.url);
@@ -36,7 +34,7 @@ export async function GET(request: NextRequest) {
     const { q, limit, include } = searchResult.data;
 
     // 検索条件と関連データ取得設定の構築
-    const where = buildClientSearchWhere(userId, q);
+    const where = buildClientSearchWhere(company!.id, q);
     const includeRelations = buildIncludeRelations(include);
 
     // 検索実行（名前順でソート）とカウント（並列実行）

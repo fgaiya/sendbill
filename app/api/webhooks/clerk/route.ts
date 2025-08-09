@@ -102,19 +102,37 @@ async function handleUserCreated(data: ClerkUserData) {
       return;
     }
 
-    // upsertを使用して冪等性を確保
-    await prisma.user.upsert({
-      where: { clerkId: data.id },
-      update: { email: primaryEmail },
-      create: {
-        clerkId: data.id,
-        email: primaryEmail,
-      },
+    // トランザクション内でUser作成とCompany作成を同時実行
+    await prisma.$transaction(async (tx) => {
+      // upsertを使用して冪等性を確保
+      const user = await tx.user.upsert({
+        where: { clerkId: data.id },
+        update: { email: primaryEmail },
+        create: {
+          clerkId: data.id,
+          email: primaryEmail,
+        },
+      });
+
+      // 既存のCompanyがない場合のみ作成
+      const existingCompany = await tx.company.findUnique({
+        where: { userId: user.id },
+      });
+
+      if (!existingCompany) {
+        await tx.company.create({
+          data: {
+            userId: user.id,
+            companyName: `${primaryEmail}の会社`, // デフォルト名（後で変更可能）
+          },
+        });
+        console.log('Company auto-created for user:', data.id);
+      }
     });
 
-    console.log('User created successfully:', data.id);
+    console.log('User and Company created successfully:', data.id);
   } catch (error) {
-    console.error('Failed to create user:', error);
+    console.error('Failed to create user and company:', error);
   }
 }
 

@@ -111,9 +111,11 @@ function createAuthResponse(user: { id: string } | null) {
 /**
  * 認証チェックとユーザー取得を行うヘルパー関数
  * APIルートで使用するための統一的な認証処理
+ * 開発環境では自動ユーザー作成、本番環境ではWebhook前提
  */
 export async function requireAuth() {
-  const user = await getOrCreateUser(false);
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  const user = await getOrCreateUser(isDevelopment);
   return createAuthResponse(user);
 }
 
@@ -123,7 +125,68 @@ export async function requireAuth() {
  * @param resourceName - エラーメッセージ用のリソース名
  * @returns 認証済みユーザーと確認済みリソース
  */
-export async function requireResourceAccess<T extends { userId: string }>(
+/**
+ * 認証済みユーザーの会社情報を取得する（自動作成対応）
+ */
+export async function requireUserCompany() {
+  const { user, error, status } = await requireAuth();
+  if (error) {
+    return { error, status, user: null, company: null };
+  }
+
+  let company = await prisma.company.findUnique({
+    where: { userId: user!.id },
+  });
+
+  // Company が存在しない場合は自動作成（既存ユーザー対応）
+  if (!company) {
+    try {
+      // Userの詳細情報を取得してemailを確認
+      const fullUser = await prisma.user.findUnique({
+        where: { id: user!.id },
+      });
+
+      company = await prisma.company.create({
+        data: {
+          userId: user!.id,
+          companyName: fullUser?.email
+            ? `${fullUser.email}の会社`
+            : '新しい会社', // デフォルト名（後で変更可能）
+        },
+      });
+      console.log('Company auto-created for existing user:', user!.id);
+    } catch (createError) {
+      // 同時リクエストでの重複作成を考慮
+      if (
+        createError instanceof Prisma.PrismaClientKnownRequestError &&
+        createError.code === 'P2002'
+      ) {
+        // 再度検索を試行
+        company = await prisma.company.findUnique({
+          where: { userId: user!.id },
+        });
+      }
+
+      if (!company) {
+        console.error(
+          'Failed to create or find company for user:',
+          user!.id,
+          createError
+        );
+        return {
+          error: apiErrors.internal(),
+          status: 500,
+          user,
+          company: null,
+        };
+      }
+    }
+  }
+
+  return { error: null, status: 200, user, company };
+}
+
+export async function requireResourceAccess<T extends { companyId: string }>(
   resource: T | null,
   resourceName: string
 ) {
@@ -132,25 +195,42 @@ export async function requireResourceAccess<T extends { userId: string }>(
       error: apiErrors.notFound(resourceName),
       status: 404,
       user: null,
+      company: null,
       resource: null,
     };
   }
 
   const { user, error, status } = await requireAuth();
   if (error) {
-    return { error, status, user: null, resource: null };
+    return { error, status, user: null, company: null, resource: null };
   }
 
-  if (resource.userId !== user!.id) {
+  // ユーザーの会社情報を取得
+  const company = await prisma.company.findUnique({
+    where: { userId: user!.id },
+  });
+
+  if (!company) {
     return {
       error: apiErrors.forbidden(),
       status: 403,
       user,
+      company: null,
       resource: null,
     };
   }
 
-  return { error: null, status: 200, user, resource };
+  if (resource.companyId !== company.id) {
+    return {
+      error: apiErrors.forbidden(),
+      status: 403,
+      user,
+      company,
+      resource: null,
+    };
+  }
+
+  return { error: null, status: 200, user, company, resource };
 }
 
 /**

@@ -10,7 +10,7 @@ import {
 } from '@/lib/domains/clients/utils';
 import { apiErrors } from '@/lib/shared/forms';
 import { prisma } from '@/lib/shared/prisma';
-import { requireAuth } from '@/lib/shared/utils/auth';
+import { requireUserCompany } from '@/lib/shared/utils/auth';
 import { createResourceWithAutoUser } from '@/lib/shared/utils/crud';
 
 export async function POST(request: NextRequest) {
@@ -23,8 +23,7 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const { user, error, status } = await requireAuth();
-
+    const { company, error, status } = await requireUserCompany();
     if (error) {
       return NextResponse.json(error, { status });
     }
@@ -57,7 +56,7 @@ export async function GET(request: NextRequest) {
     const { q, sort, include } = searchResult.data;
 
     // 検索条件とソート条件、関連データ取得設定の構築
-    const where = buildClientSearchWhere(user!.id, q || undefined);
+    const where = buildClientSearchWhere(company!.id, q || undefined);
     const orderBy = buildOrderBy(sort);
     const includeRelations = buildIncludeRelations(include);
 
