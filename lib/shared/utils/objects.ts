@@ -1,3 +1,5 @@
+import { Decimal } from 'decimal.js';
+
 /**
  * オブジェクト操作共通ユーティリティ
  */
@@ -20,4 +22,39 @@ export function omitUndefined<T extends Record<string, unknown>>(
   return Object.fromEntries(
     Object.entries(obj).filter(([, value]) => value !== undefined)
   ) as any; // eslint-disable-line @typescript-eslint/no-explicit-any
+}
+
+/**
+ * Prisma Decimalをnumberに変換する
+ * @param value - Decimal値またはnull/undefined
+ * @returns number値またはnull/undefined
+ */
+export function convertDecimalToNumber(
+  value: Decimal | null | undefined
+): number | null | undefined {
+  if (value === null) return null;
+  if (value === undefined) return undefined;
+  return Number(value);
+}
+
+/**
+ * オブジェクト内のDecimal値をnumberに変換する
+ * @param obj - 変換対象のオブジェクト
+ * @param decimalFields - Decimalフィールドのキー配列
+ * @returns Decimalが変換されたオブジェクト
+ */
+export function convertDecimalFields<T extends Record<string, unknown>>(
+  obj: T,
+  decimalFields: (keyof T)[]
+): T {
+  const converted = { ...obj };
+
+  decimalFields.forEach((field) => {
+    const value = converted[field];
+    if (value !== null && value !== undefined) {
+      converted[field] = Number(value) as T[keyof T];
+    }
+  });
+
+  return converted;
 }

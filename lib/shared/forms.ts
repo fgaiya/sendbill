@@ -3,6 +3,13 @@ import { NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
 import { z } from 'zod';
 
+import {
+  ConflictError,
+  ForbiddenError,
+  NotFoundError,
+  UnauthorizedError,
+} from '@/lib/shared/utils/errors';
+
 /**
  * フォーム管理の共通バリデーションスキーマ
  */
@@ -122,6 +129,50 @@ export function handleApiError(error: unknown, context: string) {
     });
   }
 
+  // ドメインエラー → HTTPステータスへマッピング
+  if (error instanceof NotFoundError) {
+    return NextResponse.json(apiErrors.notFound('リソース'), { status: 404 });
+  }
+  if (error instanceof ConflictError) {
+    return NextResponse.json(apiErrors.conflict(error.message), {
+      status: 409,
+    });
+  }
+  if (error instanceof ForbiddenError) {
+    return NextResponse.json(apiErrors.forbidden(), { status: 403 });
+  }
+  if (error instanceof UnauthorizedError) {
+    return NextResponse.json(apiErrors.unauthorized(), { status: 401 });
+  }
+
+  // HttpError（statusを持つエラー）もサポート（移行期の互換）
+  const statusLike = (error as { status?: unknown })?.status;
+  if (typeof statusLike === 'number') {
+    const details = (error as { details?: unknown })?.details;
+    const message = (error as Error)?.message || 'エラーが発生しました';
+    return NextResponse.json(
+      { error: message, details },
+      { status: statusLike }
+    );
+  }
+
   console.error(`${context} error:`, error);
   return NextResponse.json(apiErrors.internal(), { status: 500 });
+}
+
+// ルートやサービス層で使えるシンプルなHttpErrorファクトリ
+export interface HttpError extends Error {
+  status: number;
+  details?: unknown;
+}
+
+export function httpError(
+  status: number,
+  message: string,
+  details?: unknown
+): HttpError {
+  const err = new Error(message) as HttpError;
+  err.status = status;
+  if (details !== undefined) err.details = details;
+  return err;
 }
