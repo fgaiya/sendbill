@@ -48,13 +48,6 @@ export async function GET(request: NextRequest) {
       include,
     } = searchResult.data;
 
-    // 検索キーワードは必須
-    if (!q) {
-      return NextResponse.json(apiErrors.conflict('検索キーワードは必須です'), {
-        status: 400,
-      });
-    }
-
     // 検索条件とソート条件、関連データ取得設定の構築
     const where = buildQuoteSearchWhere(company!.id, {
       query: q,
@@ -67,7 +60,12 @@ export async function GET(request: NextRequest) {
     const includeRelations = buildIncludeRelations(include);
 
     // データ取得（検索API用に制限あり）
-    const limit = Math.min(parseInt(searchParams.get('limit') || '10'), 50);
+    const rawLimit = searchParams.get('limit');
+    const parsed = rawLimit ? Number.parseInt(rawLimit, 10) : 10;
+    const limit = Math.max(
+      1,
+      Math.min(Number.isFinite(parsed) ? parsed : 10, 50)
+    );
     const { quotes, total } = await getQuotes(
       company!.id,
       where,

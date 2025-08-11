@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+import { z } from 'zod';
+
 import { quoteItemSchemas } from '@/lib/domains/quotes/schemas';
 import {
   updateQuoteItem,
@@ -14,9 +16,16 @@ interface RouteContext {
   params: Promise<{ quoteId: string; itemId: string }>;
 }
 
+const quoteItemParamsSchema = z.object({
+  quoteId: z.string().min(1, 'quoteIdは必須です'),
+  itemId: z.string().min(1, 'itemIdは必須です'),
+});
+
 export async function GET(_request: NextRequest, context: RouteContext) {
   try {
-    const { quoteId, itemId } = await context.params;
+    const { quoteId, itemId } = quoteItemParamsSchema.parse(
+      await context.params
+    );
     const { company, error, status } = await requireUserCompany();
     if (error) {
       return NextResponse.json(error, { status });
@@ -28,7 +37,9 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       return NextResponse.json(apiErrors.notFound('品目'), { status: 404 });
     }
 
-    return NextResponse.json(convertPrismaQuoteItemToQuoteItem(item));
+    return NextResponse.json({
+      data: convertPrismaQuoteItemToQuoteItem(item),
+    });
   } catch (error) {
     return handleApiError(error, 'Quote item fetch');
   }
@@ -36,31 +47,9 @@ export async function GET(_request: NextRequest, context: RouteContext) {
 
 export async function PUT(request: NextRequest, context: RouteContext) {
   try {
-    const { quoteId, itemId } = await context.params;
-    const { company, error, status } = await requireUserCompany();
-    if (error) {
-      return NextResponse.json(error, { status });
-    }
-
-    const body = await request.json();
-    const validatedData = quoteItemSchemas.update.parse(body);
-
-    const item = await updateQuoteItem(
-      itemId,
-      quoteId,
-      company!.id,
-      validatedData
+    const { quoteId, itemId } = quoteItemParamsSchema.parse(
+      await context.params
     );
-
-    return NextResponse.json(item);
-  } catch (error) {
-    return handleApiError(error, 'Quote item update');
-  }
-}
-
-export async function PATCH(request: NextRequest, context: RouteContext) {
-  try {
-    const { quoteId, itemId } = await context.params;
     const { company, error, status } = await requireUserCompany();
     if (error) {
       return NextResponse.json(error, { status });
@@ -77,7 +66,36 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     );
 
     return NextResponse.json({
-      ...convertPrismaQuoteItemToQuoteItem(item),
+      item: convertPrismaQuoteItemToQuoteItem(item),
+      message: '品目を更新しました',
+    });
+  } catch (error) {
+    return handleApiError(error, 'Quote item update');
+  }
+}
+
+export async function PATCH(request: NextRequest, context: RouteContext) {
+  try {
+    const { quoteId, itemId } = quoteItemParamsSchema.parse(
+      await context.params
+    );
+    const { company, error, status } = await requireUserCompany();
+    if (error) {
+      return NextResponse.json(error, { status });
+    }
+
+    const body = await request.json();
+    const validatedData = quoteItemSchemas.update.parse(body);
+
+    const item = await updateQuoteItem(
+      itemId,
+      quoteId,
+      company!.id,
+      validatedData
+    );
+
+    return NextResponse.json({
+      item: convertPrismaQuoteItemToQuoteItem(item),
       message: '品目を更新しました',
     });
   } catch (error) {
@@ -87,7 +105,9 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
 export async function DELETE(_request: NextRequest, context: RouteContext) {
   try {
-    const { quoteId, itemId } = await context.params;
+    const { quoteId, itemId } = quoteItemParamsSchema.parse(
+      await context.params
+    );
     const { company, error, status } = await requireUserCompany();
     if (error) {
       return NextResponse.json(error, { status });

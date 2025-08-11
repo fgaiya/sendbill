@@ -2,7 +2,7 @@ import {
   QuoteStatus,
   Quote as PrismaQuote,
   QuoteItem as PrismaQuoteItem,
-  Client as PrismaClient,
+  Client as PrismaClientModel,
 } from '@prisma/client';
 
 import {
@@ -18,7 +18,7 @@ import {
  * サービス層で使用するPrisma型（Decimal型を含む）
  */
 export type QuoteWithRelations = PrismaQuote & {
-  client?: PrismaClient;
+  client?: PrismaClientModel;
   items?: PrismaQuoteItem[];
 };
 
@@ -113,11 +113,10 @@ export type BulkAction = 'create' | 'update' | 'delete';
 /**
  * バルク処理品目型
  */
-export interface BulkQuoteItem {
-  id?: string;
-  action: BulkAction;
-  data?: QuoteItemFormData;
-}
+export type BulkQuoteItem =
+  | { action: 'create'; data: QuoteItemFormData }
+  | { action: 'update'; id: string; data: QuoteItemFormData }
+  | { action: 'delete'; id: string };
 
 /**
  * CSVインポート結果型
@@ -173,8 +172,8 @@ export interface ApiSuccessResponse<T = unknown> {
 export type QuoteSortOption =
   | 'issueDate_asc'
   | 'issueDate_desc'
-  | 'created_asc'
-  | 'created_desc'
+  | 'createdAt_asc'
+  | 'createdAt_desc'
   | 'quoteNumber_asc'
   | 'quoteNumber_desc';
 
@@ -244,38 +243,55 @@ export function convertPrismaQuoteToQuote(
   prismaQuote: QuoteWithRelations
 ): Quote {
   return {
-    ...prismaQuote,
+    id: prismaQuote.id,
+    companyId: prismaQuote.companyId,
+    clientId: prismaQuote.clientId,
+    quoteNumber: prismaQuote.quoteNumber,
+    issueDate: prismaQuote.issueDate,
     expiryDate: prismaQuote.expiryDate,
+    status: prismaQuote.status,
     notes: prismaQuote.notes,
+    createdAt: prismaQuote.createdAt,
+    updatedAt: prismaQuote.updatedAt,
     deletedAt: prismaQuote.deletedAt,
     client: prismaQuote.client
       ? {
-          ...prismaQuote.client,
+          id: prismaQuote.client.id,
+          companyId: prismaQuote.client.companyId,
+          name: prismaQuote.client.name,
           contactName: prismaQuote.client.contactName ?? undefined,
           contactEmail: prismaQuote.client.contactEmail ?? undefined,
           address: prismaQuote.client.address ?? undefined,
           phone: prismaQuote.client.phone ?? undefined,
+          createdAt: prismaQuote.client.createdAt,
+          updatedAt: prismaQuote.client.updatedAt,
           deletedAt: prismaQuote.client.deletedAt ?? undefined,
         }
       : undefined,
     items: prismaQuote.items
       ? prismaQuote.items.map(convertPrismaQuoteItemToQuoteItem)
       : undefined,
-  };
+  } satisfies Quote;
 }
 
 export function convertPrismaQuoteItemToQuoteItem(
   prismaItem: PrismaQuoteItem
 ): QuoteItem {
   return {
-    ...prismaItem,
+    id: prismaItem.id,
+    quoteId: prismaItem.quoteId,
+    description: prismaItem.description,
     quantity: Number(prismaItem.quantity),
     unitPrice: Number(prismaItem.unitPrice),
+    taxCategory: prismaItem.taxCategory,
+    taxRate: prismaItem.taxRate == null ? null : Number(prismaItem.taxRate),
     discountAmount: Number(prismaItem.discountAmount),
-    taxRate: prismaItem.taxRate ? Number(prismaItem.taxRate) : null,
     unit: prismaItem.unit,
     sku: prismaItem.sku,
-  };
+    sortOrder: prismaItem.sortOrder,
+    createdAt: prismaItem.createdAt,
+    updatedAt: prismaItem.updatedAt,
+  } satisfies QuoteItem;
 }
 
 /**

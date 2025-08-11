@@ -324,7 +324,7 @@ export async function createQuoteItem(
   });
 
   if (!quote) {
-    throw new Error('見積書が見つかりません');
+    throw new NotFoundError('見積書が見つかりません');
   }
 
   // 並び順の自動決定（未指定または0のとき）
@@ -437,7 +437,7 @@ export async function getQuoteItems(
   });
 
   if (!quote) {
-    throw new Error('見積書が見つかりません');
+    throw new NotFoundError('見積書が見つかりません');
   }
 
   const items = await prisma.quoteItem.findMany({
@@ -485,7 +485,7 @@ export async function bulkProcessQuoteItems(
     });
 
     if (!quote) {
-      throw new Error('見積書が見つかりません');
+      throw new NotFoundError('見積書が見つかりません');
     }
 
     const results: PrismaQuoteItem[] = [];
@@ -592,7 +592,7 @@ export async function importQuoteItemsFromCSV(
     });
 
     if (!quote) {
-      throw new Error('見積書が見つかりません');
+      throw new NotFoundError('見積書が見つかりません');
     }
 
     // 上書きモードの場合、既存品目を削除
@@ -711,11 +711,11 @@ export async function calculateQuoteTax(
   ]);
 
   if (!quote) {
-    throw new Error('見積書が見つかりません');
+    throw new NotFoundError('見積書が見つかりません');
   }
 
   if (!company) {
-    throw new Error('会社情報が見つかりません');
+    throw new NotFoundError('会社情報が見つかりません');
   }
 
   return calculateTax(

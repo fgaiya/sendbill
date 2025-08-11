@@ -38,23 +38,36 @@ export function convertDecimalToNumber(
 }
 
 /**
- * オブジェクト内のDecimal値をnumberに変換する
+ * オブジェクト内のDecimal値をnumberに変換する（型安全版）
  * @param obj - 変換対象のオブジェクト
  * @param decimalFields - Decimalフィールドのキー配列
  * @returns Decimalが変換されたオブジェクト
  */
-export function convertDecimalFields<T extends Record<string, unknown>>(
+export function convertDecimalFields<
+  T extends Record<string, unknown>,
+  K extends keyof T,
+>(
   obj: T,
-  decimalFields: (keyof T)[]
-): T {
-  const converted = { ...obj };
+  decimalFields: readonly K[]
+): Omit<T, K> & {
+  [P in K]: T[P] extends Decimal | null | undefined
+    ? number | null | undefined
+    : T[P];
+} {
+  const converted: Record<string, unknown> = { ...obj };
 
   decimalFields.forEach((field) => {
-    const value = converted[field];
-    if (value !== null && value !== undefined) {
-      converted[field] = Number(value) as T[keyof T];
+    const value = converted[field as string];
+    if (value == null) return;
+    // Decimal っぽい（toNumber を持つ）場合のみ変換
+    if (typeof (value as { toNumber?: unknown }).toNumber === 'function') {
+      converted[field as string] = convertDecimalToNumber(value as Decimal);
     }
   });
 
-  return converted;
+  return converted as Omit<T, K> & {
+    [P in K]: T[P] extends Decimal | null | undefined
+      ? number | null | undefined
+      : T[P];
+  };
 }

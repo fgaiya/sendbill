@@ -16,7 +16,11 @@ import type {
  */
 
 // 検索対象フィールド
-export const QUOTE_SEARCH_FIELDS = ['quoteNumber', 'notes'] as const;
+export const QUOTE_SEARCH_FIELDS = [
+  'quoteNumber',
+  'notes',
+  'client.name',
+] as const;
 
 // ソートマッピング
 export const QUOTE_SORT_MAPPING: Record<
@@ -25,8 +29,8 @@ export const QUOTE_SORT_MAPPING: Record<
 > = {
   issueDate_asc: { issueDate: 'asc' },
   issueDate_desc: { issueDate: 'desc' },
-  created_asc: { createdAt: 'asc' },
-  created_desc: { createdAt: 'desc' },
+  createdAt_asc: { createdAt: 'asc' },
+  createdAt_desc: { createdAt: 'desc' },
   quoteNumber_asc: { quoteNumber: 'asc' },
   quoteNumber_desc: { quoteNumber: 'desc' },
 };
@@ -63,19 +67,6 @@ export const STATUS_TRANSITION_RULES: StatusTransitionRule[] = [
     requiresNumberGeneration: false,
   },
 ];
-
-/**
- * includeパラメータ処理
- */
-const _processIncludeString = (raw: unknown): string[] => {
-  if (typeof raw === 'string' && raw.trim() !== '') {
-    return raw
-      .split(',')
-      .map((s) => s.trim())
-      .filter((s) => s !== '');
-  }
-  return [];
-};
 
 /**
  * 関連データ取得設定を構築
@@ -373,21 +364,25 @@ export function parseCSVData(csvText: string): Array<Record<string, string>> {
 }
 
 /**
- * エラーメッセージを生成
+ * 共通エラーメッセージ生成関数
  */
-export function generateQuoteFormErrorMessage(error: unknown): string {
+function generateErrorMessage(error: unknown, defaultMessage: string): string {
   if (error instanceof Error) {
     return error.message;
   }
-  return '見積書の処理中にエラーが発生しました';
+  return defaultMessage;
+}
+
+/**
+ * エラーメッセージを生成
+ */
+export function generateQuoteFormErrorMessage(error: unknown): string {
+  return generateErrorMessage(error, '見積書の処理中にエラーが発生しました');
 }
 
 /**
  * 品目エラーメッセージを生成
  */
 export function generateQuoteItemFormErrorMessage(error: unknown): string {
-  if (error instanceof Error) {
-    return error.message;
-  }
-  return '品目の処理中にエラーが発生しました';
+  return generateErrorMessage(error, '品目の処理中にエラーが発生しました');
 }

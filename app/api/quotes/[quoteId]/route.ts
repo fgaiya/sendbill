@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+import { z } from 'zod';
+
 import { quoteSchemas, includeSchema } from '@/lib/domains/quotes/schemas';
 import {
   getQuote,
@@ -15,9 +17,13 @@ interface RouteContext {
   params: Promise<{ quoteId: string }>;
 }
 
+const quoteParamsSchema = z.object({
+  quoteId: z.string().min(1, 'quoteIdは必須です'),
+});
+
 export async function GET(request: NextRequest, context: RouteContext) {
   try {
-    const { quoteId } = await context.params;
+    const { quoteId } = quoteParamsSchema.parse(await context.params);
     const { company, error, status } = await requireUserCompany();
     if (error) {
       return NextResponse.json(error, { status });
@@ -51,7 +57,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
       return NextResponse.json(apiErrors.notFound('見積書'), { status: 404 });
     }
 
-    return NextResponse.json(convertPrismaQuoteToQuote(quote));
+    return NextResponse.json({
+      data: convertPrismaQuoteToQuote(quote),
+    });
   } catch (error) {
     return handleApiError(error, 'Quote fetch');
   }
@@ -59,7 +67,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
 export async function PUT(request: NextRequest, context: RouteContext) {
   try {
-    const { quoteId } = await context.params;
+    const { quoteId } = quoteParamsSchema.parse(await context.params);
     const { company, error, status } = await requireUserCompany();
     if (error) {
       return NextResponse.json(error, { status });
@@ -70,7 +78,10 @@ export async function PUT(request: NextRequest, context: RouteContext) {
 
     const quote = await updateQuote(quoteId, company!.id, validatedData);
 
-    return NextResponse.json(convertPrismaQuoteToQuote(quote));
+    return NextResponse.json({
+      data: convertPrismaQuoteToQuote(quote),
+      message: '見積書を更新しました',
+    });
   } catch (error) {
     return handleApiError(error, 'Quote update');
   }
@@ -78,7 +89,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
 
 export async function DELETE(_request: NextRequest, context: RouteContext) {
   try {
-    const { quoteId } = await context.params;
+    const { quoteId } = quoteParamsSchema.parse(await context.params);
     const { company, error, status } = await requireUserCompany();
     if (error) {
       return NextResponse.json(error, { status });

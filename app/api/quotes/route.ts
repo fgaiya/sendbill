@@ -26,8 +26,18 @@ export async function POST(request: NextRequest) {
     const validatedData = quoteSchemas.create.parse(body);
 
     const quote = await createQuote(company!.id, validatedData);
+    const publicQuote = convertPrismaQuoteToQuote(quote);
 
-    return NextResponse.json(quote, { status: 201 });
+    return NextResponse.json(
+      {
+        data: publicQuote,
+        message: '見積書を作成しました',
+      },
+      {
+        status: 201,
+        headers: { Location: `/api/quotes/${publicQuote.id}` },
+      }
+    );
   } catch (error) {
     return handleApiError(error, 'Quote creation');
   }
@@ -69,6 +79,9 @@ export async function GET(request: NextRequest) {
     }
 
     const { page, limit } = paginationResult.data;
+    const MAX_LIMIT = 100; // TODO: 設定から取得できるならそちらを使用
+    const take = Math.min(limit, MAX_LIMIT);
+    const skip = Math.max(0, (page - 1) * take);
     const {
       q,
       status: quoteStatus,
@@ -97,19 +110,19 @@ export async function GET(request: NextRequest) {
       orderBy,
       includeRelations,
       {
-        skip: (page - 1) * limit,
-        take: limit,
+        skip,
+        take,
       }
     );
 
-    const totalPages = Math.ceil(total / limit);
+    const totalPages = Math.ceil(total / take);
 
     return NextResponse.json({
       data: quotes.map(convertPrismaQuoteToQuote),
       pagination: {
         total,
         page,
-        limit,
+        limit: take, // 実際に使用されたlimit値
         totalPages,
       },
     });

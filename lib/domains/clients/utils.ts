@@ -15,8 +15,8 @@ export const CLIENT_SEARCH_FIELDS = [
 export const SORT_MAPPING = {
   name_asc: { name: 'asc' },
   name_desc: { name: 'desc' },
-  created_asc: { createdAt: 'asc' },
-  created_desc: { createdAt: 'desc' },
+  createdAt_asc: { createdAt: 'asc' },
+  createdAt_desc: { createdAt: 'desc' },
 } as const;
 
 // ソートオプションはマッピングから自動生成
@@ -69,7 +69,7 @@ const includeSchemaPart = z.preprocess(
 
 export const clientSearchSchema = z.object({
   q: z.string().nullable().optional(),
-  sort: z.enum(CLIENT_SORT_OPTIONS).optional().default('created_desc'),
+  sort: z.enum(CLIENT_SORT_OPTIONS).optional().default('createdAt_desc'),
   include: includeSchemaPart,
 });
 

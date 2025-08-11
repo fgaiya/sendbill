@@ -137,7 +137,7 @@ export const csvImportSchema = z.object({
  * 見積書検索パラメータスキーマ
  */
 export const quoteSearchSchema = z.object({
-  q: z.string().optional(),
+  q: z.string().min(1, '検索キーワードは必須です'),
   status: z.enum(['DRAFT', 'SENT', 'ACCEPTED', 'DECLINED']).optional(),
   clientId: z.string().optional(),
   dateFrom: z.coerce.date().optional(),
@@ -146,12 +146,12 @@ export const quoteSearchSchema = z.object({
     .enum([
       'issueDate_asc',
       'issueDate_desc',
-      'created_asc',
-      'created_desc',
+      'createdAt_asc',
+      'createdAt_desc',
       'quoteNumber_asc',
       'quoteNumber_desc',
     ])
-    .default('created_desc'),
+    .default('createdAt_desc'),
   include: z.preprocess(
     (val) =>
       typeof val === 'string'

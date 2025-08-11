@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+import { z } from 'zod';
+
 import { importQuoteItemsFromCSV } from '@/lib/domains/quotes/service';
 import { apiErrors, handleApiError } from '@/lib/shared/forms';
 import { requireUserCompany } from '@/lib/shared/utils/auth';
@@ -8,9 +10,13 @@ interface RouteContext {
   params: Promise<{ quoteId: string }>;
 }
 
+const quoteParamsSchema = z.object({
+  quoteId: z.string().min(1, 'quoteIdは必須です'),
+});
+
 export async function POST(request: NextRequest, context: RouteContext) {
   try {
-    const { quoteId } = await context.params;
+    const { quoteId } = quoteParamsSchema.parse(await context.params);
     const { company, error, status } = await requireUserCompany();
     if (error) {
       return NextResponse.json(error, { status });
@@ -18,14 +24,15 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
     // FormDataからCSVファイルとオプションを取得
     const formData = await request.formData();
-    const file = formData.get('file') as File;
+    const filePart = formData.get('file');
     const overwrite = formData.get('overwrite') === 'true';
 
-    if (!file) {
+    if (!(filePart instanceof File)) {
       return NextResponse.json(apiErrors.conflict('CSVファイルは必須です'), {
         status: 400,
       });
     }
+    const file = filePart;
 
     // ファイルタイプチェック
     if (!file.type.includes('csv') && !file.name.endsWith('.csv')) {

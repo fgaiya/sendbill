@@ -146,13 +146,23 @@ export function handleApiError(error: unknown, context: string) {
   }
 
   // HttpError（statusを持つエラー）もサポート（移行期の互換）
-  const statusLike = (error as { status?: unknown })?.status;
-  if (typeof statusLike === 'number') {
-    const details = (error as { details?: unknown })?.details;
-    const message = (error as Error)?.message || 'エラーが発生しました';
+  if (isHttpError(error)) {
+    const status =
+      Number.isInteger(error.status) &&
+      error.status >= 400 &&
+      error.status <= 599
+        ? error.status
+        : 500;
+    const message =
+      typeof error.message === 'string' && error.message.length
+        ? error.message
+        : 'エラーが発生しました';
+    // 本番では details を抑制（露出とシリアライズ失敗の両リスク軽減）
+    const details =
+      process.env.NODE_ENV === 'development' ? error.details : undefined;
     return NextResponse.json(
-      { error: message, details },
-      { status: statusLike }
+      details !== undefined ? { error: message, details } : { error: message },
+      { status }
     );
   }
 
@@ -165,6 +175,15 @@ export interface HttpError extends Error {
   status: number;
   details?: unknown;
 }
+
+export const isHttpError = (e: unknown): e is HttpError => {
+  return (
+    typeof e === 'object' &&
+    e !== null &&
+    'status' in e &&
+    typeof (e as Record<string, unknown>).status === 'number'
+  );
+};
 
 export function httpError(
   status: number,
