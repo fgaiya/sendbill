@@ -1,4 +1,5 @@
 import { Prisma, QuoteStatus } from '@prisma/client';
+import Papa from 'papaparse';
 
 import type {
   QuoteFilterConditions,
@@ -336,28 +337,33 @@ export function normalizeSortOrder<T extends { sortOrder: number }>(
 }
 
 /**
- * CSVデータをパース
+ * CSVデータをパース（Papa Parse使用）
+ * クォート内カンマ、エスケープクォート、改行などCSV仕様に準拠
+ * ヘッダー＆値の前後空白は明示的に trim
  */
 export function parseCSVData(csvText: string): Array<Record<string, string>> {
-  const lines = csvText.trim().split('\n');
-  if (lines.length < 2) {
-    throw new Error('CSVファイルにはヘッダー行とデータ行が必要です');
+  const trimmedText = csvText.trim();
+  if (!trimmedText) {
+    throw new Error('CSVファイルが空です');
   }
 
-  const headers = lines[0].split(',').map((h) => h.trim().replace(/"/g, ''));
-  const data: Array<Record<string, string>> = [];
+  // 型引数 <Record<string, string>> を渡すのがポイント
+  const { data, errors } = Papa.parse<Record<string, string>>(trimmedText, {
+    header: true,
+    skipEmptyLines: true,
+    transformHeader: (h) => h.trim(),
+    transform: (v) => (typeof v === 'string' ? v.trim() : v),
+  });
 
-  for (let i = 1; i < lines.length; i++) {
-    const values = lines[i].split(',').map((v) => v.trim().replace(/"/g, ''));
-    if (values.length !== headers.length) {
-      throw new Error(`行 ${i + 1} の列数が一致しません`);
-    }
+  if (errors.length > 0) {
+    const errorMessages = errors
+      .map((e) => `行 ${(e.row ?? 0) + 1}: ${e.message}`)
+      .join(', ');
+    throw new Error(`CSV解析エラー: ${errorMessages}`);
+  }
 
-    const row: Record<string, string> = {};
-    headers.forEach((header, index) => {
-      row[header] = values[index];
-    });
-    data.push(row);
+  if (data.length === 0) {
+    throw new Error('CSVファイルにデータ行がありません');
   }
 
   return data;
