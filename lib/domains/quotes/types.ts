@@ -32,13 +32,13 @@ export interface Quote {
   companyId: string;
   clientId: string;
   quoteNumber: string;
-  issueDate: Date;
-  expiryDate: Date | null;
+  issueDate: string;
+  expiryDate: string | null;
   status: QuoteStatus;
   notes: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-  deletedAt: Date | null;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
   client?: Client;
   items?: QuoteItem[];
 }
@@ -233,13 +233,13 @@ export function convertPrismaQuoteToQuote(
     companyId: prismaQuote.companyId,
     clientId: prismaQuote.clientId,
     quoteNumber: prismaQuote.quoteNumber,
-    issueDate: prismaQuote.issueDate,
-    expiryDate: prismaQuote.expiryDate,
+    issueDate: prismaQuote.issueDate.toISOString(),
+    expiryDate: prismaQuote.expiryDate?.toISOString() ?? null,
     status: prismaQuote.status,
     notes: prismaQuote.notes,
-    createdAt: prismaQuote.createdAt,
-    updatedAt: prismaQuote.updatedAt,
-    deletedAt: prismaQuote.deletedAt,
+    createdAt: prismaQuote.createdAt.toISOString(),
+    updatedAt: prismaQuote.updatedAt.toISOString(),
+    deletedAt: prismaQuote.deletedAt?.toISOString() ?? null,
     client: prismaQuote.client
       ? {
           id: prismaQuote.client.id,

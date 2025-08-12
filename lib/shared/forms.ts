@@ -8,6 +8,7 @@ import {
   ForbiddenError,
   NotFoundError,
   UnauthorizedError,
+  BadRequestError,
 } from '@/lib/shared/utils/errors';
 
 /**
@@ -134,6 +135,11 @@ export function handleApiError(error: unknown, context: string) {
   if (error instanceof NotFoundError) {
     return NextResponse.json(apiErrors.notFound('リソース'), { status: 404 });
   }
+  if (error instanceof BadRequestError) {
+    return NextResponse.json(apiErrors.badRequest(error.message), {
+      status: 400,
+    });
+  }
   if (error instanceof ConflictError) {
     return NextResponse.json(apiErrors.conflict(error.message), {
       status: 409,
@@ -154,9 +160,16 @@ export function handleApiError(error: unknown, context: string) {
       error.status <= 599
         ? error.status
         : 500;
+    const sanitizeMessage = (msg: string): string => {
+      // ファイルパスやスタックトレースのパターンを除去
+      return msg
+        .replace(/\/[\w\/\-\.]+\.(ts|js|tsx|jsx)/g, '[file]')
+        .replace(/at\s+[\w\.<>]+\s+\([^)]+\)/g, '')
+        .substring(0, 500);
+    };
     const message =
       typeof error.message === 'string' && error.message.length
-        ? error.message
+        ? sanitizeMessage(error.message)
         : 'エラーが発生しました';
     // 本番では details を抑制（露出とシリアライズ失敗の両リスク軽減）
     const details =
@@ -181,8 +194,10 @@ export const isHttpError = (e: unknown): e is HttpError => {
   return (
     typeof e === 'object' &&
     e !== null &&
+    e instanceof Error &&
     'status' in e &&
-    typeof (e as Record<string, unknown>).status === 'number'
+    typeof (e as Record<string, unknown>).status === 'number' &&
+    Number.isInteger((e as Record<string, unknown>).status)
   );
 };
 

@@ -12,6 +12,7 @@ import {
   buildQuoteSearchWhere,
   buildOrderBy,
 } from '@/lib/domains/quotes/utils';
+import { PAGINATION } from '@/lib/shared/constants';
 import { apiErrors, handleApiError } from '@/lib/shared/forms';
 import { requireUserCompany } from '@/lib/shared/utils/auth';
 
@@ -79,8 +80,7 @@ export async function GET(request: NextRequest) {
     }
 
     const { page, limit } = paginationResult.data;
-    const MAX_LIMIT = 100; // TODO: 設定から取得できるならそちらを使用
-    const take = Math.min(limit, MAX_LIMIT);
+    const take = Math.min(limit, PAGINATION.MAX_LIMIT);
     const skip = Math.max(0, (page - 1) * take);
     const {
       q,

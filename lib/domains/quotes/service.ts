@@ -7,7 +7,11 @@ import {
 
 import { httpError } from '@/lib/shared/forms';
 import { prisma } from '@/lib/shared/prisma';
-import { ConflictError, NotFoundError } from '@/lib/shared/utils/errors';
+import {
+  BadRequestError,
+  ConflictError,
+  NotFoundError,
+} from '@/lib/shared/utils/errors';
 
 import {
   generateQuoteNumber,
@@ -17,6 +21,7 @@ import {
   isValidStatusTransition,
   requiresItemsForTransition,
   requiresNumberGenerationForTransition,
+  STATUS_TRANSITION_RULES,
 } from './utils';
 
 import type { ReorderQuoteItemsData } from './schemas';
@@ -172,8 +177,12 @@ export async function updateQuoteStatus(
 
     // ステータス遷移の妥当性チェック
     if (!isValidStatusTransition(existingQuote.status, newStatus)) {
+      const validTransitions =
+        STATUS_TRANSITION_RULES.find(
+          (r) => r.from === existingQuote.status
+        )?.to.join('、') ?? 'なし';
       throw new Error(
-        `${existingQuote.status}から${newStatus}への遷移は無効です`
+        `${existingQuote.status}から${newStatus}への遷移は無効です。有効な遷移先: ${validTransitions}`
       );
     }
 
@@ -374,6 +383,16 @@ export async function updateQuoteItem(
 
   if (!existingItem) {
     throw new NotFoundError('品目が見つかりません');
+  }
+
+  // レビュー対応: 部分更新時に割引額だけが渡されたケースでも、
+  // 現在の数量×単価の合計を超えないことを即時検証
+  if (
+    data.discountAmount !== undefined &&
+    Number(data.discountAmount) >
+      Number(existingItem.unitPrice) * Number(existingItem.quantity)
+  ) {
+    throw new BadRequestError('割引額は品目合計金額を超えることはできません');
   }
 
   // 既存値を考慮した整合性チェック（数量・単価・割引の合計超過防止）

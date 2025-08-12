@@ -41,3 +41,14 @@ export class UnauthorizedError extends Error {
     }
   }
 }
+
+export class BadRequestError extends Error {
+  constructor(message = '不正なリクエストです') {
+    super(message);
+    this.name = 'BadRequestError';
+    Object.setPrototypeOf(this, BadRequestError.prototype);
+    if (Error.captureStackTrace) {
+      Error.captureStackTrace(this, BadRequestError);
+    }
+  }
+}

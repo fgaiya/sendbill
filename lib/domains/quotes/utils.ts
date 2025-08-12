@@ -263,12 +263,12 @@ export function calculateTax(
     // 税率別に集計
     if (
       item.taxCategory === 'STANDARD' ||
-      (item.taxRate !== undefined && item.taxRate === company.standardTaxRate)
+      (item.taxRate !== null && item.taxRate === company.standardTaxRate)
     ) {
       taxAmountStandard += lineTax;
     } else if (
       item.taxCategory === 'REDUCED' ||
-      (item.taxRate !== undefined && item.taxRate === company.reducedTaxRate)
+      (item.taxRate !== null && item.taxRate === company.reducedTaxRate)
     ) {
       taxAmountReduced += lineTax;
     } else if (

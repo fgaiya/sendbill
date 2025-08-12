@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { PAGINATION } from '@/lib/shared/constants';
+
 /**
  * 見積書基本スキーマ
  */
@@ -166,13 +168,21 @@ export const quoteSearchSchema = z
       ])
       .default('createdAt_desc'),
     include: z.preprocess(
-      (val) =>
-        typeof val === 'string'
-          ? val
-              .split(',')
-              .map((s) => s.trim())
-              .filter(Boolean)
-          : [],
+      (val) => {
+        if (Array.isArray(val)) {
+          return val
+            .flatMap((v) => String(v).split(','))
+            .map((s) => s.trim())
+            .filter(Boolean);
+        }
+        if (typeof val === 'string') {
+          return val
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean);
+        }
+        return [];
+      },
       z.array(z.enum(['client', 'items']))
     ),
   })
@@ -189,16 +199,16 @@ export const paginationSchema = z.object({
     .string()
     .nullable()
     .optional()
-    .default('1')
+    .default(String(PAGINATION.DEFAULT_PAGE))
     .transform(Number)
     .pipe(z.number().min(1)),
   limit: z
     .string()
     .nullable()
     .optional()
-    .default('20')
+    .default(String(PAGINATION.DEFAULT_LIMIT))
     .transform(Number)
-    .pipe(z.number().min(1).max(100)),
+    .pipe(z.number().min(1).max(PAGINATION.MAX_LIMIT)),
 });
 
 /**
