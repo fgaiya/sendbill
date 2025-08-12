@@ -7,11 +7,7 @@ import {
 
 import { httpError } from '@/lib/shared/forms';
 import { prisma } from '@/lib/shared/prisma';
-import {
-  BadRequestError,
-  ConflictError,
-  NotFoundError,
-} from '@/lib/shared/utils/errors';
+import { ConflictError, NotFoundError } from '@/lib/shared/utils/errors';
 
 import {
   generateQuoteNumber,
@@ -383,16 +379,6 @@ export async function updateQuoteItem(
 
   if (!existingItem) {
     throw new NotFoundError('品目が見つかりません');
-  }
-
-  // レビュー対応: 部分更新時に割引額だけが渡されたケースでも、
-  // 現在の数量×単価の合計を超えないことを即時検証
-  if (
-    data.discountAmount !== undefined &&
-    Number(data.discountAmount) >
-      Number(existingItem.unitPrice) * Number(existingItem.quantity)
-  ) {
-    throw new BadRequestError('割引額は品目合計金額を超えることはできません');
   }
 
   // 既存値を考慮した整合性チェック（数量・単価・割引の合計超過防止）

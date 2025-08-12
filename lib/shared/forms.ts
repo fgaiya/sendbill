@@ -114,7 +114,9 @@ export const apiErrors = {
   unauthorized: () => ({ error: '認証が必要です' }),
   forbidden: () => ({ error: 'アクセス権限がありません' }),
   notFound: (resource: string) => ({ error: `${resource}が見つかりません` }),
-  badRequest: (message: string) => ({ error: message }),
+  badRequest: (message: string) => ({
+    error: message.substring(0, 200).replace(/[<>]/g, ''),
+  }),
   conflict: (message: string) => ({ error: message }),
   validation: (details: z.ZodError['issues']) => ({
     error: 'バリデーションエラー',
@@ -206,6 +208,9 @@ export function httpError(
   message: string,
   details?: unknown
 ): HttpError {
+  if (!Number.isInteger(status) || status < 100 || status > 599) {
+    throw new Error(`Invalid HTTP status code: ${status}`);
+  }
   const err = new Error(message) as HttpError;
   err.status = status;
   if (details !== undefined) err.details = details;
