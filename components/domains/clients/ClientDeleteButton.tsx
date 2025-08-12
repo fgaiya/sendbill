@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { useClientDelete } from '@/lib/domains/clients/hooks';
-import { Client } from '@/lib/domains/clients/types';
+import { Client } from '@/lib/shared/types';
 
 interface ClientDeleteButtonProps {
   client: Client;

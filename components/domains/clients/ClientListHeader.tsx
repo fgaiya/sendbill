@@ -29,8 +29,8 @@ export function ClientListHeader({
   };
 
   const sortOptions = [
-    { value: 'created_desc', label: '登録日（新しい順）' },
-    { value: 'created_asc', label: '登録日（古い順）' },
+    { value: 'createdAt_desc', label: '登録日（新しい順）' },
+    { value: 'createdAt_asc', label: '登録日（古い順）' },
     { value: 'name_asc', label: '名前（あ〜ん）' },
     { value: 'name_desc', label: '名前（ん〜あ）' },
   ] as const;

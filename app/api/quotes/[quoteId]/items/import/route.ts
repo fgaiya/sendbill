@@ -28,16 +28,39 @@ export async function POST(request: NextRequest, context: RouteContext) {
     const overwrite = formData.get('overwrite') === 'true';
 
     if (!(filePart instanceof File)) {
-      return NextResponse.json(apiErrors.conflict('CSVファイルは必須です'), {
-        status: 400,
-      });
+      return NextResponse.json(
+        apiErrors.validation([
+          {
+            path: ['file'],
+            message: 'CSVファイルは必須です',
+            code: 'custom',
+            input: filePart,
+          },
+        ]),
+        { status: 400 }
+      );
     }
     const file = filePart;
+    const validMimeTypes = [
+      'text/csv',
+      'application/csv',
+      'application/vnd.ms-excel',
+    ];
 
     // ファイルタイプチェック
-    if (!file.type.includes('csv') && !file.name.endsWith('.csv')) {
+    if (
+      !validMimeTypes.includes(file.type) &&
+      !file.name.toLowerCase().endsWith('.csv')
+    ) {
       return NextResponse.json(
-        apiErrors.conflict('CSVファイルを選択してください'),
+        apiErrors.validation([
+          {
+            path: ['file'],
+            message: 'CSVファイルを選択してください',
+            code: 'custom',
+            input: file,
+          },
+        ]),
         { status: 400 }
       );
     }
@@ -46,7 +69,14 @@ export async function POST(request: NextRequest, context: RouteContext) {
     const maxSize = 5 * 1024 * 1024; // 5MB
     if (file.size > maxSize) {
       return NextResponse.json(
-        apiErrors.conflict('ファイルサイズは5MB以下にしてください'),
+        apiErrors.validation([
+          {
+            path: ['file'],
+            message: 'ファイルサイズは5MB以下にしてください',
+            code: 'custom',
+            input: file,
+          },
+        ]),
         { status: 400 }
       );
     }
@@ -55,15 +85,23 @@ export async function POST(request: NextRequest, context: RouteContext) {
     const csvText = await file.text();
 
     if (!csvText.trim()) {
-      return NextResponse.json(apiErrors.conflict('CSVファイルが空です'), {
-        status: 400,
-      });
+      return NextResponse.json(
+        apiErrors.validation([
+          {
+            path: ['file'],
+            message: 'CSVファイルが空です',
+            code: 'custom',
+            input: csvText,
+          },
+        ]),
+        { status: 400 }
+      );
     }
 
     // CSVインポート処理
     const result = await importQuoteItemsFromCSV(
       quoteId,
-      company!.id,
+      company.id,
       csvText,
       overwrite
     );

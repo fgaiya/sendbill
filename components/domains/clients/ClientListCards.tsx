@@ -1,7 +1,7 @@
 import Link from 'next/link';
 
 import { Card } from '@/components/ui/card';
-import { Client } from '@/lib/domains/clients/types';
+import { Client } from '@/lib/shared/types';
 import { formatDate } from '@/lib/shared/utils/date';
 
 import { ClientDeleteButton } from './ClientDeleteButton';

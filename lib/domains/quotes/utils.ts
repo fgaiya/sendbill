@@ -238,7 +238,7 @@ export function calculateTax(
 
     // 税率決定
     let effectiveTaxRate = 0;
-    if (item.taxRate !== undefined && item.taxRate !== null) {
+    if (item.taxRate !== null) {
       // 個別税率が指定されている場合
       effectiveTaxRate = item.taxRate;
     } else {
@@ -357,7 +357,10 @@ export function parseCSVData(csvText: string): Array<Record<string, string>> {
 
   if (errors.length > 0) {
     const errorMessages = errors
-      .map((e) => `行 ${(e.row ?? 0) + 1}: ${e.message}`)
+      .map((e) => {
+        const rowNum = e.row !== undefined ? e.row + 1 : '不明';
+        return `行 ${rowNum}: ${e.message}`;
+      })
       .join(', ');
     throw new Error(`CSV解析エラー: ${errorMessages}`);
   }

@@ -113,6 +113,7 @@ export const apiErrors = {
   unauthorized: () => ({ error: '認証が必要です' }),
   forbidden: () => ({ error: 'アクセス権限がありません' }),
   notFound: (resource: string) => ({ error: `${resource}が見つかりません` }),
+  badRequest: (message: string) => ({ error: message }),
   conflict: (message: string) => ({ error: message }),
   validation: (details: z.ZodError['issues']) => ({
     error: 'バリデーションエラー',

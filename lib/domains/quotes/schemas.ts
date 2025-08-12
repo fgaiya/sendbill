@@ -125,44 +125,61 @@ export const bulkQuoteItemsSchema = z.object({
  * CSVインポートスキーマ
  */
 export const csvImportSchema = z.object({
-  file: z
-    .instanceof(File)
-    .refine((file) => file.type === 'text/csv' || file.name.endsWith('.csv'), {
+  file: z.instanceof(File).refine(
+    (file) => {
+      const t = (file.type || '').toLowerCase();
+      return (
+        file.name.toLowerCase().endsWith('.csv') ||
+        t === 'text/csv' ||
+        t === 'application/csv' ||
+        t === 'application/vnd.ms-excel'
+      );
+    },
+    {
       message: 'CSVファイルを選択してください',
-    }),
+    }
+  ),
   overwrite: z.boolean().default(false), // 既存品目を上書きするか
 });
 
 /**
  * 見積書検索パラメータスキーマ
  */
-export const quoteSearchSchema = z.object({
-  q: z.string().min(1, '検索キーワードは必須です'),
-  status: z.enum(['DRAFT', 'SENT', 'ACCEPTED', 'DECLINED']).optional(),
-  clientId: z.string().optional(),
-  dateFrom: z.coerce.date().optional(),
-  dateTo: z.coerce.date().optional(),
-  sort: z
-    .enum([
-      'issueDate_asc',
-      'issueDate_desc',
-      'createdAt_asc',
-      'createdAt_desc',
-      'quoteNumber_asc',
-      'quoteNumber_desc',
-    ])
-    .default('createdAt_desc'),
-  include: z.preprocess(
-    (val) =>
-      typeof val === 'string'
-        ? val
-            .split(',')
-            .map((s) => s.trim())
-            .filter(Boolean)
-        : [],
-    z.array(z.enum(['client', 'items']))
-  ),
-});
+export const quoteSearchSchema = z
+  .object({
+    q: z.string().min(1, '検索キーワードは必須です'),
+    status: z.enum(['DRAFT', 'SENT', 'ACCEPTED', 'DECLINED']).optional(),
+    clientId: z.preprocess(
+      (v) => (typeof v === 'string' && v.trim() === '' ? undefined : v),
+      z.string().optional()
+    ),
+    dateFrom: z.coerce.date().optional(),
+    dateTo: z.coerce.date().optional(),
+    sort: z
+      .enum([
+        'issueDate_asc',
+        'issueDate_desc',
+        'createdAt_asc',
+        'createdAt_desc',
+        'quoteNumber_asc',
+        'quoteNumber_desc',
+      ])
+      .default('createdAt_desc'),
+    include: z.preprocess(
+      (val) =>
+        typeof val === 'string'
+          ? val
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean)
+          : [],
+      z.array(z.enum(['client', 'items']))
+    ),
+  })
+  .refine((d) => !(d.dateFrom && d.dateTo) || d.dateFrom <= d.dateTo, {
+    path: ['dateTo'],
+    message: '終了日は開始日以降である必要があります',
+  });
 
 /**
  * ページネーションスキーマ
@@ -223,3 +240,45 @@ export const quoteItemSchemas = {
   update: updateQuoteItemSchema,
   bulk: bulkQuoteItemsSchema,
 };
+
+/**
+ * 品目の部分更新（単一）: 並び順の変更は除外
+ */
+export const patchQuoteItemSchema = baseQuoteItemSchema
+  .omit({ sortOrder: true })
+  .partial()
+  .refine(
+    (data) => {
+      if (
+        data.discountAmount !== undefined &&
+        data.unitPrice !== undefined &&
+        data.quantity !== undefined
+      ) {
+        return data.discountAmount <= data.unitPrice * data.quantity;
+      }
+      return true;
+    },
+    {
+      message: '割引額は品目合計金額を超えることはできません',
+      path: ['discountAmount'],
+    }
+  )
+  .and(z.object({ updatedAt: z.coerce.date() }));
+
+/**
+ * 品目の並び順一括更新（部分更新）
+ */
+export const reorderQuoteItemsSchema = z.object({
+  items: z
+    .array(
+      z.object({
+        id: z.string().min(1, 'IDは必須です'),
+        sortOrder: z.coerce.number().int().nonnegative(),
+        updatedAt: z.coerce.date(),
+      })
+    )
+    .min(1, '最低1つの品目が必要です'),
+});
+
+export type QuoteItemPatchData = z.infer<typeof patchQuoteItemSchema>;
+export type ReorderQuoteItemsData = z.infer<typeof reorderQuoteItemsSchema>;

@@ -2,11 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { z } from 'zod';
 
-import { quoteItemSchemas } from '@/lib/domains/quotes/schemas';
+import {
+  quoteItemSchemas,
+  reorderQuoteItemsSchema,
+} from '@/lib/domains/quotes/schemas';
 import {
   getQuoteItems,
   createQuoteItem,
   bulkProcessQuoteItems,
+  reorderQuoteItems,
 } from '@/lib/domains/quotes/service';
 import { convertPrismaQuoteItemToQuoteItem } from '@/lib/domains/quotes/types';
 import { handleApiError } from '@/lib/shared/forms';
@@ -28,7 +32,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       return NextResponse.json(error, { status });
     }
 
-    const items = await getQuoteItems(quoteId, company!.id);
+    const items = await getQuoteItems(quoteId, company.id);
     return NextResponse.json({
       data: items.map(convertPrismaQuoteItemToQuoteItem),
     });
@@ -48,7 +52,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     const body = await request.json();
     const validatedData = quoteItemSchemas.create.parse(body);
 
-    const item = await createQuoteItem(quoteId, company!.id, validatedData);
+    const item = await createQuoteItem(quoteId, company.id, validatedData);
     const publicItem = convertPrismaQuoteItemToQuoteItem(item);
 
     return NextResponse.json(
@@ -79,7 +83,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
 
     const items = await bulkProcessQuoteItems(
       quoteId,
-      company!.id,
+      company.id,
       validatedData
     );
     return NextResponse.json({
@@ -98,17 +102,14 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       return NextResponse.json(error, { status });
     }
 
+    // 並び順の部分更新（create/deleteは不可）
     const body = await request.json();
-    const validatedData = quoteItemSchemas.bulk.parse(body);
+    const validatedData = reorderQuoteItemsSchema.parse(body);
 
-    const items = await bulkProcessQuoteItems(
-      quoteId,
-      company!.id,
-      validatedData
-    );
+    const items = await reorderQuoteItems(quoteId, company.id, validatedData);
     return NextResponse.json({
       data: items.map(convertPrismaQuoteItemToQuoteItem),
-      message: '品目を一括更新しました',
+      message: '品目の順序を更新しました',
     });
   } catch (error) {
     return handleApiError(error, 'Quote items batch update');

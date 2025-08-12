@@ -5,6 +5,7 @@ import {
   TaxCategory,
 } from '@prisma/client';
 
+import { httpError } from '@/lib/shared/forms';
 import { prisma } from '@/lib/shared/prisma';
 import { ConflictError, NotFoundError } from '@/lib/shared/utils/errors';
 
@@ -18,6 +19,7 @@ import {
   requiresNumberGenerationForTransition,
 } from './utils';
 
+import type { ReorderQuoteItemsData } from './schemas';
 import type {
   QuoteWithRelations,
   QuoteFormData,
@@ -182,18 +184,22 @@ export async function updateQuoteStatus(
       }
 
       // 品目の妥当性チェック
-      for (const item of existingQuote.items) {
+      for (let i = 0; i < existingQuote.items.length; i++) {
+        const item = existingQuote.items[i];
         const qty = Number(item.quantity);
         const price = Number(item.unitPrice);
         const discount = Number(item.discountAmount);
+
         if (qty <= 0) {
-          throw new Error('数量は正の値である必要があります');
+          throw new Error(`品目${i + 1}行目: 数量は正の値である必要があります`);
         }
         if (price < 0) {
-          throw new Error('単価は0以上である必要があります');
+          throw new Error(`品目${i + 1}行目: 単価は0以上である必要があります`);
         }
         if (discount > price * qty) {
-          throw new Error('割引額が品目合計金額を超えています');
+          throw new Error(
+            `品目${i + 1}行目: 割引額が品目合計金額を超えています`
+          );
         }
       }
     }
@@ -370,6 +376,35 @@ export async function updateQuoteItem(
     throw new NotFoundError('品目が見つかりません');
   }
 
+  // 既存値を考慮した整合性チェック（数量・単価・割引の合計超過防止）
+  {
+    const effectiveQuantity =
+      data.quantity !== undefined
+        ? Number(data.quantity)
+        : Number(existingItem.quantity);
+    const effectiveUnitPrice =
+      data.unitPrice !== undefined
+        ? Number(data.unitPrice)
+        : Number(existingItem.unitPrice);
+    const effectiveDiscount =
+      data.discountAmount !== undefined
+        ? Number(data.discountAmount)
+        : Number(existingItem.discountAmount);
+
+    if (effectiveQuantity <= 0) {
+      throw httpError(400, '数量は正の数である必要があります');
+    }
+    if (effectiveUnitPrice < 0) {
+      throw httpError(400, '単価は0以上である必要があります');
+    }
+    if (effectiveDiscount < 0) {
+      throw httpError(400, '割引額は0以上である必要があります');
+    }
+    if (effectiveDiscount > effectiveUnitPrice * effectiveQuantity) {
+      throw httpError(400, '割引額は品目合計金額を超えることはできません');
+    }
+  }
+
   // 楽観ロック: updatedAt 一致条件
   const { updatedAt, ...updateData } = data;
   const result = await prisma.quoteItem.updateMany({
@@ -417,6 +452,52 @@ export async function deleteQuoteItem(
 
   await prisma.quoteItem.delete({
     where: { id: itemId },
+  });
+}
+
+/**
+ * 品目の並び順を一括更新（部分更新）
+ * 更新件数が期待値に満たない場合は競合としてエラー
+ */
+export async function reorderQuoteItems(
+  quoteId: string,
+  companyId: string,
+  data: ReorderQuoteItemsData
+): Promise<PrismaQuoteItem[]> {
+  return await prisma.$transaction(async (tx) => {
+    // 見積書の存在確認
+    const quote = await tx.quote.findFirst({
+      where: { id: quoteId, companyId, deletedAt: null },
+    });
+    if (!quote) {
+      throw new NotFoundError('見積書が見つかりません');
+    }
+
+    let updatedCount = 0;
+    for (const { id, sortOrder, updatedAt } of data.items) {
+      const result = await tx.quoteItem.updateMany({
+        where: {
+          id,
+          quoteId,
+          quote: { companyId, deletedAt: null },
+          updatedAt,
+        },
+        data: { sortOrder },
+      });
+      updatedCount += result.count;
+    }
+
+    if (updatedCount !== data.items.length) {
+      throw new ConflictError(
+        '更新競合が発生しました。最新の状態を取得してから再試行してください。'
+      );
+    }
+
+    const items = await tx.quoteItem.findMany({
+      where: { quoteId },
+      orderBy: { sortOrder: 'asc' },
+    });
+    return items as PrismaQuoteItem[];
   });
 }
 
@@ -502,30 +583,71 @@ export async function bulkProcessQuoteItems(
           results.push(createdItem as PrismaQuoteItem);
           break;
 
-        case 'update':
+        case 'update': {
           // 楽観ロック: updatedAt 一致条件
-          {
-            const { updatedAt, ...updateData } = item.data;
-            const result = await tx.quoteItem.updateMany({
-              where: {
-                id: item.id,
-                quoteId,
-                quote: { companyId, deletedAt: null },
-                updatedAt,
-              },
-              data: updateData,
-            });
-            if (result.count === 0) {
-              throw new Error(
-                '更新競合が発生しました。最新の状態を取得してから再試行してください。'
-              );
-            }
+          const { updatedAt, ...updateData } = item.data;
+
+          // 既存値を取得して整合性検証
+          const existing = await tx.quoteItem.findFirst({
+            where: {
+              id: item.id,
+              quoteId,
+              quote: { companyId, deletedAt: null },
+            },
+          });
+          if (!existing) {
+            throw new NotFoundError('品目が見つかりません');
+          }
+
+          const effectiveQuantity =
+            updateData.quantity !== undefined
+              ? Number(updateData.quantity)
+              : Number(existing.quantity);
+          const effectiveUnitPrice =
+            updateData.unitPrice !== undefined
+              ? Number(updateData.unitPrice)
+              : Number(existing.unitPrice);
+          const effectiveDiscount =
+            updateData.discountAmount !== undefined
+              ? Number(updateData.discountAmount)
+              : Number(existing.discountAmount);
+
+          if (effectiveQuantity <= 0) {
+            throw httpError(400, '数量は正の数である必要があります');
+          }
+          if (effectiveUnitPrice < 0) {
+            throw httpError(400, '単価は0以上である必要があります');
+          }
+          if (effectiveDiscount < 0) {
+            throw httpError(400, '割引額は0以上である必要があります');
+          }
+          if (effectiveDiscount > effectiveUnitPrice * effectiveQuantity) {
+            throw httpError(
+              400,
+              '割引額は品目合計金額を超えることはできません'
+            );
+          }
+
+          const result = await tx.quoteItem.updateMany({
+            where: {
+              id: item.id,
+              quoteId,
+              quote: { companyId, deletedAt: null },
+              updatedAt,
+            },
+            data: updateData,
+          });
+          if (result.count === 0) {
+            throw new Error(
+              '更新競合が発生しました。最新の状態を取得してから再試行してください。'
+            );
           }
           const updatedItem = await tx.quoteItem.findUnique({
             where: { id: item.id },
           });
           results.push(updatedItem as PrismaQuoteItem);
           break;
+        }
 
         case 'delete':
           await tx.quoteItem.delete({
@@ -636,18 +758,18 @@ export async function importQuoteItemsFromCSV(
 
         // 品目作成
         // taxCategory を安全に解決
-        let taxCategory: TaxCategory = 'STANDARD';
-        if (row.taxCategory) {
-          const value = String(row.taxCategory).toUpperCase();
-          if (
-            value === 'STANDARD' ||
-            value === 'REDUCED' ||
-            value === 'EXEMPT' ||
-            value === 'NON_TAX'
-          ) {
-            taxCategory = value as TaxCategory;
-          }
-        }
+        const validTaxCategories: readonly TaxCategory[] = [
+          'STANDARD',
+          'REDUCED',
+          'EXEMPT',
+          'NON_TAX',
+        ] as const;
+        const value = row.taxCategory?.toUpperCase();
+        const taxCategory: TaxCategory = validTaxCategories.includes(
+          value as TaxCategory
+        )
+          ? (value as TaxCategory)
+          : 'STANDARD';
 
         await tx.quoteItem.create({
           data: {

@@ -5,6 +5,8 @@ import {
   Client as PrismaClientModel,
 } from '@prisma/client';
 
+import { Client } from '@/lib/shared/types';
+
 import {
   QuoteFormData,
   QuoteUpdateData,
@@ -55,22 +57,6 @@ export interface QuoteItem {
   sortOrder: number;
   createdAt: Date;
   updatedAt: Date;
-}
-
-/**
- * クライアント型定義（見積書用に簡略化）
- */
-export interface Client {
-  id: string;
-  companyId: string;
-  name: string;
-  contactName?: string;
-  contactEmail?: string;
-  address?: string;
-  phone?: string;
-  createdAt: Date;
-  updatedAt: Date;
-  deletedAt?: Date;
 }
 
 /**
@@ -263,9 +249,9 @@ export function convertPrismaQuoteToQuote(
           contactEmail: prismaQuote.client.contactEmail ?? undefined,
           address: prismaQuote.client.address ?? undefined,
           phone: prismaQuote.client.phone ?? undefined,
-          createdAt: prismaQuote.client.createdAt,
-          updatedAt: prismaQuote.client.updatedAt,
-          deletedAt: prismaQuote.client.deletedAt ?? undefined,
+          createdAt: prismaQuote.client.createdAt.toISOString(),
+          updatedAt: prismaQuote.client.updatedAt.toISOString(),
+          deletedAt: prismaQuote.client.deletedAt?.toISOString() ?? undefined,
         }
       : undefined,
     items: prismaQuote.items
@@ -284,7 +270,7 @@ export function convertPrismaQuoteItemToQuoteItem(
     quantity: Number(prismaItem.quantity),
     unitPrice: Number(prismaItem.unitPrice),
     taxCategory: prismaItem.taxCategory,
-    taxRate: prismaItem.taxRate == null ? null : Number(prismaItem.taxRate),
+    taxRate: prismaItem.taxRate === null ? null : Number(prismaItem.taxRate),
     discountAmount: Number(prismaItem.discountAmount),
     unit: prismaItem.unit,
     sku: prismaItem.sku,

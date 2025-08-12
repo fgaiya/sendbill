@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
     } = searchResult.data;
 
     // 検索条件とソート条件、関連データ取得設定の構築
-    const where = buildQuoteSearchWhere(company!.id, {
+    const where = buildQuoteSearchWhere(company.id, {
       query: q,
       status: quoteStatus,
       clientId,
@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
       Math.min(Number.isFinite(parsed) ? parsed : 10, 50)
     );
     const { quotes, total } = await getQuotes(
-      company!.id,
+      company.id,
       where,
       orderBy,
       includeRelations,

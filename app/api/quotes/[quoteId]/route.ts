@@ -46,14 +46,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
     const { include } = includeResult.data;
     const includeRelations = buildIncludeRelations(include);
 
-    const quote = await getQuote(quoteId, company!.id, includeRelations);
+    const quote = await getQuote(quoteId, company.id, includeRelations);
 
     if (!quote) {
-      return NextResponse.json(apiErrors.notFound('見積書'), { status: 404 });
-    }
-
-    // 削除済みの見積書は404を返す
-    if (quote.deletedAt) {
       return NextResponse.json(apiErrors.notFound('見積書'), { status: 404 });
     }
 
@@ -76,7 +71,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     const body = await request.json();
     const validatedData = quoteSchemas.update.parse(body);
 
-    const quote = await updateQuote(quoteId, company!.id, validatedData);
+    const quote = await updateQuote(quoteId, company.id, validatedData);
 
     return NextResponse.json({
       data: convertPrismaQuoteToQuote(quote),
@@ -96,7 +91,7 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
     }
 
     // 見積書の存在確認
-    const quote = await getQuote(quoteId, company!.id);
+    const quote = await getQuote(quoteId, company.id);
 
     if (!quote) {
       return NextResponse.json(apiErrors.notFound('見積書'), { status: 404 });
@@ -109,7 +104,7 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
       );
     }
 
-    await deleteQuote(quoteId, company!.id);
+    await deleteQuote(quoteId, company.id);
 
     return NextResponse.json(
       { message: '見積書を削除しました' },

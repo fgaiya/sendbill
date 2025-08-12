@@ -1,4 +1,4 @@
-import { Decimal } from 'decimal.js';
+import { Prisma } from '@prisma/client';
 
 /**
  * オブジェクト操作共通ユーティリティ
@@ -26,15 +26,22 @@ export function omitUndefined<T extends Record<string, unknown>>(
 
 /**
  * Prisma Decimalをnumberに変換する
- * @param value - Decimal値またはnull/undefined
+ * @param value - Decimal値、number値、またはnull/undefined
  * @returns number値またはnull/undefined
  */
 export function convertDecimalToNumber(
-  value: Decimal | null | undefined
+  value: Prisma.Decimal | number | null | undefined
 ): number | null | undefined {
   if (value === null) return null;
   if (value === undefined) return undefined;
-  return Number(value);
+  if (typeof value === 'number') return value;
+  // Prisma.Decimal は toNumber を提供
+  try {
+    return value.toNumber();
+  } catch {
+    // 念のためのフォールバック
+    return Number(value as unknown as string);
+  }
 }
 
 /**
@@ -49,25 +56,12 @@ export function convertDecimalFields<
 >(
   obj: T,
   decimalFields: readonly K[]
-): Omit<T, K> & {
-  [P in K]: T[P] extends Decimal | null | undefined
-    ? number | null | undefined
-    : T[P];
-} {
+): Omit<T, K> & { [P in K]: number | null | undefined } {
   const converted: Record<string, unknown> = { ...obj };
-
   decimalFields.forEach((field) => {
-    const value = converted[field as string];
-    if (value == null) return;
-    // Decimal っぽい（toNumber を持つ）場合のみ変換
-    if (typeof (value as { toNumber?: unknown }).toNumber === 'function') {
-      converted[field as string] = convertDecimalToNumber(value as Decimal);
-    }
+    converted[field as string] = convertDecimalToNumber(
+      obj[field] as Prisma.Decimal | number | null | undefined
+    );
   });
-
-  return converted as Omit<T, K> & {
-    [P in K]: T[P] extends Decimal | null | undefined
-      ? number | null | undefined
-      : T[P];
-  };
+  return converted as Omit<T, K> & { [P in K]: number | null | undefined };
 }

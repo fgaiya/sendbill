@@ -6,6 +6,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 
+import { Client } from '@/lib/shared/types';
+
 import { clientSchemas } from './schemas';
 import {
   ClientFormData,
@@ -14,7 +16,6 @@ import {
   ClientListParams,
   ClientListResponse,
   UseClientListReturn,
-  Client,
 } from './types';
 
 import type { UseFormReturn } from 'react-hook-form';
@@ -228,7 +229,7 @@ export function useClientList(
   const [params, setParams] = useState<ClientListParams>({
     page: 1,
     limit: 20,
-    sort: 'created_desc',
+    sort: 'createdAt_desc',
     ...initialParams,
   });
 

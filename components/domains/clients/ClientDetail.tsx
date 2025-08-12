@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
-import { Client } from '@/lib/domains/clients/types';
+import { Client } from '@/lib/shared/types';
 import { formatDate } from '@/lib/shared/utils/date';
 
 import { ClientDeleteButton } from './ClientDeleteButton';

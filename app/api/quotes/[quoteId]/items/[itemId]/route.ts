@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { z } from 'zod';
 
-import { quoteItemSchemas } from '@/lib/domains/quotes/schemas';
+import {
+  quoteItemSchemas,
+  patchQuoteItemSchema,
+} from '@/lib/domains/quotes/schemas';
 import {
   updateQuoteItem,
   deleteQuoteItem,
@@ -31,7 +34,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       return NextResponse.json(error, { status });
     }
 
-    const item = await getQuoteItem(itemId, quoteId, company!.id);
+    const item = await getQuoteItem(itemId, quoteId, company.id);
 
     if (!item) {
       return NextResponse.json(apiErrors.notFound('品目'), { status: 404 });
@@ -61,12 +64,12 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     const item = await updateQuoteItem(
       itemId,
       quoteId,
-      company!.id,
+      company.id,
       validatedData
     );
 
     return NextResponse.json({
-      item: convertPrismaQuoteItemToQuoteItem(item),
+      data: convertPrismaQuoteItemToQuoteItem(item),
       message: '品目を更新しました',
     });
   } catch (error) {
@@ -85,18 +88,19 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     }
 
     const body = await request.json();
-    const validatedData = quoteItemSchemas.update.parse(body);
+    // 部分更新（並び順は除外）
+    const validatedData = patchQuoteItemSchema.parse(body);
 
     const item = await updateQuoteItem(
       itemId,
       quoteId,
-      company!.id,
+      company.id,
       validatedData
     );
 
     return NextResponse.json({
-      item: convertPrismaQuoteItemToQuoteItem(item),
-      message: '品目を更新しました',
+      data: convertPrismaQuoteItemToQuoteItem(item),
+      message: '品目を部分更新しました',
     });
   } catch (error) {
     return handleApiError(error, 'Quote item partial update');
@@ -113,7 +117,7 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
       return NextResponse.json(error, { status });
     }
 
-    await deleteQuoteItem(itemId, quoteId, company!.id);
+    await deleteQuoteItem(itemId, quoteId, company.id);
 
     return NextResponse.json(
       { message: '品目を削除しました' },
