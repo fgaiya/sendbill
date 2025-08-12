@@ -41,7 +41,7 @@ export function ClientListView({
           totalCount={pagination.total}
           onSearch={setSearch}
           onSort={setSort}
-          currentSort={params.sort || 'created_desc'}
+          currentSort={params.sort || 'createdAt_desc'}
         />
 
         <div className="px-4 sm:px-6 lg:px-8 py-8">

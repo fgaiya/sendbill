@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
     const { q, limit, include } = searchResult.data;
 
     // 検索条件と関連データ取得設定の構築
-    const where = buildClientSearchWhere(company!.id, q);
+    const where = buildClientSearchWhere(company.id, q);
     const includeRelations = buildIncludeRelations(include);
 
     // 検索実行（名前順でソート）とカウント（並列実行）

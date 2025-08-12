@@ -71,7 +71,7 @@ async function createResourceInternal<
     // 一意制約チェック（オプション）
     if (options.uniqueConstraint) {
       const existing = await options.model.findUnique({
-        where: options.uniqueConstraint(company!.id),
+        where: options.uniqueConstraint(company.id),
       } as { where: WhereArg<D> });
 
       if (existing) {
@@ -85,7 +85,7 @@ async function createResourceInternal<
     const entity = await options.model.create({
       data: {
         ...(validatedData as Record<string, unknown>),
-        companyId: company!.id,
+        companyId: company.id,
       },
     });
 
@@ -125,7 +125,7 @@ async function getResourcesInternal<D extends DelegateLike>(
     const entities = await options.model.findMany({
       where: {
         ...whereOptions,
-        companyId: company!.id,
+        companyId: company.id,
       },
     });
 

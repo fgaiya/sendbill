@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import {
+  Client,
   PaginatedResponse,
   PaginationInfo,
   PaginationParams,
@@ -18,22 +19,8 @@ import type { UseFormReturn } from 'react-hook-form';
 // 取引先フォームデータ型
 export type ClientFormData = z.infer<typeof clientSchemas.create>;
 
-// 取引先データ型（APIレスポンス）
-export interface Client {
-  id: string;
-  companyId: string;
-  name: string;
-  contactName?: string;
-  contactEmail?: string;
-  address?: string;
-  phone?: string;
-  createdAt: string;
-  updatedAt: string;
-  deletedAt?: string | null;
-}
-
 // 取引先のソート可能フィールド
-export type ClientSortField = 'name' | 'created';
+export type ClientSortField = 'name' | 'createdAt';
 
 // 取引先のソートオプション
 export type ClientSortOption = SortField<ClientSortField>;
