@@ -34,8 +34,6 @@ export function BaseForm({
   isSubmitting,
   isValid = true,
   submitError,
-  submitSuccess = false,
-  successMessage,
   submitLabel = '送信',
   submittingLabel = '送信中...',
   resetLabel = 'リセット',
@@ -68,11 +66,6 @@ export function BaseForm({
         className="space-y-6"
       >
         {children}
-
-        {/* 送信結果メッセージ */}
-        {submitSuccess && successMessage && (
-          <FormStatusMessage type="success" message={successMessage} />
-        )}
 
         {submitError && (
           <FormStatusMessage type="error" message={submitError} />
