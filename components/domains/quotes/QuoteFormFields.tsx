@@ -3,10 +3,9 @@
 import { type Control, type FieldErrors } from 'react-hook-form';
 
 import type { QuoteFormData } from '@/lib/domains/quotes/schemas';
+import type { QuoteBasicsShape } from '@/lib/domains/quotes/types';
 
 import { QuoteBasicInfoFields } from './QuoteBasicInfoFields';
-
-import type { QuoteBasicsShape } from './types';
 
 export interface QuoteFormFieldsProps<
   T extends QuoteBasicsShape = QuoteFormData,

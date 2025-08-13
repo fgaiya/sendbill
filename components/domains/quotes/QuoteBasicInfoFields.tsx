@@ -11,11 +11,10 @@ import {
 
 import { FormFieldWrapper } from '@/components/ui/form-field';
 import { Input } from '@/components/ui/input';
+import type { QuoteBasicsShape } from '@/lib/domains/quotes/types';
 import { toDateInputValue, fromDateInputValue } from '@/lib/shared/utils/date';
 
 import { ClientSelector } from './ClientSelector';
-
-import type { QuoteBasicsShape } from './types';
 
 export interface QuoteBasicInfoFieldsProps<T extends QuoteBasicsShape> {
   control: Control<T>;

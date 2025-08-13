@@ -143,3 +143,16 @@ export function fromDateInputValue(value: string): Date | undefined {
 
   return date;
 }
+
+/**
+ * 日付をAPI送信用の"YYYY-MM-DD"文字列に変換
+ * タイムゾーンのずれを考慮してローカル日付を正しくAPI送信
+ * @param date Dateオブジェクト
+ * @returns "YYYY-MM-DD" 形式の文字列、または無効な日付の場合はnull
+ */
+export function toApiDateString(date: Date | null | undefined): string | null {
+  if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
+    return null;
+  }
+  return toDateInputValue(date); // 既存のtoDateInputValueを再利用
+}

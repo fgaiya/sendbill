@@ -281,6 +281,17 @@ export function convertPrismaQuoteItemToQuoteItem(
 }
 
 /**
+ * UI層で使用するフォーム型制約（コンポーネント用）
+ * React Hook Form の Control<T> のジェネリクス制約として使用
+ */
+export interface QuoteBasicsShape {
+  clientId: string;
+  issueDate: Date;
+  expiryDate?: Date;
+  notes?: string;
+}
+
+/**
  * エクスポート型定義
  */
 export type {

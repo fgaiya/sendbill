@@ -8,6 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm, type UseFormReturn } from 'react-hook-form';
 import { toast } from 'sonner';
 
+import { toApiDateString } from '@/lib/shared/utils/date';
 import { omitUndefined } from '@/lib/shared/utils/objects';
 
 import { quoteFormUiSchema } from './form-schemas';
@@ -22,7 +23,6 @@ export interface UseQuoteFormOptions {
 export interface UseQuoteFormState {
   isSubmitting: boolean;
   submitError?: string;
-  submitSuccess: boolean;
   isLoading: boolean;
   fetchError?: string;
   quote?: Quote;
@@ -48,7 +48,6 @@ export function useQuoteForm(
 
   // 基本状態
   const [submitError, setSubmitError] = useState<string>();
-  const [submitSuccess, setSubmitSuccess] = useState(false);
 
   // 編集モード用の追加状態
   const [isLoading, setIsLoading] = useState(!!quoteId);
@@ -86,6 +85,7 @@ export function useQuoteForm(
     if (!quoteId) return;
 
     let isMounted = true;
+    const { reset } = form;
 
     const fetchQuote = async () => {
       try {
@@ -115,7 +115,7 @@ export function useQuoteForm(
           setQuote(quoteData);
 
           // フォームの初期値を設定
-          form.reset(toFormValuesFromQuote(quoteData));
+          reset(toFormValuesFromQuote(quoteData));
         }
       } catch (err) {
         const message =
@@ -135,12 +135,12 @@ export function useQuoteForm(
     return () => {
       isMounted = false;
     };
-  }, [quoteId, form]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [quoteId, form.reset]);
 
   const onSubmit = async (data: QuoteFormData) => {
     try {
       setSubmitError(undefined);
-      setSubmitSuccess(false);
 
       // モードに応じてAPIエンドポイントとメソッドを切り替え
       const url = isEditMode ? `/api/quotes/${quoteId}` : '/api/quotes';
@@ -152,12 +152,20 @@ export function useQuoteForm(
         ? '見積書の更新に失敗しました'
         : '見積書の作成に失敗しました';
 
+      // API送信用のデータを正規化（日付のタイムゾーン対応、空文字列のnull化）
+      const payload = {
+        ...data,
+        issueDate: toApiDateString(data.issueDate)!,
+        expiryDate: toApiDateString(data.expiryDate),
+        notes: data.notes?.trim() || null,
+      };
+
       const response = await fetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(omitUndefined(data)),
+        body: JSON.stringify(omitUndefined(payload)),
       });
 
       if (!response.ok) {
@@ -171,13 +179,10 @@ export function useQuoteForm(
         throw new Error(apiErrorMessage);
       }
 
-      setSubmitSuccess(true);
-
       toast.success(successMessage);
 
-      setTimeout(() => {
-        router.push('/dashboard'); // 今後見積書一覧ページに変更
-      }, 2000);
+      // 即座にリダイレクト（toastは遷移先でも継続表示される）
+      router.push('/dashboard'); // 今後見積書一覧ページに変更
     } catch (error) {
       const message =
         error instanceof Error
@@ -199,12 +204,10 @@ export function useQuoteForm(
       form.reset(defaultCreateValues);
     }
     setSubmitError(undefined);
-    setSubmitSuccess(false);
   };
 
   const clearMessages = () => {
     setSubmitError(undefined);
-    setSubmitSuccess(false);
     setFetchError(undefined);
   };
 
@@ -213,7 +216,6 @@ export function useQuoteForm(
     state: {
       isSubmitting: form.formState.isSubmitting,
       submitError,
-      submitSuccess,
       isLoading,
       fetchError,
       quote,
