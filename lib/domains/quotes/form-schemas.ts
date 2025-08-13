@@ -1,5 +1,9 @@
 import { z } from 'zod';
 
+// 時刻を無視して「日付のみ」で比較するための正規化
+const normalizeDate = (d: Date) =>
+  new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+
 // UI用フォームスキーマ（RHFのフィールド型と一致させるためにcoerceを使わない）
 export const quoteFormUiSchema = z
   .object({
@@ -14,7 +18,12 @@ export const quoteFormUiSchema = z
       .max(2000, '備考は2000文字以内で入力してください')
       .optional(),
   })
-  .refine((v) => !v.expiryDate || v.expiryDate >= v.issueDate, {
-    path: ['expiryDate'],
-    message: '有効期限は発行日以降を指定してください',
-  });
+  .refine(
+    (v) =>
+      !v.expiryDate ||
+      normalizeDate(v.expiryDate) >= normalizeDate(v.issueDate),
+    {
+      path: ['expiryDate'],
+      message: '有効期限は発行日以降を指定してください',
+    }
+  );
