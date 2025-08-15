@@ -7,14 +7,7 @@ import {
 
 import { Client } from '@/lib/shared/types';
 
-import {
-  QuoteFormData,
-  QuoteUpdateData,
-  QuoteItemFormData,
-  QuoteItemUpdateData,
-  BulkQuoteItemsData,
-  QuoteSearchParams,
-} from './schemas';
+import { QuoteItemFormData } from './schemas';
 
 /**
  * サービス層で使用するPrisma型（Decimal型を含む）
@@ -301,4 +294,10 @@ export type {
   QuoteItemUpdateData,
   BulkQuoteItemsData,
   QuoteSearchParams,
-};
+} from './schemas';
+
+// フォーム関連の型をエクスポート
+export type {
+  QuoteItemFormData as QuoteItemFormUiData,
+  QuoteFormWithItemsData,
+} from './form-schemas';
