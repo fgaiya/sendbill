@@ -10,6 +10,7 @@ export function QuoteForm() {
 
   const {
     control,
+    setValue,
     formState: { errors, isValid, isDirty },
   } = form;
 
@@ -18,7 +19,7 @@ export function QuoteForm() {
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <BaseForm
           title="見積書作成"
           description="新しい見積書を作成してください"
@@ -33,6 +34,7 @@ export function QuoteForm() {
           <QuoteFormFields
             control={control}
             errors={errors}
+            setValue={setValue}
             isSubmitting={isSubmitting}
           />
 

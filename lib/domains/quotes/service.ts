@@ -23,9 +23,9 @@ import {
 import type { ReorderQuoteItemsData } from './schemas';
 import type {
   QuoteWithRelations,
-  QuoteFormData,
+  QuoteData,
   QuoteUpdateData,
-  QuoteItemFormData,
+  QuoteItemData,
   QuoteItemUpdateData,
   BulkQuoteItemsData,
   TaxCalculationResult,
@@ -44,7 +44,7 @@ import type {
  */
 export async function createQuote(
   companyId: string,
-  data: QuoteFormData
+  data: QuoteData
 ): Promise<QuoteWithRelations> {
   // クライアントの存在確認
   const client = await prisma.client.findFirst({
@@ -323,7 +323,7 @@ export async function getQuote(
 export async function createQuoteItem(
   quoteId: string,
   companyId: string,
-  data: QuoteItemFormData
+  data: QuoteItemData
 ): Promise<PrismaQuoteItem> {
   // 見積書の存在確認
   const quote = await prisma.quote.findFirst({

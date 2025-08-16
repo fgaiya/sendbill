@@ -5,14 +5,14 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm, type UseFormReturn } from 'react-hook-form';
+import { useForm, type UseFormReturn, type Resolver } from 'react-hook-form';
 import { toast } from 'sonner';
 
 import { toApiDateString } from '@/lib/shared/utils/date';
 import { omitUndefined } from '@/lib/shared/utils/objects';
 
-import { quoteFormUiSchema } from './form-schemas';
-import { type QuoteFormData } from './schemas';
+import { quoteFormWithItemsSchema } from './form-schemas';
+import { type QuoteFormWithItemsData } from './form-schemas';
 
 import type { Quote } from './types';
 
@@ -35,7 +35,7 @@ export interface UseQuoteFormActions {
 }
 
 export interface UseQuoteFormReturn {
-  form: UseFormReturn<QuoteFormData, unknown, QuoteFormData>;
+  form: UseFormReturn<QuoteFormWithItemsData>;
   state: UseQuoteFormState;
   actions: UseQuoteFormActions;
 }
@@ -58,26 +58,43 @@ export function useQuoteForm(
   const isEditMode = !!quoteId;
 
   // フォームはUI専用スキーマで検証（Dateを要求）
-  const formSchema = quoteFormUiSchema;
+  const formSchema = quoteFormWithItemsSchema;
 
-  const defaultCreateValues: QuoteFormData = {
+  const defaultCreateValues: QuoteFormWithItemsData = {
     clientId: '',
     issueDate: new Date(),
     expiryDate: undefined,
     notes: '',
+    items: [], // 空の品目配列で開始
   };
 
-  const form = useForm<QuoteFormData, unknown, QuoteFormData>({
-    resolver: zodResolver(formSchema),
+  const form = useForm<QuoteFormWithItemsData>({
+    resolver: zodResolver(formSchema) as Resolver<
+      QuoteFormWithItemsData,
+      unknown
+    >,
     defaultValues: defaultCreateValues,
     mode: 'onBlur',
   });
 
-  const toFormValuesFromQuote = (q: Quote): QuoteFormData => ({
+  const toFormValuesFromQuote = (q: Quote): QuoteFormWithItemsData => ({
     clientId: q.clientId,
     issueDate: new Date(q.issueDate),
     expiryDate: q.expiryDate ? new Date(q.expiryDate) : undefined,
     notes: q.notes || '',
+    items:
+      q.items?.map((item) => ({
+        description: item.description,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        taxCategory: item.taxCategory,
+        taxRate: item.taxRate ?? undefined,
+        discountAmount: item.discountAmount,
+        unit: item.unit || '',
+        sku: item.sku || '',
+        sortOrder: item.sortOrder,
+        subtotal: item.unitPrice * item.quantity - item.discountAmount, // 小計計算
+      })) || [],
   });
 
   // 編集モード時の初期データ取得
@@ -110,12 +127,12 @@ export function useQuoteForm(
           throw new Error(errorMessage);
         }
 
-        const quoteData = await response.json();
+        const { data: quote } = await response.json();
         if (isMounted) {
-          setQuote(quoteData);
+          setQuote(quote);
 
           // フォームの初期値を設定
-          reset(toFormValuesFromQuote(quoteData));
+          reset(toFormValuesFromQuote(quote));
         }
       } catch (err) {
         const message =
@@ -138,7 +155,7 @@ export function useQuoteForm(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quoteId, form.reset]);
 
-  const onSubmit = async (data: QuoteFormData) => {
+  const onSubmit = async (data: QuoteFormWithItemsData) => {
     try {
       setSubmitError(undefined);
 
@@ -152,12 +169,15 @@ export function useQuoteForm(
         ? '見積書の更新に失敗しました'
         : '見積書の作成に失敗しました';
 
+      // 基本見積書データ（品目を除く）を準備
+      const { items, ...basicQuoteData } = data;
+
       // API送信用のデータを正規化（日付のタイムゾーン対応、空文字列のnull化）
       const payload = {
-        ...data,
-        issueDate: toApiDateString(data.issueDate)!,
-        expiryDate: toApiDateString(data.expiryDate),
-        notes: data.notes?.trim() || null,
+        ...basicQuoteData,
+        issueDate: toApiDateString(basicQuoteData.issueDate)!,
+        expiryDate: toApiDateString(basicQuoteData.expiryDate),
+        notes: basicQuoteData.notes?.trim() || null,
       };
 
       const response = await fetch(url, {
@@ -177,6 +197,64 @@ export function useQuoteForm(
           // JSON以外のレスポンスの場合はデフォルトメッセージを使用
         }
         throw new Error(apiErrorMessage);
+      }
+
+      const responseData = await response.json();
+      const savedQuoteId = isEditMode ? quoteId : responseData.data?.id;
+      if (!savedQuoteId) {
+        throw new Error('見積書IDの取得に失敗しました');
+      }
+
+      // 品目データがある場合は品目APIで処理
+      if (items && items.length > 0) {
+        try {
+          // 品目の一括更新（既存品目は削除して新規作成）
+          const itemsPayload = items
+            .filter((item) => item.description.trim()) // 空の品目を除外
+            .map((item) => ({
+              description: item.description.trim(),
+              quantity: Number(item.quantity) || 0,
+              unitPrice: Number(item.unitPrice) || 0,
+              taxCategory: item.taxCategory,
+              taxRate:
+                item.taxRate !== undefined ? Number(item.taxRate) : undefined,
+              discountAmount: Number(item.discountAmount) || 0,
+              unit: item.unit?.trim() || undefined,
+              sku: item.sku?.trim() || undefined,
+              sortOrder: item.sortOrder,
+            }));
+
+          if (itemsPayload.length > 0) {
+            const itemsResponse = await fetch(
+              `/api/quotes/${savedQuoteId}/items`,
+              {
+                method: 'PUT',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  items: itemsPayload,
+                }),
+              }
+            );
+
+            if (!itemsResponse.ok) {
+              let errorMessage = '品目の保存に失敗しました';
+              try {
+                const itemsError = await itemsResponse.json();
+                errorMessage = itemsError.error || errorMessage;
+              } catch {}
+              throw new Error(errorMessage);
+            }
+          }
+        } catch (itemsError) {
+          // 品目保存エラーはワーニングとして表示（見積書自体は保存済み）
+          const itemsMessage =
+            itemsError instanceof Error
+              ? itemsError.message
+              : '品目の保存に失敗しました';
+          toast.error(`見積書は保存されましたが、${itemsMessage}`);
+        }
       }
 
       toast.success(successMessage);

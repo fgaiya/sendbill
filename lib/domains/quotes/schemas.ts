@@ -230,9 +230,9 @@ export const includeSchema = z.object({
 /**
  * 型エクスポート
  */
-export type QuoteFormData = z.infer<typeof createQuoteSchema>;
+export type QuoteData = z.infer<typeof createQuoteSchema>;
 export type QuoteUpdateData = z.infer<typeof updateQuoteSchema>;
-export type QuoteItemFormData = z.infer<typeof createQuoteItemSchema>;
+export type QuoteItemData = z.infer<typeof createQuoteItemSchema>;
 export type QuoteItemUpdateData = z.infer<typeof updateQuoteItemSchema>;
 export type BulkQuoteItemsData = z.infer<typeof bulkQuoteItemsSchema>;
 export type QuoteSearchParams = z.infer<typeof quoteSearchSchema>;

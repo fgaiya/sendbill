@@ -7,14 +7,7 @@ import {
 
 import { Client } from '@/lib/shared/types';
 
-import {
-  QuoteFormData,
-  QuoteUpdateData,
-  QuoteItemFormData,
-  QuoteItemUpdateData,
-  BulkQuoteItemsData,
-  QuoteSearchParams,
-} from './schemas';
+import { QuoteItemData } from './schemas';
 
 /**
  * サービス層で使用するPrisma型（Decimal型を含む）
@@ -100,8 +93,8 @@ export type BulkAction = 'create' | 'update' | 'delete';
  * バルク処理品目型
  */
 export type BulkQuoteItem =
-  | { action: 'create'; data: QuoteItemFormData }
-  | { action: 'update'; id: string; data: QuoteItemFormData }
+  | { action: 'create'; data: QuoteItemData }
+  | { action: 'update'; id: string; data: QuoteItemData }
   | { action: 'delete'; id: string };
 
 /**
@@ -292,13 +285,19 @@ export interface QuoteBasicsShape {
 }
 
 /**
- * エクスポート型定義
+ * エクスポート型定義（API層用）
  */
 export type {
-  QuoteFormData,
+  QuoteData,
   QuoteUpdateData,
-  QuoteItemFormData,
+  QuoteItemData,
   QuoteItemUpdateData,
   BulkQuoteItemsData,
   QuoteSearchParams,
-};
+} from './schemas';
+
+// フォーム関連の型をエクスポート（UI層用）
+export type {
+  QuoteItemFormData as QuoteItemFormUiData,
+  QuoteFormWithItemsData,
+} from './form-schemas';
