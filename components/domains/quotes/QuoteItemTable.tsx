@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useRef, useEffect } from 'react';
 
 import { Plus, Upload, Download, Table2 } from 'lucide-react';
 import { useWatch } from 'react-hook-form';
@@ -13,7 +13,7 @@ import {
 import type { QuoteFormWithItemsData } from '@/lib/domains/quotes/form-schemas';
 import { cn } from '@/lib/shared/utils/ui';
 
-import { QuoteItemRow } from './QuoteItemRow';
+import { QuoteItemRow, QuoteItemRowRef } from './QuoteItemRow';
 
 import type {
   UseFieldArrayReturn,
@@ -26,7 +26,7 @@ export interface QuoteItemTableProps {
   control: Control<QuoteFormWithItemsData>;
   errors: FieldErrors<QuoteFormWithItemsData>;
   setValue: UseFormSetValue<QuoteFormWithItemsData>;
-  fieldArray: UseFieldArrayReturn<QuoteFormWithItemsData, 'items'>;
+  fieldArray: UseFieldArrayReturn<QuoteFormWithItemsData, 'items', 'keyId'>;
   isSubmitting?: boolean;
   className?: string;
 }
@@ -40,6 +40,14 @@ export function QuoteItemTable({
   className,
 }: QuoteItemTableProps) {
   const { fields, append, remove, move } = fieldArray;
+
+  // 品目行refの管理
+  const itemRowRefs = useRef<(QuoteItemRowRef | null)[]>([]);
+
+  // fieldsの変更に合わせてrefs配列を調整
+  useEffect(() => {
+    itemRowRefs.current = itemRowRefs.current.slice(0, fields.length);
+  }, [fields.length]);
 
   // 品目合計の計算
   const items = useWatch({
@@ -71,12 +79,7 @@ export function QuoteItemTable({
     // 追加後、新しい品目の最初のフィールド（品目名）にフォーカス
     setTimeout(() => {
       const newIndex = fields.length;
-      const descriptionInput = document.querySelector(
-        `input[name="items.${newIndex}.description"]`
-      ) as HTMLInputElement | null;
-      if (descriptionInput) {
-        descriptionInput.focus();
-      }
+      itemRowRefs.current[newIndex]?.focusDescription();
     }, 50);
   };
 
@@ -203,7 +206,10 @@ export function QuoteItemTable({
               <tbody className="bg-white divide-y divide-gray-200">
                 {fields.map((field, index) => (
                   <QuoteItemRow
-                    key={field.id}
+                    key={field.keyId}
+                    ref={(el) => {
+                      itemRowRefs.current[index] = el;
+                    }}
                     index={index}
                     control={control}
                     errors={errors}

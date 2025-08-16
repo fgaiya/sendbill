@@ -200,7 +200,7 @@ export function useQuoteForm(
       }
 
       const responseData = await response.json();
-      const savedQuoteId = responseData.data?.id || quoteId;
+      const savedQuoteId = isEditMode ? quoteId : responseData.data?.id;
       if (!savedQuoteId) {
         throw new Error('見積書IDの取得に失敗しました');
       }
@@ -217,9 +217,7 @@ export function useQuoteForm(
               unitPrice: Number(item.unitPrice) || 0,
               taxCategory: item.taxCategory,
               taxRate:
-                item.taxRate !== undefined
-                  ? Number(item.taxRate) || 0
-                  : undefined,
+                item.taxRate !== undefined ? Number(item.taxRate) : undefined,
               discountAmount: Number(item.discountAmount) || 0,
               unit: item.unit?.trim() || undefined,
               sku: item.sku?.trim() || undefined,

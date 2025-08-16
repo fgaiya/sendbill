@@ -53,8 +53,13 @@ export function calculateItemFromForm(
   const quantity = item.quantity ?? 0;
   const discountAmount = item.discountAmount ?? 0;
 
-  // 未入力や不正値の場合は0を返す
-  if (!unitPrice || !quantity || unitPrice < 0 || quantity <= 0) {
+  // 未入力や不正値（NaN, Infinity, 0数量）の場合は0を返す
+  if (
+    !Number.isFinite(unitPrice) ||
+    !Number.isFinite(quantity) ||
+    unitPrice < 0 ||
+    quantity <= 0
+  ) {
     return {
       subtotal: 0,
       netAmount: 0,
@@ -101,10 +106,12 @@ export function debounce<A extends unknown[]>(
   func: (...args: A) => void,
   delay: number
 ): (...args: A) => void {
-  let timeoutId: NodeJS.Timeout;
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
   return (...args: A) => {
-    clearTimeout(timeoutId);
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
     timeoutId = setTimeout(() => func(...args), delay);
   };
 }

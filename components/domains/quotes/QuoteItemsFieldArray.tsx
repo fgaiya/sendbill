@@ -29,7 +29,7 @@ export function QuoteItemsFieldArray({
   const fieldArray = useFieldArray({
     control,
     name: 'items',
-    keyName: 'id',
+    keyName: 'keyId',
   });
 
   const { fields } = fieldArray;
