@@ -127,12 +127,12 @@ export function useQuoteForm(
           throw new Error(errorMessage);
         }
 
-        const quoteData = await response.json();
+        const { data: quote } = await response.json();
         if (isMounted) {
-          setQuote(quoteData);
+          setQuote(quote);
 
           // フォームの初期値を設定
-          reset(toFormValuesFromQuote(quoteData));
+          reset(toFormValuesFromQuote(quote));
         }
       } catch (err) {
         const message =
@@ -228,13 +228,12 @@ export function useQuoteForm(
             const itemsResponse = await fetch(
               `/api/quotes/${savedQuoteId}/items`,
               {
-                method: 'POST',
+                method: 'PUT',
                 headers: {
                   'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                  action: 'bulk',
-                  data: itemsPayload,
+                  items: itemsPayload,
                 }),
               }
             );
