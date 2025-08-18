@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 
-import { Prisma } from '@prisma/client';
 import { z } from 'zod';
 
 import {
@@ -93,20 +92,27 @@ const baseCompanyFields = {
   bankBranch: z.string().optional(),
   bankAccountNumber: z.string().optional(),
   bankAccountHolder: z.string().optional(),
+  // 税務設定
+  standardTaxRate: z
+    .number({ message: '標準税率は数値で入力してください' })
+    .min(0, '標準税率は0%以上である必要があります')
+    .max(100, '標準税率は100%以下である必要があります'),
+  reducedTaxRate: z
+    .number({ message: '軽減税率は数値で入力してください' })
+    .min(0, '軽減税率は0%以上である必要があります')
+    .max(100, '軽減税率は100%以下である必要があります'),
+  priceIncludesTax: z.boolean(),
 };
 
-// 会社フォーム用の型（userId等は除外）
-type CompanyFormInput = Omit<
-  Prisma.CompanyUncheckedCreateInput,
-  'id' | 'createdAt' | 'updatedAt' | 'userId'
->;
+// 注意: Prisma 入力型との整合をここで厳密拘束すると
+// RHF の Resolver 出力型とズレるため、Zod の出力（output）型に委ねる。
 
 export const companySchemas = {
-  create: z.object(baseCompanyFields) satisfies z.ZodType<CompanyFormInput>,
+  create: z.object(baseCompanyFields),
   update: z.object({
     ...baseCompanyFields,
     companyName: z.string().min(1, '会社名は必須です').optional(),
-  }) satisfies z.ZodType<Partial<CompanyFormInput>>,
+  }),
 };
 
 // API エラーレスポンス共通ユーティリティ

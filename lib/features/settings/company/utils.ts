@@ -25,5 +25,9 @@ export const getFormDataFromCompany = (
     bankBranch: company.bankBranch || '',
     bankAccountNumber: company.bankAccountNumber || '',
     bankAccountHolder: company.bankAccountHolder || '',
+    // 税務設定
+    standardTaxRate: Number(company.standardTaxRate ?? 10),
+    reducedTaxRate: Number(company.reducedTaxRate ?? 8),
+    priceIncludesTax: company.priceIncludesTax ?? false,
   };
 };

@@ -131,6 +131,7 @@ export function QuoteForm() {
                 <li>
                   会社設定読み込み中: {isLoadingCompany ? 'はい' : 'いいえ'}
                 </li>
+                <li>会社設定取得済み: {company ? 'はい' : 'いいえ'}</li>
               </ul>
             </div>
           )}

@@ -21,6 +21,9 @@ import type { QuoteFormWithItemsData } from '@/lib/domains/quotes/form-schemas';
 import { formatCurrency } from '@/lib/shared/utils';
 import { cn } from '@/lib/shared/utils/ui';
 
+import { TaxCategorySelect } from './TaxCategorySelect';
+import { TaxRateInput } from './TaxRateInput';
+
 import type { Control, FieldErrors, UseFormSetValue } from 'react-hook-form';
 
 export interface QuoteItemRowProps {
@@ -46,6 +49,8 @@ const fieldRefs = {
   quantity: 'quantity',
   unitPrice: 'unitPrice',
   discountAmount: 'discountAmount',
+  taxCategory: 'taxCategory',
+  taxRate: 'taxRate',
   unit: 'unit',
   sku: 'sku',
 } as const;
@@ -292,6 +297,36 @@ export const QuoteItemRow = forwardRef<QuoteItemRowRef, QuoteItemRowProps>(
               {itemErrors.discountAmount.message}
             </p>
           )}
+        </td>
+
+        {/* 税区分 */}
+        <td className="px-3 py-2 border-b border-gray-200 w-36 min-w-[9rem]">
+          <TaxCategorySelect<QuoteFormWithItemsData>
+            control={control}
+            name={`items.${index}.taxCategory`}
+            errors={errors}
+            standardTaxRate={company?.standardTaxRate}
+            reducedTaxRate={company?.reducedTaxRate}
+            disabled={isSubmitting}
+            showDescription={false}
+            className="w-full"
+          />
+        </td>
+
+        {/* 個別税率 */}
+        <td className="px-3 py-2 border-b border-gray-200 w-24 min-w-[6rem]">
+          <TaxRateInput<QuoteFormWithItemsData>
+            control={control}
+            name={`items.${index}.taxRate`}
+            errors={errors}
+            taxCategory={taxCategory}
+            standardTaxRate={company?.standardTaxRate}
+            reducedTaxRate={company?.reducedTaxRate}
+            disabled={isSubmitting}
+            showDefaultRate={false}
+            hideWhenDisabled={true}
+            className="w-full"
+          />
         </td>
 
         {/* 単位 */}

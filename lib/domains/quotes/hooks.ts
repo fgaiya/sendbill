@@ -74,7 +74,7 @@ export function useQuoteForm(
       unknown
     >,
     defaultValues: defaultCreateValues,
-    mode: 'onBlur',
+    mode: 'onChange',
   });
 
   const toFormValuesFromQuote = (q: Quote): QuoteFormWithItemsData => ({
@@ -172,12 +172,12 @@ export function useQuoteForm(
       // 基本見積書データ（品目を除く）を準備
       const { items, ...basicQuoteData } = data;
 
-      // API送信用のデータを正規化（日付のタイムゾーン対応、空文字列のnull化）
+      // API送信用のデータを正規化（日付のタイムゾーン対応、空文字列のundefined化）
       const payload = {
         ...basicQuoteData,
         issueDate: toApiDateString(basicQuoteData.issueDate)!,
         expiryDate: toApiDateString(basicQuoteData.expiryDate),
-        notes: basicQuoteData.notes?.trim() || null,
+        notes: basicQuoteData.notes?.trim() || undefined,
       };
 
       const response = await fetch(url, {
