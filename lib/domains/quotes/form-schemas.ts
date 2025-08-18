@@ -11,8 +11,21 @@ export const quoteFormUiSchema = z
   .object({
     // 取引先IDは空白しかない値を拒否
     clientId: z.string().trim().min(1, '取引先は必須項目です'),
+    // プレビューで表示される取引先名（オプション）
+    clientName: z.string().optional(),
     issueDate: z.date(),
+    // expiryDate が正式名称
     expiryDate: z.date().optional(),
+    // 見積書のタイトル（オプション、プレビュー用）
+    title: z
+      .string()
+      .max(200, 'タイトルは200文字以内で入力してください')
+      .optional(),
+    // 見積書の説明（オプション、プレビュー用）
+    description: z
+      .string()
+      .max(1000, '説明は1000文字以内で入力してください')
+      .optional(),
     // 備考は空白のみを実質未入力扱い＋過度な長文を制限
     notes: z
       .string()

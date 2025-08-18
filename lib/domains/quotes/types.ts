@@ -279,6 +279,7 @@ export function convertPrismaQuoteItemToQuoteItem(
  */
 export interface QuoteBasicsShape {
   clientId: string;
+  clientName?: string;
   issueDate: Date;
   expiryDate?: Date;
   notes?: string;

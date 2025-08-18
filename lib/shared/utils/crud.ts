@@ -3,11 +3,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { apiErrors, handleApiError } from '@/lib/shared/forms';
-import {
-  requireResourceAccess,
-  requireUserCompany,
-} from '@/lib/shared/utils/auth';
 import { omitUndefined } from '@/lib/shared/utils/objects';
+
+import { requireResourceAccess, requireUserCompany } from './auth';
 
 /**
  * Prisma のモデルデリゲートに共通する５メソッドだけを抜き出した型。

@@ -1,25 +1,89 @@
 'use client';
 
+import { useState, useEffect } from 'react';
+
 import { BaseForm } from '@/components/ui/BaseForm';
+import type { CompanyForCalculation } from '@/lib/domains/quotes/calculations';
 import { useQuoteForm } from '@/lib/domains/quotes/hooks';
 
 import { QuoteFormFields } from './QuoteFormFields';
+import { QuotePreviewModal } from './QuotePreviewModal';
 
 export function QuoteForm() {
   const { form, state, actions } = useQuoteForm();
+  const [company, setCompany] = useState<CompanyForCalculation | null>(null);
+  const [isLoadingCompany, setIsLoadingCompany] = useState(true);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
 
   const {
     control,
     setValue,
+    watch,
     formState: { errors, isValid, isDirty },
   } = form;
 
   const { isSubmitting, submitError } = state;
   const { onSubmit, onReset } = actions;
 
+  // フォームデータを監視してリアルタイム更新
+  const watchedValues = watch();
+  const {
+    items = [],
+    clientName,
+    issueDate,
+    expiryDate,
+    title,
+    notes,
+  } = watchedValues;
+
+  // 会社設定を取得
+  useEffect(() => {
+    const fetchCompany = async () => {
+      try {
+        const response = await fetch('/api/companies');
+        if (response.ok) {
+          const companies = await response.json();
+          if (companies.length > 0) {
+            const companyData = companies[0];
+            setCompany({
+              standardTaxRate: Number(companyData.standardTaxRate) || 10,
+              reducedTaxRate: Number(companyData.reducedTaxRate) || 8,
+              priceIncludesTax: Boolean(companyData.priceIncludesTax),
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch company:', error);
+        // デフォルト値を設定
+        setCompany({
+          standardTaxRate: 10,
+          reducedTaxRate: 8,
+          priceIncludesTax: false,
+        });
+      } finally {
+        setIsLoadingCompany(false);
+      }
+    };
+
+    fetchCompany();
+  }, []);
+
+  // キーボードショートカット（Cmd/Ctrl + P）でプレビューを開く
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'p') {
+        e.preventDefault();
+        setShowPreviewModal(true);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   return (
     <div className="min-h-screen bg-gray-50 py-12">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <BaseForm
           title="見積書作成"
           description="新しい見積書を作成してください"
@@ -35,8 +99,23 @@ export function QuoteForm() {
             control={control}
             errors={errors}
             setValue={setValue}
+            company={company}
             isSubmitting={isSubmitting}
           />
+
+          {/* 全画面プレビューボタン */}
+          <div className="mt-6 flex justify-between items-center">
+            <button
+              type="button"
+              onClick={() => setShowPreviewModal(true)}
+              className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              全画面プレビュー
+            </button>
+            <div className="text-sm text-gray-500">
+              ショートカット: Cmd/Ctrl + P
+            </div>
+          </div>
 
           {/* フォーム状態表示（開発用） */}
           {process.env.NODE_ENV === 'development' && (
@@ -48,10 +127,29 @@ export function QuoteForm() {
                 <li>有効: {isValid ? 'はい' : 'いいえ'}</li>
                 <li>変更済み: {isDirty ? 'はい' : 'いいえ'}</li>
                 <li>送信中: {isSubmitting ? 'はい' : 'いいえ'}</li>
+                <li>品目数: {items.length}</li>
+                <li>
+                  会社設定読み込み中: {isLoadingCompany ? 'はい' : 'いいえ'}
+                </li>
               </ul>
             </div>
           )}
         </BaseForm>
+
+        {/* 全画面プレビューモーダル */}
+        {!isLoadingCompany && company && (
+          <QuotePreviewModal
+            isOpen={showPreviewModal}
+            onClose={() => setShowPreviewModal(false)}
+            items={items}
+            company={company}
+            clientName={clientName}
+            issueDate={issueDate ? new Date(issueDate) : undefined}
+            expiryDate={expiryDate ? new Date(expiryDate) : undefined}
+            title={title}
+            notes={notes}
+          />
+        )}
       </div>
     </div>
   );

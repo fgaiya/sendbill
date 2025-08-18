@@ -14,11 +14,11 @@ import { Controller, useWatch } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
-  calculateItemFromForm,
-  formatCurrency,
-  debounce,
+  calculateItemTax,
+  type CompanyForCalculation,
 } from '@/lib/domains/quotes/calculations';
 import type { QuoteFormWithItemsData } from '@/lib/domains/quotes/form-schemas';
+import { formatCurrency } from '@/lib/shared/utils';
 import { cn } from '@/lib/shared/utils/ui';
 
 import type { Control, FieldErrors, UseFormSetValue } from 'react-hook-form';
@@ -28,6 +28,7 @@ export interface QuoteItemRowProps {
   control: Control<QuoteFormWithItemsData>;
   errors: FieldErrors<QuoteFormWithItemsData>;
   setValue: UseFormSetValue<QuoteFormWithItemsData>;
+  company?: CompanyForCalculation | null;
   onRemove: () => void;
   onMoveUp?: () => void;
   onMoveDown?: () => void;
@@ -63,7 +64,8 @@ export const QuoteItemRow = forwardRef<QuoteItemRowRef, QuoteItemRowProps>(
       index,
       control,
       errors,
-      setValue,
+      setValue: _setValue,
+      company,
       onRemove,
       isSubmitting = false,
       className,
@@ -98,51 +100,38 @@ export const QuoteItemRow = forwardRef<QuoteItemRowRef, QuoteItemRowProps>(
       const n = Number(half);
       return Number.isFinite(n) ? n : 0;
     };
-    // 現在の品目の値をwatchで取得
-    const watchedItem = useWatch({
-      control,
-      name: `items.${index}`,
-    });
+    // 配列全体から該当インデックスの品目を取得（データ一貫性のため）
+    const allItems = useWatch({ control, name: 'items' });
+    const watchedItem = allItems?.[index];
 
-    // デバウンス付き小計計算
-    const debouncedCalculation = useMemo(
-      () =>
-        debounce(() => {
-          const unitPrice = toNumber(watchedItem?.unitPrice);
-          const quantity = toNumber(watchedItem?.quantity);
-          const discountAmount = toNumber(watchedItem?.discountAmount);
+    // 入力値（プリミティブ）に正規化
+    const unitPrice = toNumber(watchedItem?.unitPrice);
+    const quantity = toNumber(watchedItem?.quantity);
+    const discountAmount = toNumber(watchedItem?.discountAmount);
+    const taxCategory = watchedItem?.taxCategory || 'STANDARD';
+    const taxRate = watchedItem?.taxRate as number | undefined;
 
-          try {
-            const result = calculateItemFromForm({
-              unitPrice,
-              quantity,
-              discountAmount,
-            });
-            setValue(`items.${index}.subtotal`, result.netAmount, {
-              shouldValidate: false,
-              shouldDirty: false,
-              shouldTouch: false,
-            });
-          } catch {
-            setValue(`items.${index}.subtotal`, 0, {
-              shouldValidate: false,
-              shouldDirty: false,
-              shouldTouch: false,
-            });
-          }
-        }, 300),
-      [
-        watchedItem?.unitPrice,
-        watchedItem?.quantity,
-        watchedItem?.discountAmount,
-        setValue,
-        index,
-      ]
-    );
-
-    const triggerCalculation = useCallback(() => {
-      debouncedCalculation();
-    }, [debouncedCalculation]);
+    // フォームに書き戻さず、描画専用に算出
+    const displayAmount = useMemo(() => {
+      if (
+        !company ||
+        !Number.isFinite(unitPrice) ||
+        !Number.isFinite(quantity) ||
+        quantity <= 0 ||
+        unitPrice < 0
+      ) {
+        return 0;
+      }
+      try {
+        const result = calculateItemTax(
+          { unitPrice, quantity, discountAmount, taxCategory, taxRate },
+          company
+        );
+        return company.priceIncludesTax ? result.lineTotal : result.lineNet;
+      } catch {
+        return 0;
+      }
+    }, [unitPrice, quantity, discountAmount, taxCategory, taxRate, company]);
 
     const handleKeyDown = useCallback(
       (
@@ -224,7 +213,6 @@ export const QuoteItemRow = forwardRef<QuoteItemRowRef, QuoteItemRowProps>(
                 )}
                 onChange={(e) => {
                   field.onChange(e.target.value);
-                  triggerCalculation();
                 }}
                 onKeyDown={(e) => handleKeyDown(e, 'quantity')}
               />
@@ -259,7 +247,6 @@ export const QuoteItemRow = forwardRef<QuoteItemRowRef, QuoteItemRowProps>(
                 )}
                 onChange={(e) => {
                   field.onChange(e.target.value);
-                  triggerCalculation();
                 }}
                 onKeyDown={(e) => handleKeyDown(e, 'unitPrice')}
               />
@@ -295,7 +282,6 @@ export const QuoteItemRow = forwardRef<QuoteItemRowRef, QuoteItemRowProps>(
                 )}
                 onChange={(e) => {
                   field.onChange(e.target.value);
-                  triggerCalculation();
                 }}
                 onKeyDown={(e) => handleKeyDown(e, 'discountAmount')}
               />
@@ -350,17 +336,11 @@ export const QuoteItemRow = forwardRef<QuoteItemRowRef, QuoteItemRowProps>(
           />
         </td>
 
-        {/* 小計（読み取り専用） */}
+        {/* 小計/金額（読み取り専用・派生値） */}
         <td className="px-3 py-2 border-b border-gray-200 w-32">
-          <Controller
-            name={`items.${index}.subtotal`}
-            control={control}
-            render={({ field }) => (
-              <div className="h-8 flex items-center justify-end text-sm font-mono font-semibold text-gray-900 bg-blue-50 rounded px-2 border border-blue-200">
-                {formatCurrency(field.value || 0)}
-              </div>
-            )}
-          />
+          <div className="h-8 flex items-center justify-end text-sm font-mono font-semibold text-gray-900 bg-blue-50 rounded px-2 border border-blue-200">
+            {formatCurrency(displayAmount)}
+          </div>
         </td>
 
         {/* アクション */}

@@ -7,6 +7,7 @@ import {
   type Control,
   type FieldErrors,
   type FieldPath,
+  type UseFormSetValue,
 } from 'react-hook-form';
 
 import { FormFieldWrapper } from '@/components/ui/form-field';
@@ -19,12 +20,14 @@ import { ClientSelector } from './ClientSelector';
 export interface QuoteBasicInfoFieldsProps<T extends QuoteBasicsShape> {
   control: Control<T>;
   errors: FieldErrors<T>;
+  setValue: UseFormSetValue<T>;
   isSubmitting: boolean;
 }
 
 export function QuoteBasicInfoFields<T extends QuoteBasicsShape>({
   control,
   errors,
+  setValue,
   isSubmitting,
 }: QuoteBasicInfoFieldsProps<T>) {
   const toErrorMessage = (m: unknown): string | undefined =>
@@ -53,7 +56,15 @@ export function QuoteBasicInfoFields<T extends QuoteBasicsShape>({
             <ClientSelector
               id="clientId"
               value={typeof field.value === 'string' ? field.value : ''}
-              onChange={field.onChange}
+              onChange={(client) => {
+                if (client) {
+                  field.onChange(client.id);
+                  setValue('clientName' as FieldPath<T>, client.name as never);
+                } else {
+                  field.onChange('');
+                  setValue('clientName' as FieldPath<T>, '' as never);
+                }
+              }}
               disabled={isSubmitting}
               placeholder="取引先を選択してください"
             />
