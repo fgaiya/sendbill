@@ -51,12 +51,13 @@ export function CompanyTaxSettingsFields({
                 onChange={(e) => {
                   const value = e.target.value;
                   if (value === '') {
-                    field.onChange(10);
+                    field.onChange(10); // デフォルト値
                   } else {
                     const numValue = parseFloat(value);
-                    if (!isNaN(numValue)) {
+                    if (!isNaN(numValue) && numValue >= 0 && numValue <= 100) {
                       field.onChange(numValue);
                     }
+                    // 範囲外の値は入力を無視（既存値を保持）
                   }
                 }}
                 className="pr-8"
@@ -96,12 +97,13 @@ export function CompanyTaxSettingsFields({
                 onChange={(e) => {
                   const value = e.target.value;
                   if (value === '') {
-                    field.onChange(8);
+                    field.onChange(8); // デフォルト値
                   } else {
                     const numValue = parseFloat(value);
-                    if (!isNaN(numValue)) {
+                    if (!isNaN(numValue) && numValue >= 0 && numValue <= 100) {
                       field.onChange(numValue);
                     }
+                    // 範囲外の値は入力を無視（既存値を保持）
                   }
                 }}
                 className="pr-8"

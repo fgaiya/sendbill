@@ -8,6 +8,8 @@ import {
   type FieldErrors,
   type FieldPath,
   type UseFormSetValue,
+  type Path,
+  type PathValue,
 } from 'react-hook-form';
 
 import { FormFieldWrapper } from '@/components/ui/form-field';
@@ -59,10 +61,24 @@ export function QuoteBasicInfoFields<T extends QuoteBasicsShape>({
               onChange={(client) => {
                 if (client) {
                   field.onChange(client.id);
-                  setValue('clientName' as FieldPath<T>, client.name as never);
+                  setValue(
+                    'clientName' as Path<T>,
+                    client.name as PathValue<T, Path<T>>,
+                    {
+                      shouldDirty: true,
+                      shouldValidate: true,
+                    }
+                  );
                 } else {
                   field.onChange('');
-                  setValue('clientName' as FieldPath<T>, '' as never);
+                  setValue(
+                    'clientName' as Path<T>,
+                    '' as PathValue<T, Path<T>>,
+                    {
+                      shouldDirty: true,
+                      shouldValidate: true,
+                    }
+                  );
                 }
               }}
               disabled={isSubmitting}

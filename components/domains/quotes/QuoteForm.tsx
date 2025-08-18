@@ -33,6 +33,7 @@ export function QuoteForm() {
     issueDate,
     expiryDate,
     title,
+    description,
     notes,
   } = watchedValues;
 
@@ -43,14 +44,28 @@ export function QuoteForm() {
         const response = await fetch('/api/companies');
         if (response.ok) {
           const companies = await response.json();
-          if (companies.length > 0) {
+          if (Array.isArray(companies) && companies.length > 0) {
             const companyData = companies[0];
             setCompany({
               standardTaxRate: Number(companyData.standardTaxRate) || 10,
               reducedTaxRate: Number(companyData.reducedTaxRate) || 8,
               priceIncludesTax: Boolean(companyData.priceIncludesTax),
             });
+          } else {
+            // 配列が空の場合もデフォルトへフォールバック
+            setCompany({
+              standardTaxRate: 10,
+              reducedTaxRate: 8,
+              priceIncludesTax: false,
+            });
           }
+        } else {
+          // 非2xx時もデフォルトへフォールバック
+          setCompany({
+            standardTaxRate: 10,
+            reducedTaxRate: 8,
+            priceIncludesTax: false,
+          });
         }
       } catch (error) {
         console.error('Failed to fetch company:', error);
@@ -148,6 +163,7 @@ export function QuoteForm() {
             issueDate={issueDate ? new Date(issueDate) : undefined}
             expiryDate={expiryDate ? new Date(expiryDate) : undefined}
             title={title}
+            description={description}
             notes={notes}
           />
         )}

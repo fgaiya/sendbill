@@ -22,7 +22,6 @@ export interface QuotePreviewProps {
   company: CompanyForCalculation;
   clientName?: string;
   issueDate?: Date;
-  dueDate?: Date;
   expiryDate?: Date;
   title?: string;
   description?: string;
@@ -39,7 +38,6 @@ export function QuotePreview({
   company,
   clientName = '未選択',
   issueDate,
-  dueDate,
   expiryDate,
   title = '見積書',
   description,
@@ -90,7 +88,6 @@ export function QuotePreview({
           </div>
           <div className="text-right text-sm text-gray-600 print:text-gray-800">
             <div>発行日: {formatDate(issueDate)}</div>
-            {dueDate && <div>有効期限: {formatDate(dueDate)}</div>}
             {expiryDate && <div>有効期限: {formatDate(expiryDate)}</div>}
           </div>
         </div>
