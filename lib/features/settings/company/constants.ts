@@ -20,4 +20,8 @@ export const DEFAULT_FORM_VALUES: CompanyFormData = {
   bankBranch: '',
   bankAccountNumber: '',
   bankAccountHolder: '',
+  // 税務設定
+  standardTaxRate: 10,
+  reducedTaxRate: 8,
+  priceIncludesTax: false,
 } as const;

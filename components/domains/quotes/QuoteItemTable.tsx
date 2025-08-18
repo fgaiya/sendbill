@@ -7,10 +7,11 @@ import { useWatch } from 'react-hook-form';
 
 import { Button } from '@/components/ui/button';
 import {
-  calculateItemsTotal,
-  formatCurrency,
+  calculateQuoteTotal,
+  type CompanyForCalculation,
 } from '@/lib/domains/quotes/calculations';
 import type { QuoteFormWithItemsData } from '@/lib/domains/quotes/form-schemas';
+import { formatCurrency } from '@/lib/shared/utils';
 import { cn } from '@/lib/shared/utils/ui';
 
 import { QuoteItemRow, QuoteItemRowRef } from './QuoteItemRow';
@@ -27,6 +28,7 @@ export interface QuoteItemTableProps {
   errors: FieldErrors<QuoteFormWithItemsData>;
   setValue: UseFormSetValue<QuoteFormWithItemsData>;
   fieldArray: UseFieldArrayReturn<QuoteFormWithItemsData, 'items', 'keyId'>;
+  company?: CompanyForCalculation | null;
   isSubmitting?: boolean;
   className?: string;
 }
@@ -36,6 +38,7 @@ export function QuoteItemTable({
   errors,
   setValue,
   fieldArray,
+  company,
   isSubmitting = false,
   className,
 }: QuoteItemTableProps) {
@@ -56,8 +59,20 @@ export function QuoteItemTable({
   });
 
   const totals = useMemo(() => {
-    return calculateItemsTotal(items || []);
-  }, [items]);
+    if (!company || !items) {
+      return {
+        subtotal: 0,
+        totalTax: 0,
+        totalAmount: 0,
+        taxSummary: [],
+        itemResults: [],
+      };
+    }
+
+    const result = calculateQuoteTotal(items, company);
+
+    return result;
+  }, [items, company]);
 
   // 新しい品目を追加
   const handleAddItem = () => {
@@ -189,6 +204,12 @@ export function QuoteItemTable({
                   <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
                     割引額
                   </th>
+                  <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
+                    税区分 <span className="text-red-500 ml-1">*</span>
+                  </th>
+                  <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
+                    個別税率
+                  </th>
                   <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
                     単位
                   </th>
@@ -196,7 +217,9 @@ export function QuoteItemTable({
                     SKU
                   </th>
                   <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
-                    小計
+                    {company?.priceIncludesTax
+                      ? '金額（税込）'
+                      : '小計（税抜）'}
                   </th>
                   <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-16">
                     削除
@@ -214,6 +237,7 @@ export function QuoteItemTable({
                     control={control}
                     errors={errors}
                     setValue={setValue}
+                    company={company}
                     onRemove={() => handleRemoveItem(index)}
                     onMoveUp={() => handleMoveUp(index)}
                     onMoveDown={() => handleMoveDown(index)}
@@ -249,22 +273,28 @@ export function QuoteItemTable({
               <div className="flex items-center space-x-4">
                 <span className="text-gray-600">
                   品目数:{' '}
-                  <span className="font-medium">{totals.itemCount}件</span>
+                  <span className="font-medium">{items?.length || 0}件</span>
                 </span>
                 <span className="text-gray-600">
                   小計合計:{' '}
                   <span className="font-medium">
-                    {formatCurrency(totals.totalSubtotal)}
+                    {formatCurrency(totals.subtotal)}
+                  </span>
+                </span>
+                <span className="text-gray-600">
+                  消費税:{' '}
+                  <span className="font-medium">
+                    {formatCurrency(totals.totalTax)}
                   </span>
                 </span>
               </div>
             </div>
             <div className="text-right">
               <div className="text-lg font-semibold text-gray-900">
-                合計: {formatCurrency(totals.totalNetAmount)}
+                総額: {formatCurrency(totals.totalAmount)}
               </div>
               <div className="text-xs text-gray-500">
-                ※ 税計算は次のステップで行います
+                税率別内訳: {totals.taxSummary.length}種類
               </div>
             </div>
           </div>

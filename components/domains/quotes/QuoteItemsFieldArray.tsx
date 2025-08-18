@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 
 import { useFieldArray } from 'react-hook-form';
 
+import type { CompanyForCalculation } from '@/lib/domains/quotes/calculations';
 import type { QuoteFormWithItemsData } from '@/lib/domains/quotes/form-schemas';
 
 import { QuoteItemTable } from './QuoteItemTable';
@@ -14,6 +15,7 @@ export interface QuoteItemsFieldArrayProps {
   control: Control<QuoteFormWithItemsData>;
   errors: FieldErrors<QuoteFormWithItemsData>;
   setValue: UseFormSetValue<QuoteFormWithItemsData>;
+  company?: CompanyForCalculation | null;
   isSubmitting?: boolean;
   className?: string;
 }
@@ -22,6 +24,7 @@ export function QuoteItemsFieldArray({
   control,
   errors,
   setValue,
+  company,
   isSubmitting = false,
   className,
 }: QuoteItemsFieldArrayProps) {
@@ -70,6 +73,7 @@ export function QuoteItemsFieldArray({
       errors={errors}
       setValue={setValue}
       fieldArray={fieldArray}
+      company={company}
       isSubmitting={isSubmitting}
       className={className}
     />

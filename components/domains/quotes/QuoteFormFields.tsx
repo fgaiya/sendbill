@@ -6,6 +6,7 @@ import {
   type UseFormSetValue,
 } from 'react-hook-form';
 
+import type { CompanyForCalculation } from '@/lib/domains/quotes/calculations';
 import type { QuoteFormWithItemsData } from '@/lib/domains/quotes/form-schemas';
 
 import { QuoteBasicInfoFields } from './QuoteBasicInfoFields';
@@ -15,6 +16,7 @@ export interface QuoteFormFieldsProps {
   control: Control<QuoteFormWithItemsData>;
   errors: FieldErrors<QuoteFormWithItemsData>;
   setValue: UseFormSetValue<QuoteFormWithItemsData>;
+  company?: CompanyForCalculation | null;
   isSubmitting: boolean;
 }
 
@@ -22,6 +24,7 @@ export function QuoteFormFields({
   control,
   errors,
   setValue,
+  company,
   isSubmitting,
 }: QuoteFormFieldsProps) {
   return (
@@ -30,6 +33,7 @@ export function QuoteFormFields({
       <QuoteBasicInfoFields
         control={control}
         errors={errors}
+        setValue={setValue}
         isSubmitting={isSubmitting}
       />
 
@@ -38,6 +42,7 @@ export function QuoteFormFields({
         control={control}
         errors={errors}
         setValue={setValue}
+        company={company}
         isSubmitting={isSubmitting}
       />
     </div>

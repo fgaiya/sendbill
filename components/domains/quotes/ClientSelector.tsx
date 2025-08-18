@@ -14,7 +14,7 @@ export interface Client {
 
 export interface ClientSelectorProps {
   value?: string;
-  onChange: (clientId: string) => void;
+  onChange: (client: { id: string; name: string } | null) => void;
   disabled?: boolean;
   placeholder?: string;
   id?: string;
@@ -80,8 +80,8 @@ export function ClientSelector({
 
   const selectedClient = clients.find((client) => client.id === value);
 
-  const handleClientSelect = (clientId: string) => {
-    onChange(clientId);
+  const handleClientSelect = (client: Client) => {
+    onChange({ id: client.id, name: client.name });
     setIsOpen(false);
   };
 
@@ -153,7 +153,7 @@ export function ClientSelector({
               <button
                 key={client.id}
                 type="button"
-                onClick={() => handleClientSelect(client.id)}
+                onClick={() => handleClientSelect(client)}
                 role="option"
                 aria-selected={client.id === value}
                 className={`w-full text-left px-3 py-2 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none ${

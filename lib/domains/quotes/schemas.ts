@@ -8,7 +8,10 @@ import { PAGINATION } from '@/lib/shared/constants';
 export const baseQuoteSchema = z.object({
   clientId: z.string().min(1, 'クライアントIDは必須です'),
   issueDate: z.coerce.date(),
-  expiryDate: z.coerce.date().optional(),
+  expiryDate: z.preprocess(
+    (val) => (val === null || val === '' ? undefined : val),
+    z.coerce.date().optional()
+  ),
   notes: z.string().optional(),
 });
 

@@ -11,8 +11,21 @@ export const quoteFormUiSchema = z
   .object({
     // 取引先IDは空白しかない値を拒否
     clientId: z.string().trim().min(1, '取引先は必須項目です'),
+    // プレビューで表示される取引先名（オプション）
+    clientName: z.string().optional(),
     issueDate: z.date(),
+    // expiryDate が正式名称
     expiryDate: z.date().optional(),
+    // 見積書のタイトル（オプション、プレビュー用）
+    title: z
+      .string()
+      .max(200, 'タイトルは200文字以内で入力してください')
+      .optional(),
+    // 見積書の説明（オプション、プレビュー用）
+    description: z
+      .string()
+      .max(1000, '説明は1000文字以内で入力してください')
+      .optional(),
     // 備考は空白のみを実質未入力扱い＋過度な長文を制限
     notes: z
       .string()
@@ -61,33 +74,18 @@ export const quoteItemFormSchema = baseQuoteItemSchema
     message: '割引額は品目合計金額を超えることはできません',
     path: ['discountAmount'],
   })
-  .check(
-    z.refine(
-      (data) => {
-        // 非課税または免税の場合、税率は未入力または0であること
-        if (data.taxCategory === 'NON_TAX' || data.taxCategory === 'EXEMPT') {
-          return data.taxRate == null || data.taxRate === 0;
-        }
-        return true;
-      },
-      {
-        message: '非課税または免税の場合、税率は未入力または0にしてください',
-        path: ['taxRate'],
+  .refine(
+    (data) => {
+      // 非課税または免税の場合、税率は未入力または0であること
+      if (data.taxCategory === 'NON_TAX' || data.taxCategory === 'EXEMPT') {
+        return data.taxRate == null || data.taxRate === 0;
       }
-    ),
-    z.refine(
-      (data) => {
-        // 課税区分が課税の場合、税率は必須
-        if (data.taxCategory === 'STANDARD' || data.taxCategory === 'REDUCED') {
-          return data.taxRate != null;
-        }
-        return true;
-      },
-      {
-        message: '課税区分が「課税」の場合、税率は必須です',
-        path: ['taxRate'],
-      }
-    )
+      return true;
+    },
+    {
+      message: '非課税または免税の場合、税率は未入力または0にしてください',
+      path: ['taxRate'],
+    }
   );
 
 // 品目配列を含む見積書フォームスキーマ
