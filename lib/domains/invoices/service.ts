@@ -486,7 +486,7 @@ export async function updateOverdueInvoices(
   companyId: string
 ): Promise<number> {
   const today = new Date();
-  today.setHours(23, 59, 59, 999); // 今日の終わりまで
+  today.setHours(0, 0, 0, 0); // 時刻を0時に設定
 
   const result = await prisma.invoice.updateMany({
     where: {

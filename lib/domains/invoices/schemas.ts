@@ -134,21 +134,38 @@ export const bulkInvoiceItemsSchema = z.object({
 /**
  * CSVインポートスキーマ
  */
+// File-likeオブジェクトの型定義
+interface FileObject {
+  arrayBuffer: () => Promise<ArrayBuffer>;
+  name: string;
+  type?: string;
+}
+
 export const csvImportSchema = z.object({
-  file: z.instanceof(File).refine(
-    (file) => {
-      const t = (file.type || '').toLowerCase();
-      return (
-        file.name.toLowerCase().endsWith('.csv') ||
-        t === 'text/csv' ||
-        t === 'application/csv' ||
-        t === 'application/vnd.ms-excel'
-      );
-    },
-    {
-      message: 'CSVファイルを選択してください',
-    }
-  ),
+  file: z
+    .unknown()
+    .refine(
+      (file): file is FileObject =>
+        file !== null &&
+        typeof file === 'object' &&
+        typeof (file as Record<string, unknown>).arrayBuffer === 'function' &&
+        typeof (file as Record<string, unknown>).name === 'string',
+      { message: 'CSVファイルを選択してください' }
+    )
+    .refine(
+      (file) => {
+        const fileObj = file as FileObject;
+        const name = String(fileObj.name || '').toLowerCase();
+        const t = String(fileObj.type || '').toLowerCase();
+        return (
+          name.endsWith('.csv') ||
+          t === 'text/csv' ||
+          t === 'application/csv' ||
+          t === 'application/vnd.ms-excel'
+        );
+      },
+      { message: 'CSVファイルを選択してください' }
+    ),
   overwrite: z.boolean().default(false), // 既存品目を上書きするか
 });
 

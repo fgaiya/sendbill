@@ -10,7 +10,7 @@ export type InvoiceStatus = PrismaInvoiceStatus;
 
 import { Client } from '@/lib/shared/types';
 
-import { InvoiceItemData } from './schemas';
+import { InvoiceItemData, InvoiceItemUpdateData } from './schemas';
 
 /**
  * サービス層で使用するPrisma型（Decimal型を含む）
@@ -106,7 +106,7 @@ export type BulkAction = 'create' | 'update' | 'delete';
  */
 export type BulkInvoiceItem =
   | { action: 'create'; data: InvoiceItemData }
-  | { action: 'update'; id: string; data: InvoiceItemData }
+  | { action: 'update'; id: string; data: InvoiceItemUpdateData }
   | { action: 'delete'; id: string };
 
 /**
