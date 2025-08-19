@@ -6,6 +6,7 @@ import { quoteSchemas, includeSchema } from '@/lib/domains/quotes/schemas';
 import {
   getQuote,
   updateQuote,
+  updateQuoteStatus,
   deleteQuote,
 } from '@/lib/domains/quotes/service';
 import { convertPrismaQuoteToQuote } from '@/lib/domains/quotes/types';
@@ -79,6 +80,32 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     });
   } catch (error) {
     return handleApiError(error, 'Quote update');
+  }
+}
+
+export async function PATCH(request: NextRequest, context: RouteContext) {
+  try {
+    const { quoteId } = quoteParamsSchema.parse(await context.params);
+    const { company, error, status } = await requireUserCompany();
+    if (error) {
+      return NextResponse.json(error, { status });
+    }
+
+    const body = await request.json();
+    const validatedData = quoteSchemas.statusUpdate.parse(body);
+
+    const quote = await updateQuoteStatus(
+      quoteId,
+      company.id,
+      validatedData.status
+    );
+
+    return NextResponse.json({
+      data: convertPrismaQuoteToQuote(quote),
+      message: 'ステータスを更新しました',
+    });
+  } catch (error) {
+    return handleApiError(error, 'Quote status update');
   }
 }
 
