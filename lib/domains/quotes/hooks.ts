@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 import { useRouter } from 'next/navigation';
 
@@ -14,7 +14,12 @@ import { omitUndefined } from '@/lib/shared/utils/objects';
 import { quoteFormWithItemsSchema } from './form-schemas';
 import { type QuoteFormWithItemsData } from './form-schemas';
 
-import type { Quote } from './types';
+import type {
+  Quote,
+  QuotesListResponse,
+  QuoteSortOption,
+  QuoteStatus,
+} from './types';
 
 export interface UseQuoteFormOptions {
   quoteId?: string;
@@ -212,16 +217,19 @@ export function useQuoteForm(
           const itemsPayload = items
             .filter((item) => item.description.trim()) // 空の品目を除外
             .map((item) => ({
-              description: item.description.trim(),
-              quantity: Number(item.quantity) || 0,
-              unitPrice: Number(item.unitPrice) || 0,
-              taxCategory: item.taxCategory,
-              taxRate:
-                item.taxRate !== undefined ? Number(item.taxRate) : undefined,
-              discountAmount: Number(item.discountAmount) || 0,
-              unit: item.unit?.trim() || undefined,
-              sku: item.sku?.trim() || undefined,
-              sortOrder: item.sortOrder,
+              action: 'create' as const,
+              data: {
+                description: item.description.trim(),
+                quantity: Number(item.quantity) || 0,
+                unitPrice: Number(item.unitPrice) || 0,
+                taxCategory: item.taxCategory,
+                taxRate:
+                  item.taxRate !== undefined ? Number(item.taxRate) : undefined,
+                discountAmount: Number(item.discountAmount) || 0,
+                unit: item.unit?.trim() || undefined,
+                sku: item.sku?.trim() || undefined,
+                sortOrder: item.sortOrder,
+              },
             }));
 
           if (itemsPayload.length > 0) {
@@ -303,5 +311,355 @@ export function useQuoteForm(
       onReset,
       clearMessages,
     },
+  };
+}
+
+// Quote List Hook Types
+export interface QuoteListParams {
+  page?: number;
+  limit?: number;
+  q?: string;
+  sort?: QuoteSortOption;
+  status?: QuoteStatus;
+  clientId?: string;
+  dateFrom?: string;
+  dateTo?: string;
+}
+
+export interface UseQuoteListState {
+  quotes: Quote[];
+  isLoading: boolean;
+  error?: string;
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
+
+export interface UseQuoteListActions {
+  fetchQuotes: (newParams?: QuoteListParams) => Promise<void>;
+  setPage: (page: number) => void;
+  setSort: (sort: QuoteSortOption) => void;
+  setSearch: (q: string) => void;
+  setStatusFilter: (status: QuoteStatus | undefined) => void;
+  setClientFilter: (clientId: string | undefined) => void;
+  setDateFilter: (dateFrom?: string, dateTo?: string) => void;
+  refresh: () => Promise<void>;
+  updateQuoteStatus: (quoteId: string, newStatus: QuoteStatus) => Promise<void>;
+}
+
+export interface UseQuoteListReturn {
+  state: UseQuoteListState;
+  actions: UseQuoteListActions;
+  params: QuoteListParams;
+}
+
+export function useQuoteList(
+  initialParams: QuoteListParams = {}
+): UseQuoteListReturn {
+  const [quotes, setQuotes] = useState<Quote[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string>();
+  const [pagination, setPagination] = useState({
+    total: 0,
+    page: 1,
+    limit: 20,
+    totalPages: 0,
+  });
+
+  const [params, setParams] = useState<QuoteListParams>({
+    page: 1,
+    limit: 20,
+    sort: 'createdAt_desc',
+    ...initialParams,
+  });
+
+  const fetchQuotes = useCallback(
+    async (newParams?: QuoteListParams) => {
+      setIsLoading(true);
+      setError(undefined);
+
+      try {
+        const finalParams = { ...params, ...newParams };
+        const searchParams = new URLSearchParams();
+
+        // パラメータをURLSearchParamsに変換（値が存在する場合のみ）
+        if (finalParams.page)
+          searchParams.set('page', finalParams.page.toString());
+        if (finalParams.limit)
+          searchParams.set('limit', finalParams.limit.toString());
+        if (finalParams.q?.trim()) searchParams.set('q', finalParams.q.trim());
+        if (finalParams.sort) searchParams.set('sort', finalParams.sort);
+        if (finalParams.status) searchParams.set('status', finalParams.status);
+        if (finalParams.clientId?.trim())
+          searchParams.set('clientId', finalParams.clientId.trim());
+        if (finalParams.dateFrom?.trim())
+          searchParams.set('dateFrom', finalParams.dateFrom.trim());
+        if (finalParams.dateTo?.trim())
+          searchParams.set('dateTo', finalParams.dateTo.trim());
+
+        // 一覧表示では常にclient情報とitems情報を含める（金額計算に必要）
+        searchParams.set('include', 'client,items');
+
+        const response = await fetch(`/api/quotes?${searchParams.toString()}`);
+
+        if (!response.ok) {
+          let errorMessage = '見積書の取得に失敗しました';
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorMessage;
+          } catch {
+            // JSON以外のレスポンスの場合はデフォルトメッセージを使用
+          }
+          throw new Error(errorMessage);
+        }
+
+        const data: QuotesListResponse = await response.json();
+        setQuotes(data.data);
+        setPagination(data.pagination);
+
+        // パラメータを更新
+        if (newParams) {
+          setParams(finalParams);
+        }
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : '見積書の取得に失敗しました';
+        setError(message);
+        // エラー時は既存の見積書データとページネーション状態を保持
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [params]
+  );
+
+  const setPage = useCallback(
+    (page: number) => {
+      fetchQuotes({ page });
+    },
+    [fetchQuotes]
+  );
+
+  const setSort = useCallback(
+    (sort: QuoteSortOption) => {
+      fetchQuotes({ sort, page: 1 }); // ソート変更時はページをリセット
+    },
+    [fetchQuotes]
+  );
+
+  const setSearch = useCallback(
+    (q: string) => {
+      fetchQuotes({ q, page: 1 }); // 検索時はページをリセット
+    },
+    [fetchQuotes]
+  );
+
+  const setStatusFilter = useCallback(
+    (status: QuoteStatus | undefined) => {
+      fetchQuotes({ status, page: 1 }); // フィルタ変更時はページをリセット
+    },
+    [fetchQuotes]
+  );
+
+  const setClientFilter = useCallback(
+    (clientId: string | undefined) => {
+      fetchQuotes({ clientId, page: 1 });
+    },
+    [fetchQuotes]
+  );
+
+  const setDateFilter = useCallback(
+    (dateFrom?: string, dateTo?: string) => {
+      fetchQuotes({ dateFrom, dateTo, page: 1 });
+    },
+    [fetchQuotes]
+  );
+
+  const refresh = useCallback(() => {
+    return fetchQuotes();
+  }, [fetchQuotes]);
+
+  const updateQuoteStatus = useCallback(
+    async (quoteId: string, newStatus: QuoteStatus) => {
+      // ローカル状態を楽観的に更新
+      setQuotes((currentQuotes) =>
+        currentQuotes.map((quote) =>
+          quote.id === quoteId ? { ...quote, status: newStatus } : quote
+        )
+      );
+
+      try {
+        const response = await fetch(`/api/quotes/${quoteId}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ status: newStatus }),
+        });
+
+        if (!response.ok) {
+          // エラー時は元に戻す
+          await refresh();
+
+          let errorMessage = 'ステータスの変更に失敗しました';
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorMessage;
+          } catch {
+            // JSON以外のレスポンスの場合はデフォルトメッセージを使用
+          }
+          throw new Error(errorMessage);
+        }
+      } catch (err) {
+        // エラー時はリフレッシュしてサーバー状態と同期
+        await refresh();
+        throw err;
+      }
+    },
+    [refresh]
+  );
+
+  // 初回読み込み
+  useEffect(() => {
+    void fetchQuotes();
+  }, [fetchQuotes]);
+
+  return {
+    state: {
+      quotes,
+      isLoading,
+      error,
+      pagination,
+    },
+    actions: {
+      fetchQuotes,
+      setPage,
+      setSort,
+      setSearch,
+      setStatusFilter,
+      setClientFilter,
+      setDateFilter,
+      refresh,
+      updateQuoteStatus,
+    },
+    params,
+  };
+}
+
+// Quote Delete Hook Types
+export interface UseQuoteDeleteState {
+  isDeleting: boolean;
+  deleteError?: string;
+}
+
+export interface UseQuoteDeleteActions {
+  deleteQuote: (quote: Quote) => Promise<boolean>;
+  clearError: () => void;
+}
+
+export interface UseQuoteDeleteReturn
+  extends UseQuoteDeleteState,
+    UseQuoteDeleteActions {}
+
+export function useQuoteDelete(): UseQuoteDeleteReturn {
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string>();
+
+  const deleteQuote = useCallback(async (quote: Quote): Promise<boolean> => {
+    setIsDeleting(true);
+    setDeleteError(undefined);
+
+    try {
+      const response = await fetch(`/api/quotes/${quote.id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        let errorMessage = '見積書の削除に失敗しました';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch {
+          // JSON以外のレスポンスの場合はデフォルトメッセージを使用
+        }
+        throw new Error(errorMessage);
+      }
+
+      return true;
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : '見積書の削除に失敗しました';
+      setDeleteError(message);
+      return false;
+    } finally {
+      setIsDeleting(false);
+    }
+  }, []);
+
+  const clearError = useCallback(() => {
+    setDeleteError(undefined);
+  }, []);
+
+  return {
+    isDeleting,
+    deleteError,
+    deleteQuote,
+    clearError,
+  };
+}
+
+// Quote Status Change Hook
+export function useQuoteStatusChange() {
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [statusError, setStatusError] = useState<string>();
+
+  const changeStatus = useCallback(
+    async (quoteId: string, newStatus: QuoteStatus): Promise<void> => {
+      setIsUpdating(true);
+      setStatusError(undefined);
+
+      try {
+        const response = await fetch(`/api/quotes/${quoteId}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ status: newStatus }),
+        });
+
+        if (!response.ok) {
+          let errorMessage = 'ステータスの変更に失敗しました';
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorMessage;
+          } catch {
+            // JSON以外のレスポンスの場合はデフォルトメッセージを使用
+          }
+          throw new Error(errorMessage);
+        }
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : 'ステータスの変更に失敗しました';
+        setStatusError(message);
+        throw err; // 上位で処理できるよう再スロー
+      } finally {
+        setIsUpdating(false);
+      }
+    },
+    []
+  );
+
+  const clearStatusError = useCallback(() => {
+    setStatusError(undefined);
+  }, []);
+
+  return {
+    changeStatus,
+    isUpdating,
+    statusError,
+    clearStatusError,
   };
 }

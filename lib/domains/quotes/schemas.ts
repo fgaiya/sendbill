@@ -152,8 +152,14 @@ export const csvImportSchema = z.object({
  */
 export const quoteSearchSchema = z
   .object({
-    q: z.string().min(1, '検索キーワードは必須です'),
-    status: z.enum(['DRAFT', 'SENT', 'ACCEPTED', 'DECLINED']).optional(),
+    q: z.preprocess(
+      (v) => (typeof v === 'string' && v.trim() === '' ? undefined : v),
+      z.string().optional()
+    ),
+    status: z.preprocess(
+      (v) => (typeof v === 'string' && v.trim() === '' ? undefined : v),
+      z.enum(['DRAFT', 'SENT', 'ACCEPTED', 'DECLINED']).optional()
+    ),
     clientId: z.preprocess(
       (v) => (typeof v === 'string' && v.trim() === '' ? undefined : v),
       z.string().optional()
@@ -241,11 +247,19 @@ export type BulkQuoteItemsData = z.infer<typeof bulkQuoteItemsSchema>;
 export type QuoteSearchParams = z.infer<typeof quoteSearchSchema>;
 
 /**
+ * 見積書ステータス更新スキーマ
+ */
+export const statusUpdateQuoteSchema = z.object({
+  status: z.enum(['DRAFT', 'SENT', 'ACCEPTED', 'DECLINED']),
+});
+
+/**
  * スキーマ集約オブジェクト
  */
 export const quoteSchemas = {
   create: createQuoteSchema,
   update: updateQuoteSchema,
+  statusUpdate: statusUpdateQuoteSchema,
 };
 
 export const quoteItemSchemas = {

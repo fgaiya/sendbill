@@ -1,9 +1,11 @@
 import {
-  QuoteStatus,
+  QuoteStatus as PrismaQuoteStatus,
   Quote as PrismaQuote,
   QuoteItem as PrismaQuoteItem,
   Client as PrismaClientModel,
 } from '@prisma/client';
+
+export type QuoteStatus = PrismaQuoteStatus;
 
 import { Client } from '@/lib/shared/types';
 
@@ -247,6 +249,7 @@ export function convertPrismaQuoteToQuote(
           deletedAt: prismaQuote.client.deletedAt?.toISOString() ?? undefined,
         }
       : undefined,
+    // items配列が存在する場合は変換、存在しない場合はundefined
     items: prismaQuote.items
       ? prismaQuote.items.map(convertPrismaQuoteItemToQuoteItem)
       : undefined,

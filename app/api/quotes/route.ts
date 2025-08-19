@@ -53,20 +53,26 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
 
-    // パラメータの解析とバリデーション
+    // パラメータの解析（nullを適切に処理）
+    const getParam = (key: string) => {
+      const value = searchParams.get(key);
+      return value === null || value.trim() === '' ? undefined : value;
+    };
+
+    // パラメータのバリデーション
     const paginationResult = paginationSchema.safeParse({
-      page: searchParams.get('page'),
-      limit: searchParams.get('limit'),
+      page: getParam('page'),
+      limit: getParam('limit'),
     });
 
     const searchResult = quoteSearchSchema.safeParse({
-      q: searchParams.get('q'),
-      status: searchParams.get('status'),
-      clientId: searchParams.get('clientId'),
-      dateFrom: searchParams.get('dateFrom'),
-      dateTo: searchParams.get('dateTo'),
-      sort: searchParams.get('sort'),
-      include: searchParams.get('include'),
+      q: getParam('q'),
+      status: getParam('status'),
+      clientId: getParam('clientId'),
+      dateFrom: getParam('dateFrom'),
+      dateTo: getParam('dateTo'),
+      sort: getParam('sort'),
+      include: getParam('include'),
     });
 
     if (!paginationResult.success || !searchResult.success) {
