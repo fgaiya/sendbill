@@ -86,7 +86,11 @@ export async function GET(request: NextRequest) {
 
     // limitパラメータの処理（検索APIではページネーションなしまたは制限付き）
     const limitParam = getParam('limit');
-    const limit = limitParam ? Math.min(parseInt(limitParam, 10), 100) : 50; // デフォルト50件、最大100件
+    const parsedLimit = limitParam ? Number.parseInt(limitParam, 10) : NaN;
+    // 整数でない/NaN の場合はデフォルト。整数なら [1,100] にクランプ
+    const limit = Number.isInteger(parsedLimit)
+      ? Math.min(Math.max(parsedLimit, 1), 100)
+      : 50; // デフォルト50件、最小1件、最大100件
 
     // データ取得
     const { invoices, total } = await getInvoices(

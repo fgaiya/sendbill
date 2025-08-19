@@ -60,8 +60,8 @@ export interface InvoiceItem {
   unit: string | null;
   sku: string | null;
   sortOrder: number;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string;
+  updatedAt: string;
 }
 
 /**
@@ -338,8 +338,8 @@ export function convertPrismaInvoiceItemToInvoiceItem(
     unit: prismaItem.unit,
     sku: prismaItem.sku,
     sortOrder: prismaItem.sortOrder,
-    createdAt: prismaItem.createdAt,
-    updatedAt: prismaItem.updatedAt,
+    createdAt: prismaItem.createdAt.toISOString(),
+    updatedAt: prismaItem.updatedAt.toISOString(),
   } satisfies InvoiceItem;
 }
 

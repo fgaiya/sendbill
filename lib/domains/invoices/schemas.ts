@@ -80,14 +80,18 @@ export const updateInvoiceItemSchema = baseInvoiceItemSchema
   .partial()
   .refine(
     (data) => {
-      if (
-        data.discountAmount !== undefined &&
-        data.unitPrice !== undefined &&
-        data.quantity !== undefined
-      ) {
-        return data.discountAmount <= data.unitPrice * data.quantity;
+      // 割引額が設定されている場合のみ検証
+      if (data.discountAmount === undefined) {
+        return true;
       }
-      return true;
+
+      // 既存の値を取得する必要があるため、検証をスキップ
+      // （実際のビジネスロジック層で既存値との結合後に検証）
+      if (data.unitPrice === undefined || data.quantity === undefined) {
+        return true;
+      }
+
+      return data.discountAmount <= data.unitPrice * data.quantity;
     },
     {
       message: '割引額は品目合計金額を超えることはできません',
@@ -343,14 +347,18 @@ export const patchInvoiceItemSchema = baseInvoiceItemSchema
   .partial()
   .refine(
     (data) => {
-      if (
-        data.discountAmount !== undefined &&
-        data.unitPrice !== undefined &&
-        data.quantity !== undefined
-      ) {
-        return data.discountAmount <= data.unitPrice * data.quantity;
+      // 割引額が設定されている場合のみ検証
+      if (data.discountAmount === undefined) {
+        return true;
       }
-      return true;
+
+      // 既存の値を取得する必要があるため、検証をスキップ
+      // （実際のビジネスロジック層で既存値との結合後に検証）
+      if (data.unitPrice === undefined || data.quantity === undefined) {
+        return true;
+      }
+
+      return data.discountAmount <= data.unitPrice * data.quantity;
     },
     {
       message: '割引額は品目合計金額を超えることはできません',

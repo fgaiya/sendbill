@@ -529,13 +529,25 @@ export function preprocessInvoiceFormData(
 
   // 日付フィールドの処理
   if (processed.issueDate && typeof processed.issueDate === 'string') {
-    processed.issueDate = new Date(processed.issueDate);
+    const date = new Date(processed.issueDate);
+    if (isNaN(date.getTime())) {
+      throw new Error('無効な発行日が指定されました');
+    }
+    processed.issueDate = date;
   }
   if (processed.dueDate && typeof processed.dueDate === 'string') {
-    processed.dueDate = new Date(processed.dueDate);
+    const date = new Date(processed.dueDate);
+    if (isNaN(date.getTime())) {
+      throw new Error('無効な支払期限が指定されました');
+    }
+    processed.dueDate = date;
   }
   if (processed.paymentDate && typeof processed.paymentDate === 'string') {
-    processed.paymentDate = new Date(processed.paymentDate);
+    const date = new Date(processed.paymentDate);
+    if (isNaN(date.getTime())) {
+      throw new Error('無効な支払日が指定されました');
+    }
+    processed.paymentDate = date;
   }
 
   return processed;

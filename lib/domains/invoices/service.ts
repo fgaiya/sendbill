@@ -541,15 +541,21 @@ export async function getInvoices(
   include: InvoiceIncludeConfig,
   pagination: { skip: number; take: number }
 ): Promise<{ invoices: InvoiceWithRelations[]; total: number }> {
+  const secureWhere = {
+    ...where,
+    companyId,
+    deletedAt: null,
+  };
+
   const [invoices, total] = await Promise.all([
     prisma.invoice.findMany({
-      where,
+      where: secureWhere,
       orderBy,
       include,
       skip: pagination.skip,
       take: pagination.take,
     }),
-    prisma.invoice.count({ where }),
+    prisma.invoice.count({ where: secureWhere }),
   ]);
 
   return { invoices: invoices as InvoiceWithRelations[], total };
@@ -786,19 +792,41 @@ export async function reorderInvoiceItems(
     // 並び順を正規化
     const normalizedItems = normalizeSortOrder(data.items);
 
-    // 一括更新
+    // 一括更新（楽観ロック対応）
+    const updateResults: { itemId: string; success: boolean }[] = [];
+
     for (const item of normalizedItems) {
-      await tx.invoiceItem.updateMany({
+      const originalItem = data.items.find((i) => i.id === item.id);
+      if (!originalItem) {
+        throw new Error(`品目ID ${item.id} の元データが見つかりません`);
+      }
+
+      const result = await tx.invoiceItem.updateMany({
         where: {
           id: item.id,
           invoiceId,
           invoice: { companyId, deletedAt: null },
-          updatedAt: data.items.find((i) => i.id === item.id)?.updatedAt,
+          updatedAt: originalItem.updatedAt,
         },
         data: {
           sortOrder: item.sortOrder,
         },
       });
+
+      updateResults.push({
+        itemId: item.id,
+        success: result.count > 0,
+      });
+    }
+
+    // 失敗した更新があるかチェック
+    const failedUpdates = updateResults.filter((r) => !r.success);
+    if (failedUpdates.length > 0) {
+      throw new ConflictError(
+        `並び順更新で競合が発生しました。対象品目ID: ${failedUpdates
+          .map((f) => f.itemId)
+          .join(', ')}。最新の状態を取得してから再試行してください。`
+      );
     }
 
     // 更新後の品目一覧を取得
@@ -861,6 +889,8 @@ export async function calculateInvoiceTax(
       unitPrice: Number(item.unitPrice),
       discountAmount: Number(item.discountAmount),
       taxRate: item.taxRate ? Number(item.taxRate) : null,
+      createdAt: item.createdAt.toISOString(),
+      updatedAt: item.updatedAt.toISOString(),
     })),
     {
       ...company,
