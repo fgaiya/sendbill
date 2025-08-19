@@ -268,7 +268,7 @@ export function useQuoteForm(
       toast.success(successMessage);
 
       // 即座にリダイレクト（toastは遷移先でも継続表示される）
-      router.push('/dashboard'); // 今後見積書一覧ページに変更
+      router.push('/dashboard/quotes');
     } catch (error) {
       const message =
         error instanceof Error
@@ -512,6 +512,12 @@ export function useQuoteList(
             // JSON以外のレスポンスの場合はデフォルトメッセージを使用
           }
           throw new Error(errorMessage);
+        } else {
+          // サーバー結果でローカルを正規化（番号採番なども反映）
+          const { data: updated } = await response.json();
+          setQuotes((currentQuotes) =>
+            currentQuotes.map((q) => (q.id === updated.id ? updated : q))
+          );
         }
       } catch (err) {
         // エラー時はリフレッシュしてサーバー状態と同期

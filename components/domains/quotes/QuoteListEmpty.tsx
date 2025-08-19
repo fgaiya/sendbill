@@ -1,5 +1,7 @@
 import Link from 'next/link';
 
+import { Search, FileText } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
 
 interface QuoteListEmptyProps {
@@ -15,20 +17,7 @@ export function QuoteListEmpty({
     return (
       <div className="text-center py-12">
         <div className="mx-auto max-w-md">
-          <svg
-            className="mx-auto h-12 w-12 text-gray-400"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            aria-hidden="true"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 0112 15c-2.34 0-4.47-.881-6.08-2.33"
-            />
-          </svg>
+          <Search className="mx-auto h-12 w-12 text-gray-400" />
           <h3 className="mt-2 text-sm font-semibold text-gray-900">
             検索結果が見つかりません
           </h3>
@@ -48,20 +37,7 @@ export function QuoteListEmpty({
   return (
     <div className="text-center py-12">
       <div className="mx-auto max-w-md">
-        <svg
-          className="mx-auto h-12 w-12 text-gray-400"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          aria-hidden="true"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 0112 15c-2.34 0-4.47-.881-6.08-2.33M9 5l7 7-7 7"
-          />
-        </svg>
+        <FileText className="mx-auto h-12 w-12 text-gray-400" />
         <h3 className="mt-2 text-sm font-semibold text-gray-900">
           見積書が作成されていません
         </h3>

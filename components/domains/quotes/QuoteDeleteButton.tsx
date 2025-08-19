@@ -64,10 +64,10 @@ export function QuoteDeleteButton({
     setShowConfirmDialog(false);
   }, [clearError]);
 
-  // ESCキーでダイアログを閉じる
+  // ESCキーでダイアログを閉じる（削除中は無効）
   useEffect(() => {
     const handleEscapeKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && showConfirmDialog) {
+      if (event.key === 'Escape' && showConfirmDialog && !isDeleting) {
         handleCancelDelete();
       }
     };
@@ -83,7 +83,7 @@ export function QuoteDeleteButton({
     return () => {
       document.removeEventListener('keydown', handleEscapeKey);
     };
-  }, [showConfirmDialog, handleCancelDelete]);
+  }, [showConfirmDialog, handleCancelDelete, isDeleting]);
 
   // ダイアログが開いている間、背景のスクロールを無効化
   useEffect(() => {
@@ -131,7 +131,11 @@ export function QuoteDeleteButton({
       {showConfirmDialog && (
         <div
           className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50"
-          onClick={handleCancelDelete}
+          onClick={() => {
+            if (!isDeleting) {
+              handleCancelDelete();
+            }
+          }}
         >
           <div
             ref={dialogRef}

@@ -38,6 +38,20 @@ export function QuoteStatusBadge({
   className,
 }: QuoteStatusBadgeProps) {
   const config = statusConfig[status];
+  if (!config) {
+    // フォールバック用のデフォルト設定
+    return (
+      <span
+        className={cn(
+          'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border transition-all duration-200',
+          'bg-gray-100 text-gray-800 border-gray-200',
+          className
+        )}
+      >
+        不明なステータス
+      </span>
+    );
+  }
   const Icon = config.icon;
 
   return (
