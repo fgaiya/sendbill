@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { invoiceSchemas } from '@/lib/domains/invoices/schemas';
-import { createInvoiceFromQuote } from '@/lib/domains/invoices/service';
+import { createInvoiceFromQuoteWithHistory } from '@/lib/domains/invoices/service';
 import { convertPrismaInvoiceToInvoice } from '@/lib/domains/invoices/types';
 import { handleApiError } from '@/lib/shared/forms';
 import { requireUserCompany } from '@/lib/shared/utils/auth';
@@ -25,7 +25,7 @@ interface RouteContext {
 export async function POST(request: NextRequest, context: RouteContext) {
   try {
     const { quoteId } = quoteParamsSchema.parse(await context.params);
-    const { company, error, status } = await requireUserCompany();
+    const { company, user, error, status } = await requireUserCompany();
     if (error) {
       return NextResponse.json(error, { status });
     }
@@ -34,10 +34,11 @@ export async function POST(request: NextRequest, context: RouteContext) {
     // リクエストボディのバリデーション
     const validatedData = invoiceSchemas.createFromQuote.parse(body);
 
-    // 見積書から請求書を作成
-    const result = await createInvoiceFromQuote(
+    // 見積書から請求書を作成（履歴記録付き）
+    const result = await createInvoiceFromQuoteWithHistory(
       company.id,
       quoteId,
+      user!.id,
       validatedData
     );
 

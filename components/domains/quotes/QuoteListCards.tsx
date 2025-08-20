@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 import { Card } from '@/components/ui/card';
 import { calculateItemsTotal } from '@/lib/domains/quotes/calculations';
 import type { Quote } from '@/lib/domains/quotes/types';
@@ -52,13 +54,12 @@ export function QuoteListCards({
                 {quote.quoteNumber || '(未採番)'}
               </h3>
               <div className="flex items-center gap-2 text-sm font-medium whitespace-nowrap ml-2">
-                <button
-                  disabled
-                  className="text-gray-400 cursor-not-allowed"
-                  title="詳細表示機能は準備中です"
+                <Link
+                  href={`/dashboard/quotes/${quote.id}`}
+                  className="text-blue-600 hover:text-blue-900 transition-colors"
                 >
                   詳細
-                </button>
+                </Link>
                 <span className="text-gray-300">|</span>
                 <button
                   disabled

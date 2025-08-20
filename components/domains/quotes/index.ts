@@ -28,3 +28,9 @@ export { QuoteItemRow } from './QuoteItemRow';
 // プレビューコンポーネント
 export { QuotePreview } from './QuotePreview';
 export { QuotePreviewModal } from './QuotePreviewModal';
+
+// 詳細・変換コンポーネント
+export { QuoteDetail } from './QuoteDetail';
+export { ConvertToInvoiceButton } from './ConvertToInvoiceButton';
+export { InvoiceConversionDialog } from './InvoiceConversionDialog';
+export { ConversionHistorySection } from './ConversionHistorySection';
