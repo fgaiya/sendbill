@@ -242,5 +242,6 @@ model ConversionLog {
   invoice         Invoice  @relation(fields: [invoiceId], references: [id])
   company         Company  @relation(fields: [companyId], references: [id])
   
+  @@unique([invoiceId, companyId])
   @@map("conversion_logs")
 }

@@ -108,13 +108,20 @@ export function InvoiceConversionDialog({
       return;
     }
 
+    // UTCの12:00で日付を固定（オフセットによる前日/翌日ずれ防止）
+    const toUTCDateAtNoon = (dateStr: string): Date => {
+      const d = new Date(dateStr);
+      d.setUTCHours(12, 0, 0, 0);
+      return d;
+    };
+
     setIsConverting(true);
     setError(undefined);
 
     try {
       const requestData: CreateInvoiceFromQuoteData = {
-        issueDate: new Date(issueDate),
-        dueDate: dueDate ? new Date(dueDate) : undefined,
+        issueDate: toUTCDateAtNoon(issueDate),
+        dueDate: dueDate ? toUTCDateAtNoon(dueDate) : undefined,
         notes: notes || undefined,
         selectedItemIds:
           selectedItemIds.length === quote.items?.length

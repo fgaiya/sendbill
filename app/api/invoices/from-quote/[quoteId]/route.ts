@@ -48,8 +48,8 @@ export async function POST(request: NextRequest, context: RouteContext) {
       {
         data: publicInvoice,
         duplicatedItemsCount: result.duplicatedItemsCount,
-        selectedItemsCount: result.selectedItemsCount,
-        message: `見積書から請求書を作成しました（${result.duplicatedItemsCount}件の品目を複製）`,
+        totalItemsCount: result.totalItemsCount,
+        message: `見積書から請求書を作成しました（${result.duplicatedItemsCount}/${result.totalItemsCount}件の品目を複製）`,
       },
       {
         status: 201,

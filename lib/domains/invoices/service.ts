@@ -225,7 +225,7 @@ export async function createInvoiceFromQuote(
     return {
       invoice: createdInvoice as InvoiceWithRelations,
       duplicatedItemsCount: sourceItems.length,
-      selectedItemsCount: quote.items.length,
+      totalItemsCount: quote.items.length,
     };
   });
 }
@@ -1338,7 +1338,7 @@ export async function createInvoiceFromQuoteWithHistory(
       return {
         invoice: createdInvoice as InvoiceWithRelations,
         duplicatedItemsCount: sourceItems.length,
-        selectedItemsCount: quote.items.length,
+        totalItemsCount: quote.items.length,
       };
     } catch (error) {
       // エラー情報をコンソールに記録（デバッグ用）

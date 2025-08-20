@@ -43,10 +43,12 @@ export async function GET(request: NextRequest, context: RouteContext) {
     }
 
     // 変換履歴を取得
-    const conversionLog = await prisma.conversionLog.findFirst({
+    const conversionLog = await prisma.conversionLog.findUnique({
       where: {
-        invoiceId: invoiceId,
-        companyId: company.id,
+        invoiceId_companyId: {
+          invoiceId: invoiceId,
+          companyId: company.id,
+        },
       },
       include: {
         quote: {
@@ -73,10 +75,10 @@ export async function GET(request: NextRequest, context: RouteContext) {
         conversionDate: conversionLog.conversionDate,
         userId: conversionLog.userId,
         quote: conversionLog.quote,
-        selectedItemsCount: conversionLog.selectedItemIds.length,
-        originalIssueDate: conversionLog.issueDate,
-        originalDueDate: conversionLog.dueDate,
-        originalNotes: conversionLog.notes,
+        selectedItemsCount: conversionLog.selectedItemIds?.length ?? 0,
+        issueDate: conversionLog.issueDate,
+        dueDate: conversionLog.dueDate,
+        notes: conversionLog.notes,
         quoteSnapshot: conversionLog.quoteSnapshot,
       },
     });
