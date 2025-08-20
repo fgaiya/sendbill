@@ -17,7 +17,7 @@ import {
   requiresNumberGenerationForTransition,
 } from './utils';
 
-import type { ReorderInvoiceItemsData } from './schemas';
+import type { ReorderInvoiceItemsData, BulkInvoiceItemsData } from './schemas';
 import type {
   InvoiceWithRelations,
   InvoiceData,
@@ -911,4 +911,138 @@ async function getNextSortOrder(invoiceId: string): Promise<number> {
   });
 
   return (lastItem?.sortOrder ?? -1) + 1;
+}
+
+/**
+ * 請求書品目一括処理（作成・更新・削除・並び替え）
+ */
+export async function bulkProcessInvoiceItems(
+  invoiceId: string,
+  companyId: string,
+  bulkData: BulkInvoiceItemsData
+): Promise<PrismaInvoiceItem[]> {
+  return await prisma.$transaction(async (tx) => {
+    // 請求書の存在確認
+    const invoice = await tx.invoice.findFirst({
+      where: {
+        id: invoiceId,
+        companyId,
+        deletedAt: null,
+      },
+    });
+
+    if (!invoice) {
+      throw new NotFoundError('請求書が見つかりません');
+    }
+
+    const results: PrismaInvoiceItem[] = [];
+
+    for (const item of bulkData.items) {
+      switch (item.action) {
+        case 'create':
+          const createdItem = await tx.invoiceItem.create({
+            data: {
+              invoiceId,
+              ...item.data,
+            },
+          });
+          results.push(createdItem as PrismaInvoiceItem);
+          break;
+
+        case 'update': {
+          // 楽観ロック: updatedAt 一致条件
+          const { updatedAt, ...updateData } = item.data;
+
+          // 既存値を取得して整合性検証
+          const existing = await tx.invoiceItem.findFirst({
+            where: {
+              id: item.id,
+              invoiceId,
+              invoice: { companyId, deletedAt: null },
+            },
+          });
+          if (!existing) {
+            throw new NotFoundError('品目が見つかりません');
+          }
+
+          const effectiveQuantity =
+            updateData.quantity !== undefined
+              ? Number(updateData.quantity)
+              : Number(existing.quantity);
+          const effectiveUnitPrice =
+            updateData.unitPrice !== undefined
+              ? Number(updateData.unitPrice)
+              : Number(existing.unitPrice);
+          const effectiveDiscount =
+            updateData.discountAmount !== undefined
+              ? Number(updateData.discountAmount)
+              : Number(existing.discountAmount);
+
+          if (effectiveQuantity <= 0) {
+            throw httpError(400, '数量は正の数である必要があります');
+          }
+          if (effectiveUnitPrice < 0) {
+            throw httpError(400, '単価は0以上である必要があります');
+          }
+          if (effectiveDiscount < 0) {
+            throw httpError(400, '割引額は0以上である必要があります');
+          }
+          if (effectiveDiscount > effectiveUnitPrice * effectiveQuantity) {
+            throw httpError(
+              400,
+              '割引額は品目合計金額を超えることはできません'
+            );
+          }
+
+          const result = await tx.invoiceItem.updateMany({
+            where: {
+              id: item.id,
+              invoiceId,
+              invoice: { companyId, deletedAt: null },
+              updatedAt,
+            },
+            data: updateData,
+          });
+          if (result.count === 0) {
+            throw new Error(
+              '更新競合が発生しました。最新の状態を取得してから再試行してください。'
+            );
+          }
+          const updatedItem = await tx.invoiceItem.findUnique({
+            where: { id: item.id },
+          });
+          results.push(updatedItem as PrismaInvoiceItem);
+          break;
+        }
+
+        case 'delete':
+          await tx.invoiceItem.delete({
+            where: { id: item.id },
+          });
+          break;
+      }
+    }
+
+    // ソート順を正規化
+    const allItems = await tx.invoiceItem.findMany({
+      where: { invoiceId },
+      orderBy: { sortOrder: 'asc' },
+    });
+
+    const currentMap = new Map(allItems.map((it) => [it.id, it.sortOrder]));
+    const normalizedItems = normalizeSortOrder(
+      allItems.map((item) => ({ id: item.id, sortOrder: item.sortOrder }))
+    );
+    for (const item of normalizedItems) {
+      const prev = currentMap.get(item.id);
+      if (prev !== item.sortOrder) {
+        await tx.invoiceItem.update({
+          where: { id: item.id },
+          data: { sortOrder: item.sortOrder },
+        });
+      }
+    }
+
+    return results;
+  });
 }
