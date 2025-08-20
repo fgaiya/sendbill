@@ -130,6 +130,12 @@ export const bulkInvoiceItemsSchema = z.object({
     )
     .min(1, '最低1つの品目が必要です'),
 });
+// 置換専用スキーマ（PUT用）
+export const replaceInvoiceItemsSchema = z.object({
+  items: z
+    .array(createInvoiceItemSchema)
+    .max(500, '品目は500件までに制限されています'),
+});
 
 /**
  * CSVインポートスキーマ
@@ -326,6 +332,7 @@ export type InvoiceUpdateData = z.infer<typeof updateInvoiceSchema>;
 export type InvoiceItemData = z.infer<typeof createInvoiceItemSchema>;
 export type InvoiceItemUpdateData = z.infer<typeof updateInvoiceItemSchema>;
 export type BulkInvoiceItemsData = z.infer<typeof bulkInvoiceItemsSchema>;
+export type ReplaceInvoiceItemsData = z.infer<typeof replaceInvoiceItemsSchema>;
 export type InvoiceSearchParams = z.infer<typeof invoiceSearchSchema>;
 export type CreateInvoiceFromQuoteData = z.infer<
   typeof createInvoiceFromQuoteSchema
@@ -354,6 +361,7 @@ export const invoiceItemSchemas = {
   create: createInvoiceItemSchema,
   update: updateInvoiceItemSchema,
   bulk: bulkInvoiceItemsSchema,
+  replace: replaceInvoiceItemsSchema,
 };
 
 /**

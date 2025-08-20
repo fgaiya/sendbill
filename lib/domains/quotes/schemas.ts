@@ -125,6 +125,12 @@ export const bulkQuoteItemsSchema = z.object({
     )
     .min(1, '最低1つの品目が必要です'),
 });
+// 置換専用スキーマ（PUT用）
+export const replaceQuoteItemsSchema = z.object({
+  items: z
+    .array(createQuoteItemSchema)
+    .max(500, '品目は500件までに制限されています'),
+});
 
 /**
  * CSVインポートスキーマ
@@ -244,6 +250,7 @@ export type QuoteUpdateData = z.infer<typeof updateQuoteSchema>;
 export type QuoteItemData = z.infer<typeof createQuoteItemSchema>;
 export type QuoteItemUpdateData = z.infer<typeof updateQuoteItemSchema>;
 export type BulkQuoteItemsData = z.infer<typeof bulkQuoteItemsSchema>;
+export type ReplaceQuoteItemsData = z.infer<typeof replaceQuoteItemsSchema>;
 export type QuoteSearchParams = z.infer<typeof quoteSearchSchema>;
 
 /**
@@ -266,6 +273,7 @@ export const quoteItemSchemas = {
   create: createQuoteItemSchema,
   update: updateQuoteItemSchema,
   bulk: bulkQuoteItemsSchema,
+  replace: replaceQuoteItemsSchema,
 };
 
 /**

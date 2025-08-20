@@ -11,84 +11,101 @@ import { toast } from 'sonner';
 import { toApiDateString } from '@/lib/shared/utils/date';
 import { omitUndefined } from '@/lib/shared/utils/objects';
 
-import { quoteFormWithItemsSchema } from './form-schemas';
-import { type QuoteFormWithItemsData } from './form-schemas';
+import { invoiceFormWithPaymentSchema } from './form-schemas';
+import { type InvoiceFormWithPaymentData } from './form-schemas';
+import { calculateDueDate } from './utils';
 
 import type {
-  Quote,
-  QuotesListResponse,
-  QuoteSortOption,
-  QuoteStatus,
+  Invoice,
+  InvoicesListResponse,
+  InvoiceSortOption,
+  InvoiceStatus,
 } from './types';
 
-export interface UseQuoteFormOptions {
-  quoteId?: string;
+export interface UseInvoiceFormOptions {
+  invoiceId?: string;
+  defaultPaymentTermDays?: number;
 }
 
-export interface UseQuoteFormState {
+export interface UseInvoiceFormState {
   isSubmitting: boolean;
   submitError?: string;
   isLoading: boolean;
   fetchError?: string;
-  quote?: Quote;
+  invoice?: Invoice;
 }
 
-export interface UseQuoteFormActions {
+export interface UseInvoiceFormActions {
   onSubmit: (e?: React.BaseSyntheticEvent) => Promise<void>;
   onReset: () => void;
   clearMessages: () => void;
+  setDueDateFromIssueDate: (issueDate: Date, paymentTermDays?: number) => void;
 }
 
-export interface UseQuoteFormReturn {
-  form: UseFormReturn<QuoteFormWithItemsData>;
-  state: UseQuoteFormState;
-  actions: UseQuoteFormActions;
+export interface UseInvoiceFormReturn {
+  form: UseFormReturn<InvoiceFormWithPaymentData>;
+  state: UseInvoiceFormState;
+  actions: UseInvoiceFormActions;
 }
 
-export function useQuoteForm(
-  options: UseQuoteFormOptions = {}
-): UseQuoteFormReturn {
-  const { quoteId } = options;
+export function useInvoiceForm(
+  options: UseInvoiceFormOptions = {}
+): UseInvoiceFormReturn {
+  const { invoiceId, defaultPaymentTermDays = 30 } = options;
   const router = useRouter();
 
   // 基本状態
   const [submitError, setSubmitError] = useState<string>();
 
   // 編集モード用の追加状態
-  const [isLoading, setIsLoading] = useState(!!quoteId);
+  const [isLoading, setIsLoading] = useState(!!invoiceId);
   const [fetchError, setFetchError] = useState<string>();
-  const [quote, setQuote] = useState<Quote>();
+  const [invoice, setInvoice] = useState<Invoice>();
 
   // モード判定
-  const isEditMode = !!quoteId;
+  const isEditMode = !!invoiceId;
 
   // フォームはUI専用スキーマで検証（Dateを要求）
-  const formSchema = quoteFormWithItemsSchema;
+  const formSchema = invoiceFormWithPaymentSchema;
 
-  const defaultCreateValues: QuoteFormWithItemsData = {
+  const defaultCreateValues: InvoiceFormWithPaymentData = {
     clientId: '',
     issueDate: new Date(),
-    expiryDate: undefined,
+    dueDate: undefined,
     notes: '',
+    quoteId: undefined,
+    paymentMethod: 'BANK_TRANSFER',
+    paymentTerms: undefined,
     items: [], // 空の品目配列で開始
   };
 
-  const form = useForm<QuoteFormWithItemsData>({
+  const form = useForm<InvoiceFormWithPaymentData>({
     resolver: zodResolver(formSchema) as Resolver<
-      QuoteFormWithItemsData,
+      InvoiceFormWithPaymentData,
       unknown
     >,
     defaultValues: defaultCreateValues,
     mode: 'onChange',
   });
 
-  const toFormValuesFromQuote = (q: Quote): QuoteFormWithItemsData => ({
-    clientId: q.clientId,
-    issueDate: new Date(q.issueDate),
-    expiryDate: q.expiryDate ? new Date(q.expiryDate) : undefined,
-    notes: q.notes || '',
+  const toFormValuesFromInvoice = (
+    inv: Invoice
+  ): InvoiceFormWithPaymentData => ({
+    clientId: inv.clientId,
+    issueDate: new Date(inv.issueDate),
+    dueDate: inv.dueDate ? new Date(inv.dueDate) : undefined,
+    notes: inv.notes || '',
+    quoteId: inv.quoteId || undefined,
+    paymentMethod:
+      (
+        inv as Invoice & {
+          paymentMethod?: 'BANK_TRANSFER' | 'CREDIT_CARD' | 'CASH' | 'CHECK';
+        }
+      ).paymentMethod || 'BANK_TRANSFER',
+    paymentTerms:
+      (inv as Invoice & { paymentTerms?: string }).paymentTerms || undefined,
     items:
-      q.items?.map((item) => ({
+      inv.items?.map((item) => ({
         description: item.description,
         quantity: item.quantity,
         unitPrice: item.unitPrice,
@@ -98,31 +115,43 @@ export function useQuoteForm(
         unit: item.unit || '',
         sku: item.sku || '',
         sortOrder: item.sortOrder,
-        subtotal: item.unitPrice * item.quantity - item.discountAmount, // 小計計算
+        subtotal: item.unitPrice * item.quantity - (item.discountAmount ?? 0), // 小計計算（未定義は0）
       })) || [],
   });
 
+  // 発行日から支払期限を自動計算する機能
+  const setDueDateFromIssueDate = useCallback(
+    (issueDate: Date, paymentTermDays = defaultPaymentTermDays) => {
+      const calculatedDueDate = calculateDueDate(issueDate, paymentTermDays);
+      form.setValue('dueDate', calculatedDueDate, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    },
+    [form, defaultPaymentTermDays]
+  );
+
   // 編集モード時の初期データ取得
   useEffect(() => {
-    if (!quoteId) return;
+    if (!invoiceId) return;
 
     let isMounted = true;
     const { reset } = form;
 
-    const fetchQuote = async () => {
+    const fetchInvoice = async () => {
       try {
         if (isMounted) {
           setIsLoading(true);
           setFetchError(undefined);
         }
 
-        const response = await fetch(`/api/quotes/${quoteId}`);
+        const response = await fetch(`/api/invoices/${invoiceId}`);
 
         if (!response.ok) {
           if (response.status === 404) {
-            throw new Error('見積書が見つかりません');
+            throw new Error('請求書が見つかりません');
           }
-          let errorMessage = '見積書の取得に失敗しました';
+          let errorMessage = '請求書の取得に失敗しました';
           try {
             const errorData = await response.json();
             errorMessage = errorData.error || errorMessage;
@@ -132,16 +161,16 @@ export function useQuoteForm(
           throw new Error(errorMessage);
         }
 
-        const { data: quote } = await response.json();
+        const { data: invoice } = await response.json();
         if (isMounted) {
-          setQuote(quote);
+          setInvoice(invoice);
 
           // フォームの初期値を設定
-          reset(toFormValuesFromQuote(quote));
+          reset(toFormValuesFromInvoice(invoice));
         }
       } catch (err) {
         const message =
-          err instanceof Error ? err.message : '見積書の取得に失敗しました';
+          err instanceof Error ? err.message : '請求書の取得に失敗しました';
         if (isMounted) {
           setFetchError(message);
         }
@@ -152,37 +181,40 @@ export function useQuoteForm(
       }
     };
 
-    void fetchQuote();
+    void fetchInvoice();
 
     return () => {
       isMounted = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [quoteId, form.reset]);
+  }, [invoiceId, form.reset]);
 
-  const onSubmit = async (data: QuoteFormWithItemsData) => {
+  const onSubmit = async (data: InvoiceFormWithPaymentData) => {
     try {
       setSubmitError(undefined);
 
       // モードに応じてAPIエンドポイントとメソッドを切り替え
-      const url = isEditMode ? `/api/quotes/${quoteId}` : '/api/quotes';
+      const url = isEditMode ? `/api/invoices/${invoiceId}` : '/api/invoices';
       const method = isEditMode ? 'PUT' : 'POST';
       const successMessage = isEditMode
-        ? '見積書が正常に更新されました！'
-        : '見積書が正常に作成されました！';
+        ? '請求書が正常に更新されました！'
+        : '請求書が正常に作成されました！';
       const errorMessage = isEditMode
-        ? '見積書の更新に失敗しました'
-        : '見積書の作成に失敗しました';
+        ? '請求書の更新に失敗しました'
+        : '請求書の作成に失敗しました';
 
-      // 基本見積書データ（品目を除く）を準備
-      const { items, ...basicQuoteData } = data;
+      // 基本請求書データ（品目を除く）を準備
+      const { items, ...basicInvoiceData } = data;
 
       // API送信用のデータを正規化（日付のタイムゾーン対応、空文字列のundefined化）
       const payload = {
-        ...basicQuoteData,
-        issueDate: toApiDateString(basicQuoteData.issueDate)!,
-        expiryDate: toApiDateString(basicQuoteData.expiryDate),
-        notes: basicQuoteData.notes?.trim() || undefined,
+        ...basicInvoiceData,
+        issueDate: toApiDateString(basicInvoiceData.issueDate)!,
+        dueDate: toApiDateString(basicInvoiceData.dueDate),
+        notes: basicInvoiceData.notes?.trim() || undefined,
+        quoteId: basicInvoiceData.quoteId?.trim() || undefined,
+        paymentMethod: basicInvoiceData.paymentMethod || 'BANK_TRANSFER',
+        paymentTerms: basicInvoiceData.paymentTerms?.trim() || undefined,
       };
 
       const response = await fetch(url, {
@@ -205,9 +237,9 @@ export function useQuoteForm(
       }
 
       const responseData = await response.json();
-      const savedQuoteId = isEditMode ? quoteId : responseData.data?.id;
-      if (!savedQuoteId) {
-        throw new Error('見積書IDの取得に失敗しました');
+      const savedInvoiceId = isEditMode ? invoiceId : responseData.data?.id;
+      if (!savedInvoiceId) {
+        throw new Error('請求書IDの取得に失敗しました');
       }
 
       // 品目データ（空配列含む）がある場合は品目APIで処理
@@ -215,9 +247,9 @@ export function useQuoteForm(
         try {
           // 品目の一括更新（完全置換: 既存品目は削除して新規作成）
           const itemsPayload = items
-            .filter((item) => item.description.trim()) // 空の品目を除外
+            .filter((item) => (item.description ?? '').trim().length > 0)
             .map((item) => ({
-              description: item.description.trim(),
+              description: (item.description ?? '').trim(),
               quantity: Number(item.quantity) || 0,
               unitPrice: Number(item.unitPrice) || 0,
               taxCategory: item.taxCategory,
@@ -230,7 +262,7 @@ export function useQuoteForm(
             }));
 
           const itemsResponse = await fetch(
-            `/api/quotes/${savedQuoteId}/items`,
+            `/api/invoices/${savedInvoiceId}/items`,
             {
               method: 'PUT',
               headers: {
@@ -251,35 +283,35 @@ export function useQuoteForm(
             throw new Error(errorMessage);
           }
         } catch (itemsError) {
-          // 品目保存エラーはワーニングとして表示（見積書自体は保存済み）
+          // 品目保存エラーはワーニングとして表示（請求書自体は保存済み）
           const itemsMessage =
             itemsError instanceof Error
               ? itemsError.message
               : '品目の保存に失敗しました';
-          toast.error(`見積書は保存されましたが、${itemsMessage}`);
+          toast.error(`請求書は保存されましたが、${itemsMessage}`);
         }
       }
 
       toast.success(successMessage);
 
       // 即座にリダイレクト（toastは遷移先でも継続表示される）
-      router.push('/dashboard/quotes');
+      router.push('/dashboard/invoices');
     } catch (error) {
       const message =
         error instanceof Error
           ? error.message
           : isEditMode
-            ? '見積書の更新に失敗しました'
-            : '見積書の作成に失敗しました';
+            ? '請求書の更新に失敗しました'
+            : '請求書の作成に失敗しました';
       setSubmitError(message);
       toast.error(message);
     }
   };
 
   const onReset = () => {
-    if (isEditMode && quote) {
+    if (isEditMode && invoice) {
       // 編集モード: 元のデータに戻す
-      form.reset(toFormValuesFromQuote(quote));
+      form.reset(toFormValuesFromInvoice(invoice));
     } else {
       // 新規作成モード: 既定値に戻す
       form.reset(defaultCreateValues);
@@ -299,30 +331,34 @@ export function useQuoteForm(
       submitError,
       isLoading,
       fetchError,
-      quote,
+      invoice,
     },
     actions: {
       onSubmit: form.handleSubmit(onSubmit),
       onReset,
       clearMessages,
+      setDueDateFromIssueDate,
     },
   };
 }
 
-// Quote List Hook Types
-export interface QuoteListParams {
+// Invoice List Hook Types
+export interface InvoiceListParams {
   page?: number;
   limit?: number;
   q?: string;
-  sort?: QuoteSortOption;
-  status?: QuoteStatus;
+  sort?: InvoiceSortOption;
+  status?: InvoiceStatus;
   clientId?: string;
+  quoteId?: string;
   dateFrom?: string;
   dateTo?: string;
+  dueDateFrom?: string;
+  dueDateTo?: string;
 }
 
-export interface UseQuoteListState {
-  quotes: Quote[];
+export interface UseInvoiceListState {
+  invoices: Invoice[];
   isLoading: boolean;
   error?: string;
   pagination: {
@@ -333,28 +369,33 @@ export interface UseQuoteListState {
   };
 }
 
-export interface UseQuoteListActions {
-  fetchQuotes: (newParams?: QuoteListParams) => Promise<void>;
+export interface UseInvoiceListActions {
+  fetchInvoices: (newParams?: InvoiceListParams) => Promise<void>;
   setPage: (page: number) => void;
-  setSort: (sort: QuoteSortOption) => void;
+  setSort: (sort: InvoiceSortOption) => void;
   setSearch: (q: string) => void;
-  setStatusFilter: (status: QuoteStatus | undefined) => void;
+  setStatusFilter: (status: InvoiceStatus | undefined) => void;
   setClientFilter: (clientId: string | undefined) => void;
+  setQuoteFilter: (quoteId: string | undefined) => void;
   setDateFilter: (dateFrom?: string, dateTo?: string) => void;
+  setDueDateFilter: (dueDateFrom?: string, dueDateTo?: string) => void;
   refresh: () => Promise<void>;
-  updateQuoteStatus: (quoteId: string, newStatus: QuoteStatus) => Promise<void>;
+  updateInvoiceStatus: (
+    invoiceId: string,
+    newStatus: InvoiceStatus
+  ) => Promise<void>;
 }
 
-export interface UseQuoteListReturn {
-  state: UseQuoteListState;
-  actions: UseQuoteListActions;
-  params: QuoteListParams;
+export interface UseInvoiceListReturn {
+  state: UseInvoiceListState;
+  actions: UseInvoiceListActions;
+  params: InvoiceListParams;
 }
 
-export function useQuoteList(
-  initialParams: QuoteListParams = {}
-): UseQuoteListReturn {
-  const [quotes, setQuotes] = useState<Quote[]>([]);
+export function useInvoiceList(
+  initialParams: InvoiceListParams = {}
+): UseInvoiceListReturn {
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string>();
   const [pagination, setPagination] = useState({
@@ -364,15 +405,15 @@ export function useQuoteList(
     totalPages: 0,
   });
 
-  const [params, setParams] = useState<QuoteListParams>({
+  const [params, setParams] = useState<InvoiceListParams>({
     page: 1,
     limit: 20,
     sort: 'createdAt_desc',
     ...initialParams,
   });
 
-  const fetchQuotes = useCallback(
-    async (newParams?: QuoteListParams) => {
+  const fetchInvoices = useCallback(
+    async (newParams?: InvoiceListParams) => {
       setIsLoading(true);
       setError(undefined);
 
@@ -390,18 +431,26 @@ export function useQuoteList(
         if (finalParams.status) searchParams.set('status', finalParams.status);
         if (finalParams.clientId?.trim())
           searchParams.set('clientId', finalParams.clientId.trim());
+        if (finalParams.quoteId?.trim())
+          searchParams.set('quoteId', finalParams.quoteId.trim());
         if (finalParams.dateFrom?.trim())
           searchParams.set('dateFrom', finalParams.dateFrom.trim());
         if (finalParams.dateTo?.trim())
           searchParams.set('dateTo', finalParams.dateTo.trim());
+        if (finalParams.dueDateFrom?.trim())
+          searchParams.set('dueDateFrom', finalParams.dueDateFrom.trim());
+        if (finalParams.dueDateTo?.trim())
+          searchParams.set('dueDateTo', finalParams.dueDateTo.trim());
 
         // 一覧表示では常にclient情報とitems情報を含める（金額計算に必要）
-        searchParams.set('include', 'client,items');
+        searchParams.set('include', 'client,items,quote');
 
-        const response = await fetch(`/api/quotes?${searchParams.toString()}`);
+        const response = await fetch(
+          `/api/invoices?${searchParams.toString()}`
+        );
 
         if (!response.ok) {
-          let errorMessage = '見積書の取得に失敗しました';
+          let errorMessage = '請求書の取得に失敗しました';
           try {
             const errorData = await response.json();
             errorMessage = errorData.error || errorMessage;
@@ -411,8 +460,8 @@ export function useQuoteList(
           throw new Error(errorMessage);
         }
 
-        const data: QuotesListResponse = await response.json();
-        setQuotes(data.data);
+        const data: InvoicesListResponse = await response.json();
+        setInvoices(data.data);
         setPagination(data.pagination);
 
         // パラメータを更新
@@ -421,9 +470,9 @@ export function useQuoteList(
         }
       } catch (err) {
         const message =
-          err instanceof Error ? err.message : '見積書の取得に失敗しました';
+          err instanceof Error ? err.message : '請求書の取得に失敗しました';
         setError(message);
-        // エラー時は既存の見積書データとページネーション状態を保持
+        // エラー時は既存の請求書データとページネーション状態を保持
       } finally {
         setIsLoading(false);
       }
@@ -433,61 +482,75 @@ export function useQuoteList(
 
   const setPage = useCallback(
     (page: number) => {
-      fetchQuotes({ page });
+      fetchInvoices({ page });
     },
-    [fetchQuotes]
+    [fetchInvoices]
   );
 
   const setSort = useCallback(
-    (sort: QuoteSortOption) => {
-      fetchQuotes({ sort, page: 1 }); // ソート変更時はページをリセット
+    (sort: InvoiceSortOption) => {
+      fetchInvoices({ sort, page: 1 }); // ソート変更時はページをリセット
     },
-    [fetchQuotes]
+    [fetchInvoices]
   );
 
   const setSearch = useCallback(
     (q: string) => {
-      fetchQuotes({ q, page: 1 }); // 検索時はページをリセット
+      fetchInvoices({ q, page: 1 }); // 検索時はページをリセット
     },
-    [fetchQuotes]
+    [fetchInvoices]
   );
 
   const setStatusFilter = useCallback(
-    (status: QuoteStatus | undefined) => {
-      fetchQuotes({ status, page: 1 }); // フィルタ変更時はページをリセット
+    (status: InvoiceStatus | undefined) => {
+      fetchInvoices({ status, page: 1 }); // フィルタ変更時はページをリセット
     },
-    [fetchQuotes]
+    [fetchInvoices]
   );
 
   const setClientFilter = useCallback(
     (clientId: string | undefined) => {
-      fetchQuotes({ clientId, page: 1 });
+      fetchInvoices({ clientId, page: 1 });
     },
-    [fetchQuotes]
+    [fetchInvoices]
+  );
+
+  const setQuoteFilter = useCallback(
+    (quoteId: string | undefined) => {
+      fetchInvoices({ quoteId, page: 1 });
+    },
+    [fetchInvoices]
   );
 
   const setDateFilter = useCallback(
     (dateFrom?: string, dateTo?: string) => {
-      fetchQuotes({ dateFrom, dateTo, page: 1 });
+      fetchInvoices({ dateFrom, dateTo, page: 1 });
     },
-    [fetchQuotes]
+    [fetchInvoices]
+  );
+
+  const setDueDateFilter = useCallback(
+    (dueDateFrom?: string, dueDateTo?: string) => {
+      fetchInvoices({ dueDateFrom, dueDateTo, page: 1 });
+    },
+    [fetchInvoices]
   );
 
   const refresh = useCallback(() => {
-    return fetchQuotes();
-  }, [fetchQuotes]);
+    return fetchInvoices();
+  }, [fetchInvoices]);
 
-  const updateQuoteStatus = useCallback(
-    async (quoteId: string, newStatus: QuoteStatus) => {
+  const updateInvoiceStatus = useCallback(
+    async (invoiceId: string, newStatus: InvoiceStatus) => {
       // ローカル状態を楽観的に更新
-      setQuotes((currentQuotes) =>
-        currentQuotes.map((quote) =>
-          quote.id === quoteId ? { ...quote, status: newStatus } : quote
+      setInvoices((currentInvoices) =>
+        currentInvoices.map((invoice) =>
+          invoice.id === invoiceId ? { ...invoice, status: newStatus } : invoice
         )
       );
 
       try {
-        const response = await fetch(`/api/quotes/${quoteId}`, {
+        const response = await fetch(`/api/invoices/${invoiceId}`, {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
@@ -510,8 +573,10 @@ export function useQuoteList(
         } else {
           // サーバー結果でローカルを正規化（番号採番なども反映）
           const { data: updated } = await response.json();
-          setQuotes((currentQuotes) =>
-            currentQuotes.map((q) => (q.id === updated.id ? updated : q))
+          setInvoices((currentInvoices) =>
+            currentInvoices.map((inv) =>
+              inv.id === updated.id ? updated : inv
+            )
           );
         }
       } catch (err) {
@@ -525,80 +590,85 @@ export function useQuoteList(
 
   // 初回読み込み
   useEffect(() => {
-    void fetchQuotes();
-  }, [fetchQuotes]);
+    void fetchInvoices();
+  }, [fetchInvoices]);
 
   return {
     state: {
-      quotes,
+      invoices,
       isLoading,
       error,
       pagination,
     },
     actions: {
-      fetchQuotes,
+      fetchInvoices,
       setPage,
       setSort,
       setSearch,
       setStatusFilter,
       setClientFilter,
+      setQuoteFilter,
       setDateFilter,
+      setDueDateFilter,
       refresh,
-      updateQuoteStatus,
+      updateInvoiceStatus,
     },
     params,
   };
 }
 
-// Quote Delete Hook Types
-export interface UseQuoteDeleteState {
+// Invoice Delete Hook Types
+export interface UseInvoiceDeleteState {
   isDeleting: boolean;
   deleteError?: string;
 }
 
-export interface UseQuoteDeleteActions {
-  deleteQuote: (quote: Quote) => Promise<boolean>;
+export interface UseInvoiceDeleteActions {
+  deleteInvoice: (invoice: Invoice) => Promise<boolean>;
   clearError: () => void;
 }
 
-export interface UseQuoteDeleteReturn
-  extends UseQuoteDeleteState,
-    UseQuoteDeleteActions {}
+export interface UseInvoiceDeleteReturn
+  extends UseInvoiceDeleteState,
+    UseInvoiceDeleteActions {}
 
-export function useQuoteDelete(): UseQuoteDeleteReturn {
+export function useInvoiceDelete(): UseInvoiceDeleteReturn {
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string>();
 
-  const deleteQuote = useCallback(async (quote: Quote): Promise<boolean> => {
-    setIsDeleting(true);
-    setDeleteError(undefined);
+  const deleteInvoice = useCallback(
+    async (invoice: Invoice): Promise<boolean> => {
+      setIsDeleting(true);
+      setDeleteError(undefined);
 
-    try {
-      const response = await fetch(`/api/quotes/${quote.id}`, {
-        method: 'DELETE',
-      });
+      try {
+        const response = await fetch(`/api/invoices/${invoice.id}`, {
+          method: 'DELETE',
+        });
 
-      if (!response.ok) {
-        let errorMessage = '見積書の削除に失敗しました';
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.error || errorMessage;
-        } catch {
-          // JSON以外のレスポンスの場合はデフォルトメッセージを使用
+        if (!response.ok) {
+          let errorMessage = '請求書の削除に失敗しました';
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorMessage;
+          } catch {
+            // JSON以外のレスポンスの場合はデフォルトメッセージを使用
+          }
+          throw new Error(errorMessage);
         }
-        throw new Error(errorMessage);
-      }
 
-      return true;
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : '見積書の削除に失敗しました';
-      setDeleteError(message);
-      return false;
-    } finally {
-      setIsDeleting(false);
-    }
-  }, []);
+        return true;
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : '請求書の削除に失敗しました';
+        setDeleteError(message);
+        return false;
+      } finally {
+        setIsDeleting(false);
+      }
+    },
+    []
+  );
 
   const clearError = useCallback(() => {
     setDeleteError(undefined);
@@ -607,23 +677,23 @@ export function useQuoteDelete(): UseQuoteDeleteReturn {
   return {
     isDeleting,
     deleteError,
-    deleteQuote,
+    deleteInvoice,
     clearError,
   };
 }
 
-// Quote Status Change Hook
-export function useQuoteStatusChange() {
+// Invoice Status Change Hook
+export function useInvoiceStatusChange() {
   const [isUpdating, setIsUpdating] = useState(false);
   const [statusError, setStatusError] = useState<string>();
 
   const changeStatus = useCallback(
-    async (quoteId: string, newStatus: QuoteStatus): Promise<void> => {
+    async (invoiceId: string, newStatus: InvoiceStatus): Promise<void> => {
       setIsUpdating(true);
       setStatusError(undefined);
 
       try {
-        const response = await fetch(`/api/quotes/${quoteId}`, {
+        const response = await fetch(`/api/invoices/${invoiceId}`, {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',

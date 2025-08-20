@@ -35,6 +35,8 @@ export interface Invoice {
   status: InvoiceStatus;
   notes: string | null;
   paymentDate: string | null;
+  paymentMethod?: 'BANK_TRANSFER' | 'CREDIT_CARD' | 'CASH' | 'CHECK' | null;
+  paymentTerms?: string | null;
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
@@ -73,6 +75,17 @@ export interface Company {
   reducedTaxRate: number;
   priceIncludesTax: boolean;
   invoiceNumberSeq: number;
+}
+
+/**
+ * Company with bank info and tax registration for payment fields
+ */
+export interface CompanyWithBankInfo extends Company {
+  invoiceRegistrationNumber?: string | null;
+  bankName?: string | null;
+  bankBranch?: string | null;
+  bankAccountNumber?: string | null;
+  bankAccountHolder?: string | null;
 }
 
 /**
@@ -290,6 +303,20 @@ export function convertPrismaInvoiceToInvoice(
     status: prismaInvoice.status,
     notes: prismaInvoice.notes,
     paymentDate: prismaInvoice.paymentDate?.toISOString() ?? null,
+    paymentMethod:
+      (
+        prismaInvoice as InvoiceWithRelations & {
+          paymentMethod?:
+            | 'BANK_TRANSFER'
+            | 'CREDIT_CARD'
+            | 'CASH'
+            | 'CHECK'
+            | null;
+        }
+      ).paymentMethod ?? null,
+    paymentTerms:
+      (prismaInvoice as InvoiceWithRelations & { paymentTerms?: string | null })
+        .paymentTerms ?? null,
     createdAt: prismaInvoice.createdAt.toISOString(),
     updatedAt: prismaInvoice.updatedAt.toISOString(),
     deletedAt: prismaInvoice.deletedAt?.toISOString() ?? null,
@@ -387,6 +414,14 @@ export interface InvoiceBasicsShape {
   dueDate?: Date;
   notes?: string;
   quoteId?: string;
+}
+
+/**
+ * Payment method shape for invoice forms
+ */
+export interface InvoicePaymentShape {
+  paymentMethod?: 'BANK_TRANSFER' | 'CREDIT_CARD' | 'CASH' | 'CHECK';
+  paymentTerms?: string;
 }
 
 /**

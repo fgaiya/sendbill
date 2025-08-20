@@ -21,11 +21,11 @@ import { requireUserCompany } from '@/lib/shared/utils/auth';
 
 // パラメータスキーマ
 const invoiceParamsSchema = z.object({
-  id: z.string().min(1, '請求書IDは必須です'),
+  invoiceId: z.uuid('請求書IDの形式が正しくありません'),
 });
 
 interface RouteContext {
-  params: Promise<{ id: string }>;
+  params: Promise<{ invoiceId: string }>;
 }
 
 /**
@@ -33,7 +33,7 @@ interface RouteContext {
  */
 export async function GET(request: NextRequest, context: RouteContext) {
   try {
-    const { id: invoiceId } = invoiceParamsSchema.parse(await context.params);
+    const { invoiceId } = invoiceParamsSchema.parse(await context.params);
     const { company, error, status } = await requireUserCompany();
     if (error) {
       return NextResponse.json(error, { status });
@@ -74,7 +74,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
  */
 export async function PUT(request: NextRequest, context: RouteContext) {
   try {
-    const { id: invoiceId } = invoiceParamsSchema.parse(await context.params);
+    const { invoiceId } = invoiceParamsSchema.parse(await context.params);
     const { company, error, status } = await requireUserCompany();
     if (error) {
       return NextResponse.json(error, { status });
@@ -104,7 +104,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
  */
 export async function DELETE(request: NextRequest, context: RouteContext) {
   try {
-    const { id: invoiceId } = invoiceParamsSchema.parse(await context.params);
+    const { invoiceId } = invoiceParamsSchema.parse(await context.params);
     const { company, error, status } = await requireUserCompany();
     if (error) {
       return NextResponse.json(error, { status });
@@ -125,7 +125,7 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
  */
 export async function PATCH(request: NextRequest, context: RouteContext) {
   try {
-    const { id: invoiceId } = invoiceParamsSchema.parse(await context.params);
+    const { invoiceId } = invoiceParamsSchema.parse(await context.params);
     const { company, error, status } = await requireUserCompany();
     if (error) {
       return NextResponse.json(error, { status });
