@@ -947,14 +947,40 @@ export async function bulkProcessInvoiceItems(
     }
 
     const results: PrismaInvoiceItem[] = [];
+    // 新規作成品目の既存最大 sortOrder を起点に採番（安定した順序のため）
+    const last = await tx.invoiceItem.findFirst({
+      where: { invoiceId },
+      orderBy: { sortOrder: 'desc' },
+      select: { sortOrder: true },
+    });
+    let nextSortOrder = (last?.sortOrder ?? -1) + 1;
 
     for (const item of bulkData.items) {
       switch (item.action) {
         case 'create': {
+          // 入力値の整合性チェック（サーバー側の最終防衛線）
+          const qty = Number(item.data.quantity);
+          const unitPrice = Number(item.data.unitPrice);
+          const discount = Number(item.data.discountAmount ?? 0);
+          if (qty <= 0)
+            throw httpError(400, '数量は正の数である必要があります');
+          if (unitPrice < 0)
+            throw httpError(400, '単価は0以上である必要があります');
+          if (discount < 0)
+            throw httpError(400, '割引額は0以上である必要があります');
+          if (discount > unitPrice * qty) {
+            throw httpError(
+              400,
+              '割引額は品目合計金額を超えることはできません'
+            );
+          }
+
           const createdItem = await tx.invoiceItem.create({
             data: {
               invoiceId,
               ...item.data,
+              // 指定がなければ末尾に連番で付与（複数 create の順序が安定）
+              sortOrder: item.data.sortOrder ?? nextSortOrder++,
             },
           });
           results.push(createdItem as PrismaInvoiceItem);
