@@ -48,9 +48,10 @@ model Company {
   quoteNumberSeq   Int @default(1)
   invoiceNumberSeq Int @default(1)
 
-  clients  Client[]
-  quotes   Quote[]
-  invoices Invoice[]
+  clients        Client[]
+  quotes         Quote[]
+  invoices       Invoice[]
+  conversionLogs ConversionLog[]
 
   @@map("companies")
 }
@@ -95,8 +96,9 @@ model Quote {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  items    QuoteItem[]
-  invoices Invoice[]
+  items          QuoteItem[]
+  invoices       Invoice[]
+  conversionLogs ConversionLog[]
 
   @@unique([companyId, quoteNumber])
   @@index([companyId, clientId, status])
@@ -150,7 +152,8 @@ model Invoice {
   paymentMethod PaymentMethod? @default(BANK_TRANSFER)
   paymentTerms  String?
 
-  items InvoiceItem[]
+  items          InvoiceItem[]
+  conversionLogs ConversionLog[]
 
   @@unique([companyId, invoiceNumber])
   @@index([companyId, clientId, status, quoteId])
@@ -194,6 +197,7 @@ enum QuoteStatus {
   SENT
   ACCEPTED
   DECLINED
+  INVOICED
 }
 
 enum InvoiceStatus {
@@ -208,4 +212,36 @@ enum PaymentMethod {
   CREDIT_CARD   // クレジットカード
   CASH          // 現金
   CHECK         // 小切手
+}
+
+model ConversionLog {
+  id              String   @id @default(cuid())
+  quoteId         String
+  invoiceId       String
+  userId          String // Clerk User ID
+  companyId       String
+  conversionDate  DateTime @default(now())
+  
+  // 変換前データスナップショット
+  quoteSnapshot   Json
+  // 変換パラメータ
+  selectedItemIds String[]
+  issueDate       DateTime
+  dueDate         DateTime?
+  notes           String?
+  
+  // エラー情報
+  errorMessage    String?
+  stackTrace      String?
+  
+  // 監査用
+  createdAt       DateTime @default(now())
+  
+  // リレーション
+  quote           Quote    @relation(fields: [quoteId], references: [id])
+  invoice         Invoice  @relation(fields: [invoiceId], references: [id])
+  company         Company  @relation(fields: [companyId], references: [id])
+  
+  @@unique([invoiceId, companyId])
+  @@map("conversion_logs")
 }

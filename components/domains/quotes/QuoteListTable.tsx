@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 import { calculateItemsTotal } from '@/lib/domains/quotes/calculations';
 import type { Quote } from '@/lib/domains/quotes/types';
 import { formatDate } from '@/lib/shared/utils/date';
@@ -192,13 +194,12 @@ export function QuoteListTable({
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <div className="flex items-center justify-end gap-2">
-                    <button
-                      disabled
-                      className="text-gray-400 cursor-not-allowed"
-                      title="詳細表示機能は準備中です"
+                    <Link
+                      href={`/dashboard/quotes/${quote.id}`}
+                      className="text-blue-600 hover:text-blue-900 transition-colors"
                     >
                       詳細
-                    </button>
+                    </Link>
                     <span className="text-gray-300">|</span>
                     <button
                       disabled

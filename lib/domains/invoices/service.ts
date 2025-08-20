@@ -1,6 +1,7 @@
 import {
   Prisma,
   InvoiceStatus,
+  QuoteStatus,
   type InvoiceItem as PrismaInvoiceItem,
 } from '@prisma/client';
 
@@ -224,7 +225,7 @@ export async function createInvoiceFromQuote(
     return {
       invoice: createdInvoice as InvoiceWithRelations,
       duplicatedItemsCount: sourceItems.length,
-      selectedItemsCount: quote.items.length,
+      totalItemsCount: quote.items.length,
     };
   });
 }
@@ -1182,5 +1183,176 @@ export async function replaceAllInvoiceItems(
     }
 
     return results;
+  });
+}
+
+/**
+ * 見積書から請求書を作成し、変換履歴を記録する（トランザクション統合版）
+ */
+export async function createInvoiceFromQuoteWithHistory(
+  companyId: string,
+  quoteId: string,
+  userId: string,
+  data: CreateInvoiceFromQuoteData
+): Promise<CreateInvoiceFromQuoteResult> {
+  return await prisma.$transaction(async (tx) => {
+    let quote: Prisma.QuoteGetPayload<{
+      include: {
+        items: true;
+        client: true;
+      };
+    }> | null = null;
+
+    try {
+      // 1. 見積書の存在確認と詳細取得
+      quote = await tx.quote.findFirst({
+        where: {
+          id: quoteId,
+          companyId,
+          deletedAt: null,
+        },
+        include: {
+          items: {
+            orderBy: { sortOrder: 'asc' },
+          },
+          client: true,
+        },
+      });
+
+      if (!quote) {
+        throw new NotFoundError('指定された見積書が見つかりません');
+      }
+
+      if (quote.items.length === 0) {
+        throw httpError(400, '見積書に品目が登録されていません');
+      }
+
+      // 2. 複製対象品目の決定
+      const sourceItems = data.selectedItemIds
+        ? quote.items.filter((item) => data.selectedItemIds!.includes(item.id))
+        : quote.items;
+
+      if (sourceItems.length === 0) {
+        throw httpError(400, '複製する品目が選択されていません');
+      }
+
+      // 3. 請求書番号の仮採番
+      const draftNumber = `DRAFT-${Date.now()}-${Math.random()
+        .toString(36)
+        .slice(2, 8)}`;
+
+      // 4. 請求書を作成
+      const invoice = await tx.invoice.create({
+        data: {
+          companyId,
+          clientId: quote.clientId,
+          quoteId: quote.id,
+          invoiceNumber: draftNumber,
+          issueDate: data.issueDate,
+          dueDate: data.dueDate,
+          notes: data.notes,
+          status: 'DRAFT',
+        },
+        include: {
+          client: true,
+          items: {
+            orderBy: { sortOrder: 'asc' },
+          },
+          quote: {
+            select: {
+              id: true,
+              quoteNumber: true,
+              issueDate: true,
+              status: true,
+            },
+          },
+        },
+      });
+
+      // 5. 品目を複製
+      for (let i = 0; i < sourceItems.length; i++) {
+        const sourceItem = sourceItems[i];
+        await tx.invoiceItem.create({
+          data: {
+            invoiceId: invoice.id,
+            description: sourceItem.description,
+            quantity: sourceItem.quantity,
+            unitPrice: sourceItem.unitPrice,
+            taxCategory: sourceItem.taxCategory,
+            taxRate: sourceItem.taxRate,
+            discountAmount: sourceItem.discountAmount,
+            unit: sourceItem.unit,
+            sku: sourceItem.sku,
+            sortOrder: i,
+          },
+        });
+      }
+
+      // 6. 最新の請求書情報を取得（品目含む）
+      const createdInvoice = await tx.invoice.findUnique({
+        where: { id: invoice.id },
+        include: {
+          client: true,
+          items: {
+            orderBy: { sortOrder: 'asc' },
+          },
+          quote: {
+            select: {
+              id: true,
+              quoteNumber: true,
+              issueDate: true,
+              status: true,
+            },
+          },
+        },
+      });
+
+      if (!createdInvoice) {
+        throw new NotFoundError('作成した請求書が見つかりません');
+      }
+
+      // 7. 見積書ステータスをINVOICEDに更新
+      await tx.quote.update({
+        where: { id: quoteId },
+        data: {
+          status: QuoteStatus.INVOICED,
+          updatedAt: new Date(),
+        },
+      });
+
+      // 8. 変換履歴を記録（成功時）
+      await tx.conversionLog.create({
+        data: {
+          quoteId,
+          invoiceId: createdInvoice.id,
+          userId,
+          companyId,
+          quoteSnapshot: quote,
+          selectedItemIds: data.selectedItemIds || [],
+          issueDate: data.issueDate,
+          dueDate: data.dueDate,
+          notes: data.notes,
+        },
+      });
+
+      return {
+        invoice: createdInvoice as InvoiceWithRelations,
+        duplicatedItemsCount: sourceItems.length,
+        totalItemsCount: quote.items.length,
+      };
+    } catch (error) {
+      // エラー情報をコンソールに記録（デバッグ用）
+      console.error('Conversion failed for quote:', quoteId, {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        data,
+        userId,
+        companyId,
+        quoteFound: !!quote,
+      });
+
+      // 元のエラーを再スロー（トランザクションはロールバックされる）
+      throw error;
+    }
   });
 }

@@ -1,4 +1,4 @@
-import { Clock, Send, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { Clock, Send, ThumbsUp, ThumbsDown, FileCheck } from 'lucide-react';
 
 import { type QuoteStatus } from '@/lib/domains/quotes/types';
 import { cn } from '@/lib/shared/utils/ui';
@@ -29,6 +29,11 @@ const statusConfig = {
     label: '却下',
     className: 'bg-red-100 text-red-800 border-red-200',
     icon: ThumbsDown,
+  },
+  INVOICED: {
+    label: '請求書作成済み',
+    className: 'bg-purple-100 text-purple-800 border-purple-200',
+    icon: FileCheck,
   },
 } as const;
 

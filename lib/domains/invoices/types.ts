@@ -159,7 +159,7 @@ export interface InvoiceNumberGenerationOptions {
 export interface CreateInvoiceFromQuoteResult {
   invoice: InvoiceWithRelations;
   duplicatedItemsCount: number;
-  selectedItemsCount: number;
+  totalItemsCount: number;
 }
 
 /**
