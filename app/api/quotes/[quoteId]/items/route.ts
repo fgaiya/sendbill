@@ -4,13 +4,13 @@ import { z } from 'zod';
 
 import {
   quoteItemSchemas,
-  reorderQuoteItemsSchema,
+  bulkQuoteItemsSchema,
 } from '@/lib/domains/quotes/schemas';
 import {
   getQuoteItems,
   createQuoteItem,
   replaceAllQuoteItems,
-  reorderQuoteItems,
+  bulkProcessQuoteItems,
 } from '@/lib/domains/quotes/service';
 import { convertPrismaQuoteItemToQuoteItem } from '@/lib/domains/quotes/types';
 import { handleApiError } from '@/lib/shared/forms';
@@ -103,16 +103,20 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       return NextResponse.json(error, { status });
     }
 
-    // 並び順の部分更新（create/deleteは不可）
+    // 一括処理（create/update/delete混在処理）
     const body = await request.json();
-    const validatedData = reorderQuoteItemsSchema.parse(body);
+    const validatedData = bulkQuoteItemsSchema.parse(body);
 
-    const items = await reorderQuoteItems(quoteId, company.id, validatedData);
+    const items = await bulkProcessQuoteItems(
+      quoteId,
+      company.id,
+      validatedData
+    );
     return NextResponse.json({
       data: items.map(convertPrismaQuoteItemToQuoteItem),
-      message: '品目の順序を更新しました',
+      message: '品目を更新しました',
     });
   } catch (error) {
-    return handleApiError(error, 'Quote items batch update');
+    return handleApiError(error, 'Quote items bulk update');
   }
 }

@@ -108,7 +108,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
 
 /**
  * 請求書品目一括更新API（PATCH）
- * 既存品目の部分更新用
+ * 既存品目の部分更新用（create/update/delete混在処理）
  */
 export async function PATCH(request: NextRequest, context: RouteContext) {
   try {

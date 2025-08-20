@@ -210,8 +210,8 @@ export function useQuoteForm(
         throw new Error('見積書IDの取得に失敗しました');
       }
 
-      // 品目データがある場合は品目APIで処理
-      if (items && items.length > 0) {
+      // 品目データ（空配列含む）がある場合は品目APIで処理
+      if (items) {
         try {
           // 品目の一括更新（完全置換: 既存品目は削除して新規作成）
           const itemsPayload = items
@@ -229,28 +229,26 @@ export function useQuoteForm(
               sortOrder: item.sortOrder,
             }));
 
-          if (itemsPayload.length > 0) {
-            const itemsResponse = await fetch(
-              `/api/quotes/${savedQuoteId}/items`,
-              {
-                method: 'PUT',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  items: itemsPayload,
-                }),
-              }
-            );
-
-            if (!itemsResponse.ok) {
-              let errorMessage = '品目の保存に失敗しました';
-              try {
-                const itemsError = await itemsResponse.json();
-                errorMessage = itemsError.error || errorMessage;
-              } catch {}
-              throw new Error(errorMessage);
+          const itemsResponse = await fetch(
+            `/api/quotes/${savedQuoteId}/items`,
+            {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                items: itemsPayload, // 空配列でも送る（完全置換）
+              }),
             }
+          );
+
+          if (!itemsResponse.ok) {
+            let errorMessage = '品目の保存に失敗しました';
+            try {
+              const itemsError = await itemsResponse.json();
+              errorMessage = itemsError.error || errorMessage;
+            } catch {}
+            throw new Error(errorMessage);
           }
         } catch (itemsError) {
           // 品目保存エラーはワーニングとして表示（見積書自体は保存済み）
