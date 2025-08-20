@@ -18,7 +18,7 @@ interface ConversionHistoryItem {
     issueDate: string;
     status: string;
   };
-  selectedItemsCount: number;
+  duplicatedItemsCount: number;
   issueDate: string;
   dueDate?: string;
   notes?: string;
@@ -163,7 +163,7 @@ export function ConversionHistorySection({
                     コピーした品目数
                   </dt>
                   <dd className="text-sm text-gray-900">
-                    {item.selectedItemsCount}件
+                    {item.duplicatedItemsCount}件
                   </dd>
                 </div>
               </div>

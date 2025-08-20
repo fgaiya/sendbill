@@ -75,7 +75,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         conversionDate: conversionLog.conversionDate,
         userId: conversionLog.userId,
         quote: conversionLog.quote,
-        selectedItemsCount: conversionLog.selectedItemIds?.length ?? 0,
+        duplicatedItemsCount: conversionLog.selectedItemIds?.length ?? 0,
         issueDate: conversionLog.issueDate,
         dueDate: conversionLog.dueDate,
         notes: conversionLog.notes,
