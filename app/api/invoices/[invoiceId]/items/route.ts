@@ -9,6 +9,7 @@ import {
 import {
   getInvoiceItems,
   createInvoiceItem,
+  replaceAllInvoiceItems,
   bulkProcessInvoiceItems,
 } from '@/lib/domains/invoices/service';
 import { convertPrismaInvoiceItemToInvoiceItem } from '@/lib/domains/invoices/types';
@@ -78,7 +79,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
 }
 
 /**
- * 請求書品目一括処理API（作成・更新・削除・並び替え）
+ * 請求書品目完全置換API（既存全削除→新規一括作成）
  */
 export async function PUT(request: NextRequest, context: RouteContext) {
   try {
@@ -89,18 +90,19 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     }
 
     const body = await request.json();
-    const validatedData = bulkInvoiceItemsSchema.parse(body);
+    const validatedData = invoiceItemSchemas.replace.parse(body);
 
-    const items = await bulkProcessInvoiceItems(
+    const items = await replaceAllInvoiceItems(
       invoiceId,
       company.id,
-      validatedData
+      validatedData.items
     );
     return NextResponse.json({
       data: items.map(convertPrismaInvoiceItemToInvoiceItem),
+      message: '品目を更新しました',
     });
   } catch (error) {
-    return handleApiError(error, 'Invoice items bulk processing');
+    return handleApiError(error, 'Invoice items replacement');
   }
 }
 

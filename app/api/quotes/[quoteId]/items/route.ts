@@ -9,7 +9,7 @@ import {
 import {
   getQuoteItems,
   createQuoteItem,
-  bulkProcessQuoteItems,
+  replaceAllQuoteItems,
   reorderQuoteItems,
 } from '@/lib/domains/quotes/service';
 import { convertPrismaQuoteItemToQuoteItem } from '@/lib/domains/quotes/types';
@@ -79,18 +79,19 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     }
 
     const body = await request.json();
-    const validatedData = quoteItemSchemas.bulk.parse(body);
+    const validatedData = quoteItemSchemas.replace.parse(body);
 
-    const items = await bulkProcessQuoteItems(
+    const items = await replaceAllQuoteItems(
       quoteId,
       company.id,
-      validatedData
+      validatedData.items
     );
     return NextResponse.json({
       data: items.map(convertPrismaQuoteItemToQuoteItem),
+      message: '品目を更新しました',
     });
   } catch (error) {
-    return handleApiError(error, 'Quote items bulk processing');
+    return handleApiError(error, 'Quote items replacement');
   }
 }
 

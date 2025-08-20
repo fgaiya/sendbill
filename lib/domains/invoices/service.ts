@@ -1111,3 +1111,76 @@ export async function bulkProcessInvoiceItems(
     return results;
   });
 }
+
+/**
+ * 請求書品目を完全置換（既存全削除→新規一括作成）
+ */
+export async function replaceAllInvoiceItems(
+  invoiceId: string,
+  companyId: string,
+  newItems: Array<{
+    description: string;
+    quantity: number;
+    unitPrice: number;
+    taxCategory: 'STANDARD' | 'REDUCED' | 'EXEMPT' | 'NON_TAX';
+    taxRate?: number;
+    discountAmount?: number;
+    unit?: string;
+    sku?: string;
+    sortOrder?: number;
+  }>
+): Promise<PrismaInvoiceItem[]> {
+  return await prisma.$transaction(async (tx) => {
+    // 請求書の存在確認
+    const invoice = await tx.invoice.findFirst({
+      where: {
+        id: invoiceId,
+        companyId,
+        deletedAt: null,
+      },
+    });
+
+    if (!invoice) {
+      throw new NotFoundError('請求書が見つかりません');
+    }
+
+    // 既存品目を全削除
+    await tx.invoiceItem.deleteMany({
+      where: { invoiceId },
+    });
+
+    // 新規品目を一括作成
+    if (newItems.length === 0) {
+      return [];
+    }
+
+    const results: PrismaInvoiceItem[] = [];
+    let sortOrder = 0;
+
+    for (const itemData of newItems) {
+      // 入力値の整合性チェック（サーバー側の最終防衛線）
+      const qty = Number(itemData.quantity);
+      const unitPrice = Number(itemData.unitPrice);
+      const discount = Number(itemData.discountAmount ?? 0);
+      if (qty <= 0) throw httpError(400, '数量は正の数である必要があります');
+      if (unitPrice < 0)
+        throw httpError(400, '単価は0以上である必要があります');
+      if (discount < 0)
+        throw httpError(400, '割引額は0以上である必要があります');
+      if (discount > unitPrice * qty) {
+        throw httpError(400, '割引額は品目合計金額を超えることはできません');
+      }
+
+      const createdItem = await tx.invoiceItem.create({
+        data: {
+          invoiceId,
+          ...itemData,
+          sortOrder: itemData.sortOrder ?? sortOrder++,
+        },
+      });
+      results.push(createdItem as PrismaInvoiceItem);
+    }
+
+    return results;
+  });
+}

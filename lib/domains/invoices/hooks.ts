@@ -245,23 +245,20 @@ export function useInvoiceForm(
       // 品目データがある場合は品目APIで処理
       if (items && items.length > 0) {
         try {
-          // 品目の一括更新（既存品目は削除して新規作成）
+          // 品目の一括更新（完全置換: 既存品目は削除して新規作成）
           const itemsPayload = items
             .filter((item) => (item.description ?? '').trim().length > 0)
             .map((item) => ({
-              action: 'create' as const,
-              data: {
-                description: (item.description ?? '').trim(),
-                quantity: Number(item.quantity) || 0,
-                unitPrice: Number(item.unitPrice) || 0,
-                taxCategory: item.taxCategory,
-                taxRate:
-                  item.taxRate !== undefined ? Number(item.taxRate) : undefined,
-                discountAmount: Number(item.discountAmount) || 0,
-                unit: item.unit?.trim() || undefined,
-                sku: item.sku?.trim() || undefined,
-                sortOrder: item.sortOrder,
-              },
+              description: (item.description ?? '').trim(),
+              quantity: Number(item.quantity) || 0,
+              unitPrice: Number(item.unitPrice) || 0,
+              taxCategory: item.taxCategory,
+              taxRate:
+                item.taxRate !== undefined ? Number(item.taxRate) : undefined,
+              discountAmount: Number(item.discountAmount) || 0,
+              unit: item.unit?.trim() || undefined,
+              sku: item.sku?.trim() || undefined,
+              sortOrder: item.sortOrder,
             }));
 
           if (itemsPayload.length > 0) {
