@@ -719,9 +719,20 @@ export async function deleteInvoiceItem(
     throw new NotFoundError('品目が見つかりません');
   }
 
-  await prisma.invoiceItem.delete({
-    where: { id: itemId },
+  const deleteResult = await prisma.invoiceItem.deleteMany({
+    where: {
+      id: itemId,
+      invoice: {
+        id: invoiceId,
+        companyId,
+        deletedAt: null,
+      },
+    },
   });
+
+  if (deleteResult.count === 0) {
+    throw new NotFoundError('品目が見つかりません');
+  }
 }
 
 /**
@@ -939,7 +950,7 @@ export async function bulkProcessInvoiceItems(
 
     for (const item of bulkData.items) {
       switch (item.action) {
-        case 'create':
+        case 'create': {
           const createdItem = await tx.invoiceItem.create({
             data: {
               invoiceId,
@@ -948,6 +959,7 @@ export async function bulkProcessInvoiceItems(
           });
           results.push(createdItem as PrismaInvoiceItem);
           break;
+        }
 
         case 'update': {
           // 楽観ロック: updatedAt 一致条件
@@ -1015,11 +1027,25 @@ export async function bulkProcessInvoiceItems(
           break;
         }
 
-        case 'delete':
-          await tx.invoiceItem.delete({
-            where: { id: item.id },
+        case 'delete': {
+          const deleteResult = await tx.invoiceItem.deleteMany({
+            where: {
+              id: item.id,
+              invoice: {
+                id: invoiceId,
+                companyId,
+                deletedAt: null,
+              },
+            },
           });
+
+          if (deleteResult.count === 0) {
+            throw new NotFoundError(
+              `削除対象品目が見つかりません (ID: ${item.id})`
+            );
+          }
           break;
+        }
       }
     }
 
@@ -1036,10 +1062,23 @@ export async function bulkProcessInvoiceItems(
     for (const item of normalizedItems) {
       const prev = currentMap.get(item.id);
       if (prev !== item.sortOrder) {
-        await tx.invoiceItem.update({
-          where: { id: item.id },
+        const updateResult = await tx.invoiceItem.updateMany({
+          where: {
+            id: item.id,
+            invoice: {
+              id: invoiceId,
+              companyId,
+              deletedAt: null,
+            },
+          },
           data: { sortOrder: item.sortOrder },
         });
+
+        if (updateResult.count === 0) {
+          throw new NotFoundError(
+            `ソート順更新対象品目が見つかりません (ID: ${item.id})`
+          );
+        }
       }
     }
 

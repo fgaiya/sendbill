@@ -37,7 +37,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       return NextResponse.json(error, { status });
     }
 
-    const item = await getInvoiceItem(invoiceId, itemId, company.id);
+    const item = await getInvoiceItem(itemId, invoiceId, company.id);
 
     if (!item) {
       return NextResponse.json(
@@ -73,8 +73,8 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     const validatedData = invoiceItemSchemas.update.parse(body);
 
     const item = await updateInvoiceItem(
-      invoiceId,
       itemId,
+      invoiceId,
       company.id,
       validatedData
     );
@@ -106,8 +106,8 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     const validatedData = patchInvoiceItemSchema.parse(body);
 
     const item = await updateInvoiceItem(
-      invoiceId,
       itemId,
+      invoiceId,
       company.id,
       validatedData
     );
@@ -135,7 +135,7 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
       return NextResponse.json(error, { status });
     }
 
-    await deleteInvoiceItem(invoiceId, itemId, company.id);
+    await deleteInvoiceItem(itemId, invoiceId, company.id);
 
     return NextResponse.json({
       message: '品目を削除しました',

@@ -176,7 +176,10 @@ export const InvoiceItemRow = forwardRef<
           render={({ field }) => (
             <Input
               {...field}
-              ref={descriptionInputRef}
+              ref={(el) => {
+                descriptionInputRef.current = el;
+                field.ref(el);
+              }}
               id={`items.${index}.description`}
               placeholder="商品・サービス名"
               disabled={isSubmitting}

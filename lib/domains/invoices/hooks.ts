@@ -247,11 +247,11 @@ export function useInvoiceForm(
         try {
           // 品目の一括更新（既存品目は削除して新規作成）
           const itemsPayload = items
-            .filter((item) => item.description.trim()) // 空の品目を除外
+            .filter((item) => (item.description ?? '').trim().length > 0)
             .map((item) => ({
               action: 'create' as const,
               data: {
-                description: item.description.trim(),
+                description: (item.description ?? '').trim(),
                 quantity: Number(item.quantity) || 0,
                 unitPrice: Number(item.unitPrice) || 0,
                 taxCategory: item.taxCategory,
