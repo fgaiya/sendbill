@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
-
 import Link from 'next/link';
 
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { SearchForm } from '@/components/ui/SearchForm';
+import { SortSelect } from '@/components/ui/SortSelect';
 import { ClientSortOption } from '@/lib/domains/clients/types';
+import { CLIENT_SORT_OPTIONS } from '@/lib/shared/constants/list-options';
 
 interface ClientListHeaderProps {
   totalCount: number;
@@ -21,20 +21,6 @@ export function ClientListHeader({
   onSort,
   currentSort,
 }: ClientListHeaderProps) {
-  const [searchQuery, setSearchQuery] = useState('');
-
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSearch(searchQuery);
-  };
-
-  const sortOptions = [
-    { value: 'createdAt_desc', label: '登録日（新しい順）' },
-    { value: 'createdAt_asc', label: '登録日（古い順）' },
-    { value: 'name_asc', label: '名前（あ〜ん）' },
-    { value: 'name_desc', label: '名前（ん〜あ）' },
-  ] as const;
-
   return (
     <div className="bg-white border-b border-gray-200 px-6 py-4">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -47,37 +33,17 @@ export function ClientListHeader({
 
         <div className="flex flex-col sm:flex-row gap-3">
           {/* 検索フォーム */}
-          <form onSubmit={handleSearchSubmit} className="flex gap-2">
-            <Input
-              type="text"
-              placeholder="取引先名、担当者名で検索..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full sm:w-64"
-            />
-            <Button type="submit" variant="outline" size="sm">
-              検索
-            </Button>
-          </form>
+          <SearchForm
+            placeholder="取引先名、担当者名で検索..."
+            onSubmit={onSearch}
+          />
 
           {/* ソート */}
-          <div>
-            <label htmlFor="client-sort-select" className="sr-only">
-              並び順
-            </label>
-            <select
-              id="client-sort-select"
-              value={currentSort}
-              onChange={(e) => onSort(e.target.value as typeof currentSort)}
-              className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              {sortOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
+          <SortSelect
+            options={CLIENT_SORT_OPTIONS}
+            value={currentSort}
+            onChange={onSort}
+          />
 
           {/* 新規登録ボタン */}
           <Link href="/dashboard/clients/new">
