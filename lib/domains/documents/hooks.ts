@@ -79,6 +79,12 @@ export function useDocumentList(
   const [selectedDocuments, setSelectedDocuments] = useState<Set<string>>(
     new Set()
   );
+
+  // ドキュメント配列変更時の選択状態クリア
+  useEffect(() => {
+    setSelectedDocuments(new Set());
+  }, [documents]);
+
   const [pagination, setPagination] = useState({
     total: 0,
     page: 1,
@@ -128,21 +134,34 @@ export function useDocumentList(
           invoices = invoicesResponse.value.data;
         }
 
+        // 各APIからのページネーション情報を統合
+        const quotesData =
+          quotesResponse.status === 'fulfilled'
+            ? quotesResponse.value
+            : {
+                data: [],
+                pagination: { total: 0, page: 1, limit: 20, totalPages: 0 },
+              };
+        const invoicesData =
+          invoicesResponse.status === 'fulfilled'
+            ? invoicesResponse.value
+            : {
+                data: [],
+                pagination: { total: 0, page: 1, limit: 20, totalPages: 0 },
+              };
+
         // データを統合
         const combinedDocuments = combineAndSort(quotes, invoices, finalParams);
 
-        // ページネーション計算
-        const totalCount = combinedDocuments.length;
+        setDocuments(combinedDocuments);
+
+        // 統合されたページネーション情報を計算
+        const totalQuotes = quotesData.pagination?.total || 0;
+        const totalInvoices = invoicesData.pagination?.total || 0;
+        const totalCount = totalQuotes + totalInvoices;
         const page = finalParams.page || 1;
         const limit = finalParams.limit || 20;
-        const startIndex = (page - 1) * limit;
-        const endIndex = startIndex + limit;
-        const paginatedDocuments = combinedDocuments.slice(
-          startIndex,
-          endIndex
-        );
 
-        setDocuments(paginatedDocuments);
         setPagination({
           total: totalCount,
           page,
@@ -150,9 +169,9 @@ export function useDocumentList(
           totalPages: Math.ceil(totalCount / limit),
         });
         setSummary({
-          quotesCount: quotes.length,
-          invoicesCount: invoices.length,
-          totalCount: quotes.length + invoices.length,
+          quotesCount: totalQuotes,
+          invoicesCount: totalInvoices,
+          totalCount,
         });
 
         // パラメータを更新
@@ -179,8 +198,9 @@ export function useDocumentList(
     }
 
     const searchParams = new URLSearchParams();
-    if (params.page) searchParams.set('page', '1'); // 全件取得
-    if (params.limit) searchParams.set('limit', '1000'); // 大きな値で全件取得
+    // 正しいページネーションパラメータを使用
+    if (params.page) searchParams.set('page', params.page.toString());
+    if (params.limit) searchParams.set('limit', params.limit.toString());
     if (params.q) searchParams.set('q', params.q);
     if (params.status) searchParams.set('status', params.status);
     if (params.clientId) searchParams.set('clientId', params.clientId);
@@ -204,8 +224,9 @@ export function useDocumentList(
     }
 
     const searchParams = new URLSearchParams();
-    if (params.page) searchParams.set('page', '1');
-    if (params.limit) searchParams.set('limit', '1000');
+    // 正しいページネーションパラメータを使用
+    if (params.page) searchParams.set('page', params.page.toString());
+    if (params.limit) searchParams.set('limit', params.limit.toString());
     if (params.q) searchParams.set('q', params.q);
     if (params.status) searchParams.set('status', params.status);
     if (params.clientId) searchParams.set('clientId', params.clientId);
@@ -264,6 +285,14 @@ export function useDocumentList(
           return (
             new Date(a.issueDate).getTime() - new Date(b.issueDate).getTime()
           );
+        case 'number_desc':
+          const bNum = isQuote(b) ? b.quoteNumber : b.invoiceNumber;
+          const aNum = isQuote(a) ? a.quoteNumber : a.invoiceNumber;
+          return bNum.localeCompare(aNum);
+        case 'number_asc':
+          const aNumber = isQuote(a) ? a.quoteNumber : a.invoiceNumber;
+          const bNumber = isQuote(b) ? b.quoteNumber : b.invoiceNumber;
+          return aNumber.localeCompare(bNumber);
         default:
           return (
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -396,10 +425,10 @@ export function useDocumentList(
     [documents, clearSelection, refresh]
   );
 
-  // 初回読み込み
+  // 初回読み込み（無限ループ回避のため依存配列を空にする）
   useEffect(() => {
     void fetchDocuments();
-  }, [fetchDocuments]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return {
     state: {

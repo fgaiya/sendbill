@@ -1,3 +1,5 @@
+'use client';
+
 interface SortOption<T = string> {
   value: T;
   label: string;

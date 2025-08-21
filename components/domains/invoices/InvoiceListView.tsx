@@ -44,6 +44,7 @@ export function InvoiceListView({
     setQuoteFilter(undefined);
     setDateFilter(undefined, undefined);
     setDueDateFilter(undefined, undefined);
+    setPage(1);
   };
 
   const isSearchResult = Boolean(

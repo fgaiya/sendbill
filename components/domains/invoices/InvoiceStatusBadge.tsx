@@ -10,13 +10,15 @@ interface InvoiceStatusBadgeProps {
   className?: string;
 }
 
-const statusConfig: Record<
-  InvoiceStatus,
-  {
-    label: string;
-    icon: React.ComponentType<{ className?: string }>;
-    className: string;
-  }
+const statusConfig: Partial<
+  Record<
+    InvoiceStatus,
+    {
+      label: string;
+      icon: React.ComponentType<{ className?: string }>;
+      className: string;
+    }
+  >
 > = {
   DRAFT: {
     label: '下書き',
@@ -44,18 +46,27 @@ export function InvoiceStatusBadge({
   status,
   className,
 }: InvoiceStatusBadgeProps) {
-  const config = statusConfig[status];
+  const config =
+    statusConfig[status] ??
+    ({
+      label: status,
+      icon: Clock,
+      className: 'bg-gray-100 text-gray-700 border-gray-200',
+    } as const);
   const Icon = config.icon;
 
   return (
     <span
+      role="status"
+      aria-label={`${config.label} 状態`}
+      title={config.label}
       className={cn(
         'inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border',
         config.className,
         className
       )}
     >
-      <Icon className="h-3 w-3 mr-1" />
+      <Icon className="h-3 w-3 mr-1" aria-hidden="true" />
       {config.label}
     </span>
   );

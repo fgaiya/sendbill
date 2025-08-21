@@ -7,6 +7,7 @@ import type {
 import type { DocumentListParams } from '@/lib/domains/documents/types';
 
 import { DocumentListEmpty } from './DocumentListEmpty';
+import { DocumentListError } from './DocumentListError';
 import { DocumentListHeader } from './DocumentListHeader';
 import { DocumentListPagination } from './DocumentListPagination';
 import { DocumentListTable } from './DocumentListTable';
@@ -23,7 +24,7 @@ export function DocumentListView({
   actions,
   params,
 }: DocumentListViewProps) {
-  const { documents, isLoading, pagination, summary } = state;
+  const { documents, isLoading, error, pagination, summary } = state;
   const {
     setPage,
     setSort,
@@ -43,9 +44,10 @@ export function DocumentListView({
     setDateFilter(undefined, undefined);
   };
 
+  const effectiveType = params.type ?? 'all';
   const isSearchResult = Boolean(
     params.q ||
-      params.type !== 'all' ||
+      effectiveType !== 'all' ||
       params.status ||
       params.clientId ||
       params.dateFrom ||
@@ -85,7 +87,9 @@ export function DocumentListView({
         </div>
 
         <div className="px-4 sm:px-6 lg:px-8 py-8">
-          {isEmpty ? (
+          {error ? (
+            <DocumentListError error={error} />
+          ) : isEmpty ? (
             <DocumentListEmpty
               isSearchResult={isSearchResult}
               currentType={params.type || 'all'}

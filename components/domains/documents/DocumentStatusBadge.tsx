@@ -108,13 +108,16 @@ export function DocumentStatusBadge({
 
   return (
     <span
+      role="status"
+      aria-label={`${config.label} 状態`}
+      title={config.label}
       className={cn(
         'inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border',
         config.className,
         className
       )}
     >
-      <Icon className="h-3 w-3 mr-1" />
+      <Icon className="h-3 w-3 mr-1" aria-hidden="true" />
       {config.label}
     </span>
   );

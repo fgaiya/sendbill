@@ -6,6 +6,12 @@
 import type { Invoice } from '@/lib/domains/invoices/types';
 import type { Quote } from '@/lib/domains/quotes/types';
 
+// 税率定数（将来の税率変更に対応）
+const TAX_RATES = {
+  STANDARD: 10, // 標準税率 10%
+  REDUCED: 8, // 軽減税率 8%
+} as const;
+
 /**
  * 帳票種別
  */
@@ -135,24 +141,27 @@ export interface DocumentTotal {
  * 帳票合計金額計算（統合）
  */
 export function calculateDocumentTotal(document: Document): DocumentTotal {
-  // 実際の計算はドメイン固有の関数を使用
   if (!document.items || document.items.length === 0) {
     return { subtotal: 0, totalTax: 0, totalAmount: 0 };
   }
 
-  // 簡易計算（実際のプロダクションではドメイン関数を使用）
   let subtotal = 0;
   let totalTax = 0;
 
   for (const item of document.items) {
+    // 税抜金額（割引後）
     const lineNet = item.unitPrice * item.quantity - (item.discountAmount || 0);
     let lineTax = 0;
 
+    // 税額計算（品目の taxRate を優先、なければデフォルト税率）
     if (item.taxCategory === 'STANDARD') {
-      lineTax = Math.round(lineNet * 0.1); // 10%
+      const taxRate = item.taxRate ?? TAX_RATES.STANDARD;
+      lineTax = Math.round((lineNet * taxRate) / 100);
     } else if (item.taxCategory === 'REDUCED') {
-      lineTax = Math.round(lineNet * 0.08); // 8%
+      const taxRate = item.taxRate ?? TAX_RATES.REDUCED;
+      lineTax = Math.round((lineNet * taxRate) / 100);
     }
+    // EXEMPT, NON_TAXは税額0
 
     subtotal += lineNet;
     totalTax += lineTax;
