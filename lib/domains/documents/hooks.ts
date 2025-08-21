@@ -285,14 +285,16 @@ export function useDocumentList(
           return (
             new Date(a.issueDate).getTime() - new Date(b.issueDate).getTime()
           );
-        case 'number_desc':
+        case 'number_desc': {
           const bNum = isQuote(b) ? b.quoteNumber : b.invoiceNumber;
           const aNum = isQuote(a) ? a.quoteNumber : a.invoiceNumber;
           return bNum.localeCompare(aNum);
-        case 'number_asc':
+        }
+        case 'number_asc': {
           const aNumber = isQuote(a) ? a.quoteNumber : a.invoiceNumber;
           const bNumber = isQuote(b) ? b.quoteNumber : b.invoiceNumber;
           return aNumber.localeCompare(bNumber);
+        }
         default:
           return (
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
