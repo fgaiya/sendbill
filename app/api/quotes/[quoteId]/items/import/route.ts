@@ -3,7 +3,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { importQuoteItemsFromCSV } from '@/lib/domains/quotes/service';
-import { apiErrors, handleApiError } from '@/lib/shared/forms';
+import {
+  apiErrors,
+  handleApiError,
+  commonValidationSchemas,
+} from '@/lib/shared/forms';
 import { requireUserCompany } from '@/lib/shared/utils/auth';
 
 interface RouteContext {
@@ -11,7 +15,7 @@ interface RouteContext {
 }
 
 const quoteParamsSchema = z.object({
-  quoteId: z.string().min(1, 'quoteIdは必須です'),
+  quoteId: commonValidationSchemas.cuid('quoteID'),
 });
 
 export async function POST(request: NextRequest, context: RouteContext) {

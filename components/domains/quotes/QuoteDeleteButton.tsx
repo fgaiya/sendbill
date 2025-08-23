@@ -50,7 +50,7 @@ export function QuoteDeleteButton({
       if (onDeleteSuccess) {
         onDeleteSuccess();
       } else {
-        router.push('/dashboard/quotes');
+        router.push('/dashboard/documents?type=quote');
       }
     } else if (deleteError) {
       // エラートーストを表示

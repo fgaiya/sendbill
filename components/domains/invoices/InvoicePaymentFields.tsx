@@ -1,31 +1,24 @@
 'use client';
 
-import {
-  Controller,
-  type Control,
-  type FieldErrors,
-  type FieldPath,
-} from 'react-hook-form';
+import { Controller, type Control, type FieldErrors } from 'react-hook-form';
 
 import { FormFieldWrapper } from '@/components/ui/form-field';
-import type {
-  InvoicePaymentShape,
-  CompanyWithBankInfo,
-} from '@/lib/domains/invoices/types';
+import type { InvoiceFormWithPaymentData } from '@/lib/domains/invoices/form-schemas';
+import type { CompanyWithBankInfo } from '@/lib/domains/invoices/types';
 
-export interface InvoicePaymentFieldsProps<T extends InvoicePaymentShape> {
-  control: Control<T>;
-  errors: FieldErrors<T>;
+export interface InvoicePaymentFieldsProps {
+  control: Control<InvoiceFormWithPaymentData>;
+  errors: FieldErrors<InvoiceFormWithPaymentData>;
   company: CompanyWithBankInfo | null;
   isSubmitting: boolean;
 }
 
-export function InvoicePaymentFields<T extends InvoicePaymentShape>({
+export function InvoicePaymentFields({
   control,
   errors,
   company,
   isSubmitting,
-}: InvoicePaymentFieldsProps<T>) {
+}: InvoicePaymentFieldsProps) {
   const toErrorMessage = (m: unknown): string | undefined =>
     typeof m === 'string' ? m : undefined;
 
@@ -34,9 +27,9 @@ export function InvoicePaymentFields<T extends InvoicePaymentShape>({
       <h3 className="text-lg font-semibold text-gray-900">支払情報</h3>
 
       {/* 支払方法 */}
-      <Controller
+      <Controller<InvoiceFormWithPaymentData, 'paymentMethod'>
         control={control}
-        name={'paymentMethod' as FieldPath<T>}
+        name={'paymentMethod'}
         render={({ field }) => (
           <FormFieldWrapper
             label="支払方法"
@@ -81,9 +74,10 @@ export function InvoicePaymentFields<T extends InvoicePaymentShape>({
         )}
 
       {/* 支払条件 */}
-      <Controller
+      <Controller<InvoiceFormWithPaymentData, 'paymentTerms'>
         control={control}
-        name={'paymentTerms' as FieldPath<T>}
+        name="paymentTerms"
+        defaultValue=""
         render={({ field }) => (
           <FormFieldWrapper
             label="支払条件"
@@ -92,8 +86,12 @@ export function InvoicePaymentFields<T extends InvoicePaymentShape>({
           >
             <textarea
               {...field}
-              value={field.value || ''}
               id="paymentTerms"
+              aria-invalid={!!errors.paymentTerms}
+              aria-describedby={
+                errors.paymentTerms ? 'paymentTerms-error' : undefined
+              }
+              value={field.value}
               placeholder="支払条件や特記事項があれば記入してください（例：月末締切翌月30日支払い）"
               disabled={isSubmitting}
               rows={2}

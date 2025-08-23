@@ -2,8 +2,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 
-import { useRouter } from 'next/navigation';
-
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm, type UseFormReturn, type Resolver } from 'react-hook-form';
 import { toast } from 'sonner';
@@ -25,6 +23,7 @@ import type {
 export interface UseInvoiceFormOptions {
   invoiceId?: string;
   defaultPaymentTermDays?: number;
+  enabled?: boolean;
 }
 
 export interface UseInvoiceFormState {
@@ -37,6 +36,7 @@ export interface UseInvoiceFormState {
 
 export interface UseInvoiceFormActions {
   onSubmit: (e?: React.BaseSyntheticEvent) => Promise<void>;
+  submitAndGet: () => Promise<Invoice | undefined>;
   onReset: () => void;
   clearMessages: () => void;
   setDueDateFromIssueDate: (issueDate: Date, paymentTermDays?: number) => void;
@@ -51,14 +51,13 @@ export interface UseInvoiceFormReturn {
 export function useInvoiceForm(
   options: UseInvoiceFormOptions = {}
 ): UseInvoiceFormReturn {
-  const { invoiceId, defaultPaymentTermDays = 30 } = options;
-  const router = useRouter();
+  const { invoiceId, defaultPaymentTermDays = 30, enabled = true } = options;
 
   // 基本状態
   const [submitError, setSubmitError] = useState<string>();
 
   // 編集モード用の追加状態
-  const [isLoading, setIsLoading] = useState(!!invoiceId);
+  const [isLoading, setIsLoading] = useState(Boolean(invoiceId && enabled));
   const [fetchError, setFetchError] = useState<string>();
   const [invoice, setInvoice] = useState<Invoice>();
 
@@ -133,10 +132,11 @@ export function useInvoiceForm(
 
   // 編集モード時の初期データ取得
   useEffect(() => {
-    if (!invoiceId) return;
+    if (!invoiceId || !enabled) return;
 
     let isMounted = true;
     const { reset } = form;
+    const controller = new AbortController();
 
     const fetchInvoice = async () => {
       try {
@@ -145,7 +145,10 @@ export function useInvoiceForm(
           setFetchError(undefined);
         }
 
-        const response = await fetch(`/api/invoices/${invoiceId}`);
+        const response = await fetch(
+          `/api/invoices/${invoiceId}?include=items,client,quote`,
+          { signal: controller.signal }
+        );
 
         if (!response.ok) {
           if (response.status === 404) {
@@ -185,9 +188,9 @@ export function useInvoiceForm(
 
     return () => {
       isMounted = false;
+      controller.abort();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [invoiceId, form.reset]);
+  }, [invoiceId, enabled, form.reset]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onSubmit = async (data: InvoiceFormWithPaymentData) => {
     try {
@@ -294,8 +297,8 @@ export function useInvoiceForm(
 
       toast.success(successMessage);
 
-      // 即座にリダイレクト（toastは遷移先でも継続表示される）
-      router.push('/dashboard/invoices');
+      // 更新されたデータを返す（リダイレクトは呼び出し元で処理）
+      return responseData.data as Invoice;
     } catch (error) {
       const message =
         error instanceof Error
@@ -335,6 +338,13 @@ export function useInvoiceForm(
     },
     actions: {
       onSubmit: form.handleSubmit(onSubmit),
+      submitAndGet: async () => {
+        let result: Invoice | undefined;
+        await form.handleSubmit(async (values) => {
+          result = (await onSubmit(values)) ?? undefined;
+        })();
+        return result;
+      },
       onReset,
       clearMessages,
       setDueDateFromIssueDate,

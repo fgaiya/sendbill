@@ -5,6 +5,8 @@ import React, { useState, useEffect } from 'react';
 import { BaseForm } from '@/components/ui/BaseForm';
 import { useInvoiceForm } from '@/lib/domains/invoices/hooks';
 import type { CompanyWithBankInfo } from '@/lib/domains/invoices/types';
+import { DEFAULT_COMPANY_WITH_BANK } from '@/lib/domains/invoices/types';
+import { toNumber, toBoolean } from '@/lib/shared/utils';
 
 import { InvoiceFormFields } from './InvoiceFormFields';
 
@@ -38,10 +40,22 @@ export function InvoiceForm() {
             const companyData = companies[0];
             setCompany({
               id: companyData.id,
-              standardTaxRate: Number(companyData.standardTaxRate) || 10,
-              reducedTaxRate: Number(companyData.reducedTaxRate) || 8,
-              priceIncludesTax: Boolean(companyData.priceIncludesTax),
-              invoiceNumberSeq: Number(companyData.invoiceNumberSeq) || 1,
+              standardTaxRate: toNumber(
+                companyData.standardTaxRate,
+                DEFAULT_COMPANY_WITH_BANK.standardTaxRate
+              ),
+              reducedTaxRate: toNumber(
+                companyData.reducedTaxRate,
+                DEFAULT_COMPANY_WITH_BANK.reducedTaxRate
+              ),
+              priceIncludesTax: toBoolean(
+                companyData.priceIncludesTax,
+                DEFAULT_COMPANY_WITH_BANK.priceIncludesTax
+              ),
+              invoiceNumberSeq: toNumber(
+                companyData.invoiceNumberSeq,
+                DEFAULT_COMPANY_WITH_BANK.invoiceNumberSeq
+              ),
               invoiceRegistrationNumber:
                 companyData.invoiceRegistrationNumber || null,
               bankName: companyData.bankName || null,

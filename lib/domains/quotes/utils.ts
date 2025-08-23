@@ -148,9 +148,11 @@ export function buildQuoteSearchWhere(
       },
       {
         client: {
-          name: {
-            contains: options.query,
-            mode: 'insensitive',
+          is: {
+            name: {
+              contains: options.query,
+              mode: 'insensitive',
+            },
           },
         },
       },
@@ -220,7 +222,12 @@ export function requiresNumberGenerationForTransition(
  * 税計算を実行
  */
 export function calculateTax(
-  items: QuoteItem[],
+  items: Array<
+    Pick<
+      QuoteItem,
+      'quantity' | 'unitPrice' | 'discountAmount' | 'taxRate' | 'taxCategory'
+    >
+  >,
   company: Pick<
     Company,
     'standardTaxRate' | 'reducedTaxRate' | 'priceIncludesTax'

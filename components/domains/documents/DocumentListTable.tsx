@@ -2,13 +2,12 @@
 
 import Link from 'next/link';
 
-import { FileText, Receipt, ArrowUpRight } from 'lucide-react';
+import { FileText, Receipt, Eye } from 'lucide-react';
 
 import type { Document } from '@/lib/domains/documents/types';
 import {
   isQuote,
   getDocumentNumber,
-  getDocumentDetailUrl,
   getDocumentEditUrl,
   calculateDocumentTotal,
 } from '@/lib/domains/documents/types';
@@ -25,6 +24,7 @@ interface DocumentListTableProps {
   toggleSelectDocument: (documentId: string) => void;
   selectAllDocuments: () => void;
   clearSelection: () => void;
+  onOpenDetail: (document: Document) => void;
 }
 
 export function DocumentListTable({
@@ -35,7 +35,10 @@ export function DocumentListTable({
   toggleSelectDocument,
   selectAllDocuments,
   clearSelection,
+  onOpenDetail,
 }: DocumentListTableProps) {
+  // 詳細表示はクライアントサイドのモーダルで行う
+
   if (isLoading) {
     return (
       <div className="hidden md:block">
@@ -169,7 +172,6 @@ export function DocumentListTable({
             {documents.map((document) => {
               const total = calculateDocumentTotal(document);
               const documentNumber = getDocumentNumber(document);
-              const detailUrl = getDocumentDetailUrl(document);
               const editUrl = getDocumentEditUrl(document);
 
               return (
@@ -207,14 +209,15 @@ export function DocumentListTable({
                     </div>
                   </td>
 
-                  {/* 番号 */}
+                  {/* 番号 - クリックでモーダル表示 */}
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <Link
-                      href={detailUrl}
+                    <button
+                      type="button"
+                      onClick={() => onOpenDetail(document)}
                       className="text-blue-600 hover:text-blue-800 font-medium hover:underline"
                     >
                       {documentNumber}
-                    </Link>
+                    </button>
                   </td>
 
                   {/* 取引先 */}
@@ -254,18 +257,20 @@ export function DocumentListTable({
                   {/* 操作 */}
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
                     <div className="flex items-center justify-end space-x-2">
+                      <button
+                        type="button"
+                        onClick={() => onOpenDetail(document)}
+                        className="text-blue-600 hover:text-blue-800 hover:underline flex items-center"
+                        title="詳細をモーダルで表示"
+                      >
+                        <Eye className="h-3 w-3 mr-1" />
+                        詳細
+                      </button>
                       <Link
                         href={editUrl}
                         className="text-blue-600 hover:text-blue-800 hover:underline"
                       >
                         編集
-                      </Link>
-                      <Link
-                        href={detailUrl}
-                        className="text-gray-600 hover:text-gray-800 hover:underline flex items-center"
-                      >
-                        詳細
-                        <ArrowUpRight className="h-3 w-3 ml-1" />
                       </Link>
                       <DocumentActions
                         document={document}

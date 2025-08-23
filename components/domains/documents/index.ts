@@ -12,3 +12,10 @@ export { DocumentListError } from './DocumentListError';
 export { DocumentTypeTab } from './DocumentTypeTab';
 export { DocumentStatusBadge } from './DocumentStatusBadge';
 export { DocumentActions } from './DocumentActions';
+
+// 詳細モーダル機能
+export { DocumentDetailModal } from './DocumentDetailModal';
+export { DocumentDetailView } from './DocumentDetailView';
+export { DocumentEditContainer } from './DocumentEditContainer';
+export { DocumentHistorySection } from './DocumentHistorySection';
+export { DocumentDeleteConfirm } from './DocumentDeleteConfirm';

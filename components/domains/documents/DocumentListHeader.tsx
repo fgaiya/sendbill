@@ -126,12 +126,16 @@ export function DocumentListHeader({
             {/* 新規作成ドロップダウン */}
             <div className="relative">
               <Button asChild>
-                <Link href="/dashboard/quotes/new">見積書を作成</Link>
+                <Link href="/dashboard/quotes/new" prefetch={false}>
+                  見積書を作成
+                </Link>
               </Button>
             </div>
             <div className="relative">
               <Button asChild variant="outline">
-                <Link href="/dashboard/invoices/new">請求書を作成</Link>
+                <Link href="/dashboard/invoices/new" prefetch={false}>
+                  請求書を作成
+                </Link>
               </Button>
             </div>
           </div>

@@ -18,7 +18,7 @@ import { InvoiceItemData, InvoiceItemUpdateData } from './schemas';
 export type InvoiceWithRelations = PrismaInvoice & {
   client?: PrismaClientModel;
   items?: PrismaInvoiceItem[];
-  quote?: PrismaQuote;
+  quote?: PrismaQuote | null;
 };
 
 /**
@@ -87,6 +87,21 @@ export interface CompanyWithBankInfo extends Company {
   bankAccountNumber?: string | null;
   bankAccountHolder?: string | null;
 }
+
+/**
+ * 会社設定のデフォルト値（請求書用）
+ */
+export const DEFAULT_COMPANY_WITH_BANK: Omit<CompanyWithBankInfo, 'id'> = {
+  standardTaxRate: 10,
+  reducedTaxRate: 8,
+  priceIncludesTax: false,
+  invoiceNumberSeq: 1,
+  invoiceRegistrationNumber: null,
+  bankName: null,
+  bankBranch: null,
+  bankAccountNumber: null,
+  bankAccountHolder: null,
+};
 
 /**
  * 請求書一覧レスポンス型

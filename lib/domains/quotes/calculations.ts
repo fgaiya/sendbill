@@ -17,6 +17,15 @@ export interface CompanyForCalculation {
 }
 
 /**
+ * 会社設定のデフォルト値
+ */
+export const DEFAULT_COMPANY: CompanyForCalculation = {
+  standardTaxRate: 10,
+  reducedTaxRate: 8,
+  priceIncludesTax: false,
+};
+
+/**
  * 税区分定義
  */
 export type TaxCategory = 'STANDARD' | 'REDUCED' | 'EXEMPT' | 'NON_TAX';

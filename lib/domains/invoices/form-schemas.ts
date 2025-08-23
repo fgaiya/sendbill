@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { commonValidationSchemas } from '@/lib/shared/forms';
+
 import { baseInvoiceItemSchema } from './schemas';
 
 // 時刻を無視して「日付のみ」で比較するための正規化
@@ -9,15 +11,21 @@ const normalizeDate = (d: Date) =>
 // UI用フォームスキーマ（RHFのフィールド型と一致させるためにcoerceを使わない）
 export const invoiceFormUiSchema = z
   .object({
-    // 取引先IDは空白しかない値を拒否
-    clientId: z.string().trim().min(1, '取引先は必須項目です'),
+    // 取引先ID（初期状態では空文字列を許可、選択後はCUID形式を要求）
+    clientId: z.preprocess(
+      (val) => (typeof val === 'string' && val.trim() === '' ? '' : val),
+      z.union([
+        z.literal(''), // フォーム初期状態用
+        commonValidationSchemas.cuid('取引先ID'), // 選択後のCUID
+      ])
+    ),
     // プレビューで表示される取引先名（オプション）
     clientName: z.string().optional(),
     issueDate: z.date(),
     // dueDate が正式名称（請求書の支払期限）
     dueDate: z.date().optional(),
     // 見積書ID（見積書から請求書作成時に使用）
-    quoteId: z.string().optional(),
+    quoteId: commonValidationSchemas.cuid('見積書ID').optional(),
     // 備考は空白のみを実質未入力扱い＋過度な長文を制限
     notes: z
       .string()

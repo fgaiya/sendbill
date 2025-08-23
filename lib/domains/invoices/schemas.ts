@@ -1,19 +1,20 @@
 import { z } from 'zod';
 
 import { PAGINATION } from '@/lib/shared/constants';
+import { commonValidationSchemas } from '@/lib/shared/forms';
 
 /**
  * 請求書基本スキーマ
  */
 export const baseInvoiceSchema = z.object({
-  clientId: z.string().min(1, 'クライアントIDは必須です'),
+  clientId: commonValidationSchemas.cuid('クライアントID'),
   issueDate: z.coerce.date(),
   dueDate: z.preprocess(
     (val) => (val === null || val === '' ? undefined : val),
     z.coerce.date().optional()
   ),
   notes: z.string().optional(),
-  quoteId: z.string().optional(), // 見積書からの複製時に使用
+  quoteId: commonValidationSchemas.cuid('見積書ID').optional(), // 見積書からの複製時に使用
 });
 
 /**
@@ -110,13 +111,13 @@ const bulkCreateItemSchema = z.object({
 
 const bulkUpdateItemSchema = z.object({
   action: z.literal('update'),
-  id: z.string().min(1, '更新時はIDが必須です'),
+  id: commonValidationSchemas.cuid('品目ID'),
   data: updateInvoiceItemSchema,
 });
 
 const bulkDeleteItemSchema = z.object({
   action: z.literal('delete'),
-  id: z.string().min(1, '削除時はIDが必須です'),
+  id: commonValidationSchemas.cuid('品目ID'),
 });
 
 export const bulkInvoiceItemsSchema = z.object({
@@ -291,7 +292,7 @@ export const createInvoiceFromQuoteSchema = z
     ),
     notes: z.string().optional(),
     selectedItemIds: z
-      .array(z.string())
+      .array(commonValidationSchemas.cuid('品目ID'))
       .min(1, '最低1つの品目を選択してください')
       .optional(), // 未指定時は全品目を複製
   })
@@ -399,7 +400,7 @@ export const reorderInvoiceItemsSchema = z.object({
   items: z
     .array(
       z.object({
-        id: z.string().min(1, 'IDは必須です'),
+        id: commonValidationSchemas.cuid('ID'),
         sortOrder: z.coerce.number().int().nonnegative(),
         updatedAt: z.coerce.date(),
       })
