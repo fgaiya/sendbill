@@ -103,19 +103,8 @@ export function DocumentEditContainer({
 
   // フォーム変更検知
   useEffect(() => {
-    const subscription = effectiveForm.watch(() => {
-      setHasUnsavedChanges(true);
-    });
-    return () => {
-      if (
-        subscription &&
-        typeof subscription === 'object' &&
-        'unsubscribe' in subscription
-      ) {
-        subscription.unsubscribe();
-      }
-    };
-  }, [effectiveForm]);
+    setHasUnsavedChanges(effectiveForm.formState.isDirty);
+  }, [effectiveForm.formState.isDirty]);
 
   // 編集モード開始：ソフトロックとバックアップ復元を試行
   useEffect(() => {

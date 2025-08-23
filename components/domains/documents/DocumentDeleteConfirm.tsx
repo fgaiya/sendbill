@@ -4,7 +4,6 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 
 import { AlertTriangle, X, Trash2 } from 'lucide-react';
 import { createPortal } from 'react-dom';
-import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -198,8 +197,6 @@ export function DocumentDeleteConfirm({
       setDeleteError(undefined);
 
       await onConfirm();
-
-      toast.success(`${documentType}「${documentNumber}」を削除しました`);
     } catch (error) {
       const message =
         error instanceof Error
@@ -207,7 +204,6 @@ export function DocumentDeleteConfirm({
           : `${documentType}の削除に失敗しました`;
 
       setDeleteError(message);
-      toast.error(message);
     } finally {
       setIsDeleting(false);
     }
