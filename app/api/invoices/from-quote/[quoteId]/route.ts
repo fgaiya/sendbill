@@ -5,12 +5,12 @@ import { z } from 'zod';
 import { invoiceSchemas } from '@/lib/domains/invoices/schemas';
 import { createInvoiceFromQuoteWithHistory } from '@/lib/domains/invoices/service';
 import { convertPrismaInvoiceToInvoice } from '@/lib/domains/invoices/types';
-import { handleApiError } from '@/lib/shared/forms';
+import { handleApiError, commonValidationSchemas } from '@/lib/shared/forms';
 import { requireUserCompany } from '@/lib/shared/utils/auth';
 
 // パラメータスキーマ
 const quoteParamsSchema = z.object({
-  quoteId: z.string().min(1, '見積書IDは必須です'),
+  quoteId: commonValidationSchemas.cuid('見積書ID'),
 });
 
 interface RouteContext {

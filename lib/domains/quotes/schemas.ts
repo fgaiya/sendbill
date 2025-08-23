@@ -1,12 +1,13 @@
 import { z } from 'zod';
 
 import { PAGINATION } from '@/lib/shared/constants';
+import { commonValidationSchemas } from '@/lib/shared/forms';
 
 /**
  * 見積書基本スキーマ
  */
 export const baseQuoteSchema = z.object({
-  clientId: z.string().min(1, 'クライアントIDは必須です'),
+  clientId: commonValidationSchemas.cuid('クライアントID'),
   issueDate: z.coerce.date(),
   expiryDate: z.preprocess(
     (val) => (val === null || val === '' ? undefined : val),
@@ -105,13 +106,13 @@ const bulkCreateItemSchema = z.object({
 
 const bulkUpdateItemSchema = z.object({
   action: z.literal('update'),
-  id: z.string().min(1, '更新時はIDが必須です'),
+  id: commonValidationSchemas.cuid('品目ID'),
   data: updateQuoteItemSchema,
 });
 
 const bulkDeleteItemSchema = z.object({
   action: z.literal('delete'),
-  id: z.string().min(1, '削除時はIDが必須です'),
+  id: commonValidationSchemas.cuid('品目ID'),
 });
 
 export const bulkQuoteItemsSchema = z.object({
@@ -307,7 +308,7 @@ export const reorderQuoteItemsSchema = z.object({
   items: z
     .array(
       z.object({
-        id: z.string().min(1, 'IDは必須です'),
+        id: commonValidationSchemas.cuid('ID'),
         sortOrder: z.coerce.number().int().nonnegative(),
         updatedAt: z.coerce.date(),
       })

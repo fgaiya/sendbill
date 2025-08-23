@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { z } from 'zod';
 
-import { handleApiError } from '@/lib/shared/forms';
+import { handleApiError, commonValidationSchemas } from '@/lib/shared/forms';
 import { prisma } from '@/lib/shared/prisma';
 import { requireUserCompany } from '@/lib/shared/utils/auth';
 
@@ -11,7 +11,7 @@ interface RouteContext {
 }
 
 const invoiceParamsSchema = z.object({
-  invoiceId: z.string().min(1, 'invoiceIdは必須です'),
+  invoiceId: commonValidationSchemas.cuid('invoiceID'),
 });
 
 /**

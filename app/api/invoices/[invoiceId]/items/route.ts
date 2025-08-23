@@ -13,11 +13,11 @@ import {
   bulkProcessInvoiceItems,
 } from '@/lib/domains/invoices/service';
 import { convertPrismaInvoiceItemToInvoiceItem } from '@/lib/domains/invoices/types';
-import { handleApiError } from '@/lib/shared/forms';
+import { handleApiError, commonValidationSchemas } from '@/lib/shared/forms';
 import { requireUserCompany } from '@/lib/shared/utils/auth';
 
 const invoiceParamsSchema = z.object({
-  invoiceId: z.uuid(),
+  invoiceId: commonValidationSchemas.cuid('請求書ID'),
 });
 
 type RouteContext = {

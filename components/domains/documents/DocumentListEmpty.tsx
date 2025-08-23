@@ -49,7 +49,7 @@ export function DocumentListEmpty({
           title: '見積書がまだありません',
           description: '最初の見積書を作成して、取引先との商談を始めましょう。',
           actionLabel: '見積書を作成',
-          actionHref: '/dashboard/quotes/new',
+          actionHref: '/dashboard/documents/new?type=quote',
         };
       case 'invoice':
         return {
@@ -58,7 +58,7 @@ export function DocumentListEmpty({
           description:
             '最初の請求書を作成して、取引先への請求管理を始めましょう。',
           actionLabel: '請求書を作成',
-          actionHref: '/dashboard/invoices/new',
+          actionHref: '/dashboard/documents/new?type=invoice',
         };
       default:
         return {
@@ -95,13 +95,13 @@ export function DocumentListEmpty({
         ) : (
           <div className="flex flex-col sm:flex-row gap-3">
             <Button asChild>
-              <Link href="/dashboard/quotes/new">
+              <Link href="/dashboard/documents/new?type=quote">
                 <FileText className="h-4 w-4 mr-2" />
                 見積書を作成
               </Link>
             </Button>
             <Button asChild variant="outline">
-              <Link href="/dashboard/invoices/new">
+              <Link href="/dashboard/documents/new?type=invoice">
                 <Receipt className="h-4 w-4 mr-2" />
                 請求書を作成
               </Link>

@@ -11,7 +11,11 @@ import {
 } from '@/lib/domains/quotes/service';
 import { convertPrismaQuoteToQuote } from '@/lib/domains/quotes/types';
 import { buildIncludeRelations } from '@/lib/domains/quotes/utils';
-import { apiErrors, handleApiError } from '@/lib/shared/forms';
+import {
+  apiErrors,
+  handleApiError,
+  commonValidationSchemas,
+} from '@/lib/shared/forms';
 import { requireUserCompany } from '@/lib/shared/utils/auth';
 
 interface RouteContext {
@@ -19,7 +23,7 @@ interface RouteContext {
 }
 
 const quoteParamsSchema = z.object({
-  quoteId: z.string().min(1, 'quoteIdは必須です'),
+  quoteId: commonValidationSchemas.cuid('quoteID'),
 });
 
 export async function GET(request: NextRequest, context: RouteContext) {

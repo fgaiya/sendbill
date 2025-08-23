@@ -17,9 +17,9 @@ import {
 const navigationItems: NavigationItem[] = [
   { href: '/', label: 'ホーム', requireAuth: false },
   { href: '/dashboard', label: 'ダッシュボード', requireAuth: true },
-  { href: '/dashboard/clients', label: '取引先', requireAuth: true },
-  { href: '/dashboard/invoices', label: '請求書', requireAuth: true },
-  { href: '/dashboard/quotes', label: '見積書', requireAuth: true },
+  { href: '/dashboard/clients', label: '顧客管理', requireAuth: true },
+  { href: '/dashboard/documents', label: '帳票管理', requireAuth: true },
+  { href: '/dashboard/settings', label: '設定', requireAuth: true },
 ];
 
 export default function Navigation({ isMobile = false }: NavigationProps) {

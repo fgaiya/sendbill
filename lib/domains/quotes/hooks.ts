@@ -2,8 +2,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 
-import { useRouter } from 'next/navigation';
-
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm, type UseFormReturn, type Resolver } from 'react-hook-form';
 import { toast } from 'sonner';
@@ -23,6 +21,7 @@ import type {
 
 export interface UseQuoteFormOptions {
   quoteId?: string;
+  enabled?: boolean;
 }
 
 export interface UseQuoteFormState {
@@ -34,7 +33,7 @@ export interface UseQuoteFormState {
 }
 
 export interface UseQuoteFormActions {
-  onSubmit: (e?: React.BaseSyntheticEvent) => Promise<void>;
+  onSubmit: (e?: React.BaseSyntheticEvent) => Promise<Quote | void>;
   onReset: () => void;
   clearMessages: () => void;
 }
@@ -48,8 +47,7 @@ export interface UseQuoteFormReturn {
 export function useQuoteForm(
   options: UseQuoteFormOptions = {}
 ): UseQuoteFormReturn {
-  const { quoteId } = options;
-  const router = useRouter();
+  const { quoteId, enabled = true } = options;
 
   // 基本状態
   const [submitError, setSubmitError] = useState<string>();
@@ -104,7 +102,7 @@ export function useQuoteForm(
 
   // 編集モード時の初期データ取得
   useEffect(() => {
-    if (!quoteId) return;
+    if (!quoteId || !enabled) return;
 
     let isMounted = true;
     const { reset } = form;
@@ -116,7 +114,9 @@ export function useQuoteForm(
           setFetchError(undefined);
         }
 
-        const response = await fetch(`/api/quotes/${quoteId}`);
+        const response = await fetch(
+          `/api/quotes/${quoteId}?include=items,client`
+        );
 
         if (!response.ok) {
           if (response.status === 404) {
@@ -262,8 +262,8 @@ export function useQuoteForm(
 
       toast.success(successMessage);
 
-      // 即座にリダイレクト（toastは遷移先でも継続表示される）
-      router.push('/dashboard/quotes');
+      // 更新されたデータを返す（リダイレクトは呼び出し元で処理）
+      return responseData.data as Quote;
     } catch (error) {
       const message =
         error instanceof Error

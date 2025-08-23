@@ -26,7 +26,7 @@ export function InvoiceFormFields({
   return (
     <div className="space-y-8">
       {/* 基本情報セクション */}
-      <InvoiceBasicInfoFields
+      <InvoiceBasicInfoFields<InvoiceFormWithPaymentData>
         control={control}
         errors={errors}
         setValue={setValue}

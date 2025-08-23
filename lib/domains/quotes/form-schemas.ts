@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { commonValidationSchemas } from '@/lib/shared/forms';
+
 import { baseQuoteItemSchema } from './schemas';
 
 // 時刻を無視して「日付のみ」で比較するための正規化
@@ -10,7 +12,7 @@ const normalizeDate = (d: Date) =>
 export const quoteFormUiSchema = z
   .object({
     // 取引先IDは空白しかない値を拒否
-    clientId: z.string().trim().min(1, '取引先は必須項目です'),
+    clientId: commonValidationSchemas.cuid('取引先ID'),
     // プレビューで表示される取引先名（オプション）
     clientName: z.string().optional(),
     issueDate: z.date(),

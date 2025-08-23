@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { commonValidationSchemas } from '@/lib/shared/forms';
+
 import { baseInvoiceItemSchema } from './schemas';
 
 // 時刻を無視して「日付のみ」で比較するための正規化
@@ -10,14 +12,14 @@ const normalizeDate = (d: Date) =>
 export const invoiceFormUiSchema = z
   .object({
     // 取引先IDは空白しかない値を拒否
-    clientId: z.string().trim().min(1, '取引先は必須項目です'),
+    clientId: commonValidationSchemas.cuid('取引先ID'),
     // プレビューで表示される取引先名（オプション）
     clientName: z.string().optional(),
     issueDate: z.date(),
     // dueDate が正式名称（請求書の支払期限）
     dueDate: z.date().optional(),
     // 見積書ID（見積書から請求書作成時に使用）
-    quoteId: z.string().optional(),
+    quoteId: commonValidationSchemas.cuid('見積書ID').optional(),
     // 備考は空白のみを実質未入力扱い＋過度な長文を制限
     notes: z
       .string()

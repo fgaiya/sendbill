@@ -1,11 +1,17 @@
 'use client';
 
+import { useState } from 'react';
+
 import type {
   UseDocumentListState,
   UseDocumentListActions,
 } from '@/lib/domains/documents/hooks';
-import type { DocumentListParams } from '@/lib/domains/documents/types';
+import type {
+  Document as DocumentType,
+  DocumentListParams,
+} from '@/lib/domains/documents/types';
 
+import { DocumentDetailModal } from './DocumentDetailModal';
 import { DocumentListEmpty } from './DocumentListEmpty';
 import { DocumentListError } from './DocumentListError';
 import { DocumentListHeader } from './DocumentListHeader';
@@ -35,6 +41,23 @@ export function DocumentListView({
     setDateFilter,
     refresh,
   } = actions;
+
+  // Client-side modal state for document details
+  const [selectedDocument, setSelectedDocument] = useState<DocumentType | null>(
+    null
+  );
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleOpenDetail = (doc: DocumentType) => {
+    setSelectedDocument(doc);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedDocument(null);
+    void refresh();
+  };
 
   const handleReset = () => {
     setSearch('');
@@ -106,6 +129,7 @@ export function DocumentListView({
                 toggleSelectDocument={actions.toggleSelectDocument}
                 selectAllDocuments={actions.selectAllDocuments}
                 clearSelection={actions.clearSelection}
+                onOpenDetail={handleOpenDetail}
               />
 
               {/* ページネーション */}
@@ -116,6 +140,15 @@ export function DocumentListView({
                   total={pagination.total}
                   limit={pagination.limit}
                   onPageChange={setPage}
+                />
+              )}
+
+              {/* 詳細モーダル */}
+              {selectedDocument && (
+                <DocumentDetailModal
+                  isOpen={isModalOpen}
+                  onClose={handleCloseModal}
+                  document={selectedDocument}
                 />
               )}
             </>

@@ -117,7 +117,7 @@ export function getDocumentTypeName(type: DocumentType): string {
  */
 export function getDocumentDetailUrl(document: Document): string {
   const type = document.documentType;
-  return `/dashboard/${type}s/${document.id}`;
+  return `/dashboard/documents/${type}s/${document.id}`;
 }
 
 /**

@@ -7,6 +7,7 @@ import { cn } from '@/lib/shared/utils/ui';
 
 interface InvoiceStatusBadgeProps {
   status: InvoiceStatus;
+  showIcon?: boolean;
   className?: string;
 }
 
@@ -44,6 +45,7 @@ const statusConfig: Partial<
 
 export function InvoiceStatusBadge({
   status,
+  showIcon = true,
   className,
 }: InvoiceStatusBadgeProps) {
   const config =
@@ -66,7 +68,7 @@ export function InvoiceStatusBadge({
         className
       )}
     >
-      <Icon className="h-3 w-3 mr-1" aria-hidden="true" />
+      {showIcon && <Icon className="h-3 w-3 mr-1" aria-hidden="true" />}
       {config.label}
     </span>
   );

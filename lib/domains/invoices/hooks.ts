@@ -2,8 +2,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 
-import { useRouter } from 'next/navigation';
-
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm, type UseFormReturn, type Resolver } from 'react-hook-form';
 import { toast } from 'sonner';
@@ -25,6 +23,7 @@ import type {
 export interface UseInvoiceFormOptions {
   invoiceId?: string;
   defaultPaymentTermDays?: number;
+  enabled?: boolean;
 }
 
 export interface UseInvoiceFormState {
@@ -36,7 +35,7 @@ export interface UseInvoiceFormState {
 }
 
 export interface UseInvoiceFormActions {
-  onSubmit: (e?: React.BaseSyntheticEvent) => Promise<void>;
+  onSubmit: (e?: React.BaseSyntheticEvent) => Promise<Invoice | void>;
   onReset: () => void;
   clearMessages: () => void;
   setDueDateFromIssueDate: (issueDate: Date, paymentTermDays?: number) => void;
@@ -51,8 +50,7 @@ export interface UseInvoiceFormReturn {
 export function useInvoiceForm(
   options: UseInvoiceFormOptions = {}
 ): UseInvoiceFormReturn {
-  const { invoiceId, defaultPaymentTermDays = 30 } = options;
-  const router = useRouter();
+  const { invoiceId, defaultPaymentTermDays = 30, enabled = true } = options;
 
   // 基本状態
   const [submitError, setSubmitError] = useState<string>();
@@ -133,7 +131,7 @@ export function useInvoiceForm(
 
   // 編集モード時の初期データ取得
   useEffect(() => {
-    if (!invoiceId) return;
+    if (!invoiceId || !enabled) return;
 
     let isMounted = true;
     const { reset } = form;
@@ -145,7 +143,9 @@ export function useInvoiceForm(
           setFetchError(undefined);
         }
 
-        const response = await fetch(`/api/invoices/${invoiceId}`);
+        const response = await fetch(
+          `/api/invoices/${invoiceId}?include=items,client,quote`
+        );
 
         if (!response.ok) {
           if (response.status === 404) {
@@ -294,8 +294,8 @@ export function useInvoiceForm(
 
       toast.success(successMessage);
 
-      // 即座にリダイレクト（toastは遷移先でも継続表示される）
-      router.push('/dashboard/invoices');
+      // 更新されたデータを返す（リダイレクトは呼び出し元で処理）
+      return responseData.data as Invoice;
     } catch (error) {
       const message =
         error instanceof Error

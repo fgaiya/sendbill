@@ -4,7 +4,9 @@ import { useState, useEffect } from 'react';
 
 import { BaseForm } from '@/components/ui/BaseForm';
 import type { CompanyForCalculation } from '@/lib/domains/quotes/calculations';
+import { DEFAULT_COMPANY } from '@/lib/domains/quotes/calculations';
 import { useQuoteForm } from '@/lib/domains/quotes/hooks';
+import { toNumber, toBoolean } from '@/lib/shared/utils';
 
 import { QuoteFormFields } from './QuoteFormFields';
 import { QuotePreviewModal } from './QuotePreviewModal';
@@ -47,34 +49,31 @@ export function QuoteForm() {
           if (Array.isArray(companies) && companies.length > 0) {
             const companyData = companies[0];
             setCompany({
-              standardTaxRate: Number(companyData.standardTaxRate) || 10,
-              reducedTaxRate: Number(companyData.reducedTaxRate) || 8,
-              priceIncludesTax: Boolean(companyData.priceIncludesTax),
+              standardTaxRate: toNumber(
+                companyData.standardTaxRate,
+                DEFAULT_COMPANY.standardTaxRate
+              ),
+              reducedTaxRate: toNumber(
+                companyData.reducedTaxRate,
+                DEFAULT_COMPANY.reducedTaxRate
+              ),
+              priceIncludesTax: toBoolean(
+                companyData.priceIncludesTax,
+                DEFAULT_COMPANY.priceIncludesTax
+              ),
             });
           } else {
             // 配列が空の場合もデフォルトへフォールバック
-            setCompany({
-              standardTaxRate: 10,
-              reducedTaxRate: 8,
-              priceIncludesTax: false,
-            });
+            setCompany(DEFAULT_COMPANY);
           }
         } else {
           // 非2xx時もデフォルトへフォールバック
-          setCompany({
-            standardTaxRate: 10,
-            reducedTaxRate: 8,
-            priceIncludesTax: false,
-          });
+          setCompany(DEFAULT_COMPANY);
         }
       } catch (error) {
         console.error('Failed to fetch company:', error);
         // デフォルト値を設定
-        setCompany({
-          standardTaxRate: 10,
-          reducedTaxRate: 8,
-          priceIncludesTax: false,
-        });
+        setCompany(DEFAULT_COMPANY);
       } finally {
         setIsLoadingCompany(false);
       }

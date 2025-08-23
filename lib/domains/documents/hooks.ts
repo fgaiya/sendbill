@@ -105,6 +105,42 @@ export function useDocumentList(
   });
 
   /**
+   * summary用に全件数を取得
+   */
+  const fetchSummary = useCallback(async () => {
+    try {
+      const [quotesResponse, invoicesResponse] = await Promise.allSettled([
+        fetch('/api/quotes?limit=1'), // 最小限のデータで件数だけ取得
+        fetch('/api/invoices?limit=1'), // 最小限のデータで件数だけ取得
+      ]);
+
+      let quotesCount = 0;
+      let invoicesCount = 0;
+
+      if (quotesResponse.status === 'fulfilled' && quotesResponse.value.ok) {
+        const quotesData = await quotesResponse.value.json();
+        quotesCount = quotesData.pagination?.total || 0;
+      }
+
+      if (
+        invoicesResponse.status === 'fulfilled' &&
+        invoicesResponse.value.ok
+      ) {
+        const invoicesData = await invoicesResponse.value.json();
+        invoicesCount = invoicesData.pagination?.total || 0;
+      }
+
+      setSummary({
+        quotesCount,
+        invoicesCount,
+        totalCount: quotesCount + invoicesCount,
+      });
+    } catch (error) {
+      console.warn('Failed to fetch summary:', error);
+    }
+  }, []);
+
+  /**
    * 見積書と請求書を並行取得して統合
    */
   const fetchDocuments = useCallback(
@@ -168,11 +204,12 @@ export function useDocumentList(
           limit,
           totalPages: Math.ceil(totalCount / limit),
         });
-        setSummary({
-          quotesCount: totalQuotes,
-          invoicesCount: totalInvoices,
-          totalCount,
-        });
+
+        // summaryは初回読み込み時のみ更新（newParamsが指定されていない場合）または明示的にリフレッシュが要求された場合に更新
+        const isInitialLoad = !newParams;
+        if (isInitialLoad) {
+          await fetchSummary();
+        }
 
         // パラメータを更新
         if (newParams) {
@@ -186,7 +223,7 @@ export function useDocumentList(
         setIsLoading(false);
       }
     },
-    [params]
+    [params, fetchSummary]
   );
 
   /**
@@ -353,9 +390,10 @@ export function useDocumentList(
     [fetchDocuments]
   );
 
-  const refresh = useCallback(() => {
-    return fetchDocuments();
-  }, [fetchDocuments]);
+  const refresh = useCallback(async () => {
+    await fetchSummary();
+    await fetchDocuments();
+  }, [fetchDocuments, fetchSummary]);
 
   // 一括操作関数
   const toggleSelectDocument = useCallback((documentId: string) => {
@@ -429,6 +467,8 @@ export function useDocumentList(
 
   // 初回読み込み（無限ループ回避のため依存配列を空にする）
   useEffect(() => {
+    // 初回はsummaryも取得
+    void fetchSummary();
     void fetchDocuments();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 

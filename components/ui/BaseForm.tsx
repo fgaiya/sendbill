@@ -9,7 +9,7 @@ interface BaseFormProps {
   title: string;
   description: string;
   children: React.ReactNode;
-  onSubmit: (e?: React.BaseSyntheticEvent) => Promise<void>;
+  onSubmit: (e?: React.BaseSyntheticEvent) => Promise<unknown>;
   onReset: () => void;
   isLoading?: boolean;
   isSubmitting: boolean;

@@ -73,6 +73,15 @@ export const commonValidationSchemas = {
     .optional()
     .transform((val) => (val === '' ? undefined : val))
     .pipe(z.url({ message: '有効なURLを入力してください' }).optional()),
+
+  // CUID（データベースのIDフォーマット）
+  cuid: (fieldName: string = 'ID') =>
+    z
+      .string()
+      .trim()
+      .min(1, `${fieldName}は必須です`)
+      .max(30, `${fieldName}が長すぎます`)
+      .regex(/^c[0-9a-z]+$/, `${fieldName}の形式が不正です`),
 };
 
 // 会社情報バリデーションスキーマ

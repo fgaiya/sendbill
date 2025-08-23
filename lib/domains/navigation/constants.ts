@@ -44,13 +44,6 @@ export const SIDEBAR_MENU_CONFIG: SidebarMenuConfig[] = [
     isActive: (pathname: string) => pathname === '/dashboard',
   },
   {
-    href: '/dashboard/invoices',
-    label: '請求書',
-    iconName: 'FileText',
-    requireAuth: true,
-    isActive: (pathname: string) => pathname.startsWith('/dashboard/invoices'),
-  },
-  {
     href: '/dashboard/clients',
     label: '顧客管理',
     iconName: 'Users',
@@ -58,11 +51,11 @@ export const SIDEBAR_MENU_CONFIG: SidebarMenuConfig[] = [
     isActive: (pathname: string) => pathname.startsWith('/dashboard/clients'),
   },
   {
-    href: '/dashboard/quotes',
-    label: '見積書',
-    iconName: 'Receipt',
+    href: '/dashboard/documents',
+    label: '帳票管理',
+    iconName: 'FileText',
     requireAuth: true,
-    isActive: (pathname: string) => pathname.startsWith('/dashboard/quotes'),
+    isActive: (pathname: string) => pathname.startsWith('/dashboard/documents'),
   },
   {
     href: '/dashboard/settings',

@@ -37,24 +37,6 @@ export function InvoiceItemsFieldArray({
 
   const { fields } = fieldArray;
 
-  // パフォーマンス最適化：初期化時に最低1件の品目を追加
-  useEffect(() => {
-    if (fields.length === 0) {
-      fieldArray.append({
-        description: '',
-        quantity: 1,
-        unitPrice: 0,
-        taxCategory: 'STANDARD',
-        taxRate: undefined,
-        discountAmount: 0,
-        unit: '',
-        sku: '',
-        sortOrder: 0,
-        subtotal: 0,
-      });
-    }
-  }, [fieldArray, fields.length]);
-
   // フォーム送信前のバリデーション前処理
   useEffect(() => {
     // 品目の sortOrder を自動更新

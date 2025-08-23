@@ -16,12 +16,16 @@ import {
 } from '@/lib/domains/invoices/service';
 import { convertPrismaInvoiceToInvoice } from '@/lib/domains/invoices/types';
 import { buildIncludeRelations } from '@/lib/domains/invoices/utils';
-import { apiErrors, handleApiError } from '@/lib/shared/forms';
+import {
+  apiErrors,
+  handleApiError,
+  commonValidationSchemas,
+} from '@/lib/shared/forms';
 import { requireUserCompany } from '@/lib/shared/utils/auth';
 
 // パラメータスキーマ
 const invoiceParamsSchema = z.object({
-  invoiceId: z.uuid('請求書IDの形式が正しくありません'),
+  invoiceId: commonValidationSchemas.cuid('請求書ID'),
 });
 
 interface RouteContext {

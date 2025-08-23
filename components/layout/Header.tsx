@@ -8,9 +8,11 @@ import Navigation from '@/components/domains/navigation/Navigation';
 import {
   useMenuState,
   useKeyboardNavigation,
+  useSidebar,
 } from '@/lib/domains/navigation/client';
 import { BUTTON_CLASSES } from '@/lib/domains/navigation/styles';
 import { useOutsideClick } from '@/lib/shared/hooks';
+import { cn } from '@/lib/shared/utils/ui';
 
 import { MenuButton } from './MenuButton';
 import { MobileMenu } from './MobileMenu';
@@ -18,6 +20,7 @@ import { MobileMenu } from './MobileMenu';
 export default function Header() {
   const { isSignedIn } = useAuth();
   const menu = useMenuState();
+  const sidebar = useSidebar();
   const { menuRef, buttonRef, handleMenuKeyDown, handleButtonKeyDown } =
     useKeyboardNavigation(menu.isOpen, menu.toggle, menu.close);
 
@@ -30,7 +33,14 @@ export default function Header() {
 
   return (
     <header className="bg-white shadow-sm border-b border-gray-200">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div
+        className={cn(
+          'mx-auto max-w-7xl px-4 sm:px-6 lg:px-8',
+          // デスクトップでサイドバーの状態に応じてマージン調整
+          isSignedIn && 'lg:ml-16',
+          isSignedIn && !sidebar.isCollapsed && 'lg:ml-64'
+        )}
+      >
         <div className="flex items-center justify-between h-16">
           {/* ロゴ・ブランド */}
           <div className="flex-shrink-0">

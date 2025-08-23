@@ -4,5 +4,6 @@
 export * from './currency';
 export * from './date';
 export * from './objects';
+export * from './parsing';
 export * from './storage';
 export * from './ui';

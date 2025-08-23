@@ -12,12 +12,12 @@ import {
   deleteInvoiceItem,
 } from '@/lib/domains/invoices/service';
 import { convertPrismaInvoiceItemToInvoiceItem } from '@/lib/domains/invoices/types';
-import { handleApiError } from '@/lib/shared/forms';
+import { handleApiError, commonValidationSchemas } from '@/lib/shared/forms';
 import { requireUserCompany } from '@/lib/shared/utils/auth';
 
 const invoiceItemParamsSchema = z.object({
-  invoiceId: z.uuid(),
-  itemId: z.uuid(),
+  invoiceId: commonValidationSchemas.cuid('請求書ID'),
+  itemId: commonValidationSchemas.cuid('アイテムID'),
 });
 
 type RouteContext = {
