@@ -209,9 +209,11 @@ export interface QuoteFilterConditions {
       mode: 'insensitive';
     };
     client?: {
-      name?: {
-        contains: string;
-        mode: 'insensitive';
+      is?: {
+        name?: {
+          contains: string;
+          mode: 'insensitive';
+        };
       };
     };
   }>;

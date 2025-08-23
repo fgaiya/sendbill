@@ -33,7 +33,8 @@ export interface UseQuoteFormState {
 }
 
 export interface UseQuoteFormActions {
-  onSubmit: (e?: React.BaseSyntheticEvent) => Promise<Quote | void>;
+  onSubmit: (e?: React.BaseSyntheticEvent) => Promise<void>;
+  submitAndGet: () => Promise<Quote | undefined>;
   onReset: () => void;
   clearMessages: () => void;
 }
@@ -53,7 +54,7 @@ export function useQuoteForm(
   const [submitError, setSubmitError] = useState<string>();
 
   // 編集モード用の追加状態
-  const [isLoading, setIsLoading] = useState(!!quoteId);
+  const [isLoading, setIsLoading] = useState(Boolean(quoteId && enabled));
   const [fetchError, setFetchError] = useState<string>();
   const [quote, setQuote] = useState<Quote>();
 
@@ -106,6 +107,7 @@ export function useQuoteForm(
 
     let isMounted = true;
     const { reset } = form;
+    const controller = new AbortController();
 
     const fetchQuote = async () => {
       try {
@@ -115,7 +117,8 @@ export function useQuoteForm(
         }
 
         const response = await fetch(
-          `/api/quotes/${quoteId}?include=items,client`
+          `/api/quotes/${quoteId}?include=items,client`,
+          { signal: controller.signal }
         );
 
         if (!response.ok) {
@@ -156,9 +159,9 @@ export function useQuoteForm(
 
     return () => {
       isMounted = false;
+      controller.abort();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [quoteId, form.reset]);
+  }, [quoteId, enabled, form.reset]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onSubmit = async (data: QuoteFormWithItemsData) => {
     try {
@@ -303,6 +306,13 @@ export function useQuoteForm(
     },
     actions: {
       onSubmit: form.handleSubmit(onSubmit),
+      submitAndGet: async () => {
+        let result: Quote | undefined;
+        await form.handleSubmit(async (values) => {
+          result = (await onSubmit(values)) ?? undefined;
+        })();
+        return result;
+      },
       onReset,
       clearMessages,
     },

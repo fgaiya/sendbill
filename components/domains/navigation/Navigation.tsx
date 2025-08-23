@@ -37,7 +37,8 @@ export default function Navigation({ isMobile = false }: NavigationProps) {
   return (
     <nav className={isMobile ? 'space-y-1' : 'flex space-x-4'}>
       {visibleItems.map((item) => {
-        const isActive = pathname === item.href;
+        const isActive =
+          pathname === item.href || pathname.startsWith(item.href + '/');
         const stateClasses = isActive
           ? NAV_LINK_STATE_CLASSES.ACTIVE
           : NAV_LINK_STATE_CLASSES.INACTIVE;

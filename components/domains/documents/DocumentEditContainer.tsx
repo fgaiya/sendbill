@@ -67,8 +67,8 @@ export function DocumentEditContainer({
     try {
       setSaveError(undefined);
 
-      // APIを呼び出してサーバーレスポンスを取得
-      const updatedData = await actions.onSubmit();
+      // submitAndGetを使用してサーバーレスポンスを取得
+      const updatedData = await actions.submitAndGet();
 
       if (updatedData) {
         // サーバーから返された実際の更新データを使用して型安全に変換

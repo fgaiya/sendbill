@@ -205,11 +205,7 @@ export function useDocumentList(
           totalPages: Math.ceil(totalCount / limit),
         });
 
-        // summaryは初回読み込み時のみ更新（newParamsが指定されていない場合）または明示的にリフレッシュが要求された場合に更新
-        const isInitialLoad = !newParams;
-        if (isInitialLoad) {
-          await fetchSummary();
-        }
+        // summary更新はfetchDocumentsの責務から外す（初回/refreshでのみ更新）
 
         // パラメータを更新
         if (newParams) {
@@ -223,7 +219,7 @@ export function useDocumentList(
         setIsLoading(false);
       }
     },
-    [params, fetchSummary]
+    [params]
   );
 
   /**
@@ -391,8 +387,8 @@ export function useDocumentList(
   );
 
   const refresh = useCallback(async () => {
-    await fetchSummary();
-    await fetchDocuments();
+    // summaryとdocumentsを並行取得
+    await Promise.all([fetchSummary(), fetchDocuments()]);
   }, [fetchDocuments, fetchSummary]);
 
   // 一括操作関数
@@ -467,9 +463,8 @@ export function useDocumentList(
 
   // 初回読み込み（無限ループ回避のため依存配列を空にする）
   useEffect(() => {
-    // 初回はsummaryも取得
-    void fetchSummary();
-    void fetchDocuments();
+    // 初回はrefreshで両方を一度に取得（並行）
+    void refresh();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return {

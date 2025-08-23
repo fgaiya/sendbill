@@ -35,7 +35,8 @@ export interface UseInvoiceFormState {
 }
 
 export interface UseInvoiceFormActions {
-  onSubmit: (e?: React.BaseSyntheticEvent) => Promise<Invoice | void>;
+  onSubmit: (e?: React.BaseSyntheticEvent) => Promise<void>;
+  submitAndGet: () => Promise<Invoice | undefined>;
   onReset: () => void;
   clearMessages: () => void;
   setDueDateFromIssueDate: (issueDate: Date, paymentTermDays?: number) => void;
@@ -56,7 +57,7 @@ export function useInvoiceForm(
   const [submitError, setSubmitError] = useState<string>();
 
   // 編集モード用の追加状態
-  const [isLoading, setIsLoading] = useState(!!invoiceId);
+  const [isLoading, setIsLoading] = useState(Boolean(invoiceId && enabled));
   const [fetchError, setFetchError] = useState<string>();
   const [invoice, setInvoice] = useState<Invoice>();
 
@@ -135,6 +136,7 @@ export function useInvoiceForm(
 
     let isMounted = true;
     const { reset } = form;
+    const controller = new AbortController();
 
     const fetchInvoice = async () => {
       try {
@@ -144,7 +146,8 @@ export function useInvoiceForm(
         }
 
         const response = await fetch(
-          `/api/invoices/${invoiceId}?include=items,client,quote`
+          `/api/invoices/${invoiceId}?include=items,client,quote`,
+          { signal: controller.signal }
         );
 
         if (!response.ok) {
@@ -185,9 +188,9 @@ export function useInvoiceForm(
 
     return () => {
       isMounted = false;
+      controller.abort();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [invoiceId, form.reset]);
+  }, [invoiceId, enabled, form.reset]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onSubmit = async (data: InvoiceFormWithPaymentData) => {
     try {
@@ -335,6 +338,13 @@ export function useInvoiceForm(
     },
     actions: {
       onSubmit: form.handleSubmit(onSubmit),
+      submitAndGet: async () => {
+        let result: Invoice | undefined;
+        await form.handleSubmit(async (values) => {
+          result = (await onSubmit(values)) ?? undefined;
+        })();
+        return result;
+      },
       onReset,
       clearMessages,
       setDueDateFromIssueDate,

@@ -148,9 +148,11 @@ export function buildQuoteSearchWhere(
       },
       {
         client: {
-          name: {
-            contains: options.query,
-            mode: 'insensitive',
+          is: {
+            name: {
+              contains: options.query,
+              mode: 'insensitive',
+            },
           },
         },
       },

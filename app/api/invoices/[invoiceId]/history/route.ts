@@ -11,7 +11,7 @@ interface RouteContext {
 }
 
 const invoiceParamsSchema = z.object({
-  invoiceId: commonValidationSchemas.cuid('invoiceID'),
+  invoiceId: commonValidationSchemas.cuid('請求書ID'),
 });
 
 /**

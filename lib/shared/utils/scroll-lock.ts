@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+
 /**
  * 複数モーダル対応のボディスクロールロック管理
  * 参照カウント方式で重複するモーダルのスクロールロックを適切に管理
@@ -12,6 +14,7 @@ let __bodyOverflowBeforeLock: string | null = null;
  * 複数回呼ばれても安全（参照カウント管理）
  */
 export function lockBodyScroll(): void {
+  if (typeof document === 'undefined') return;
   if (__bodyScrollLockCount === 0) {
     __bodyOverflowBeforeLock = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -24,6 +27,7 @@ export function lockBodyScroll(): void {
  * 全てのロックが解除された時点で元のoverflow値を復元
  */
 export function unlockBodyScroll(): void {
+  if (typeof document === 'undefined') return;
   __bodyScrollLockCount = Math.max(0, __bodyScrollLockCount - 1);
   if (__bodyScrollLockCount === 0) {
     document.body.style.overflow = __bodyOverflowBeforeLock ?? '';
@@ -35,7 +39,6 @@ export function unlockBodyScroll(): void {
  * React useEffect用のスクロールロックフック
  * @param isLocked ロック状態
  */
-import { useEffect } from 'react';
 
 export function useBodyScrollLock(isLocked: boolean): void {
   useEffect(() => {

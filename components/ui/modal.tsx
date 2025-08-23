@@ -89,7 +89,9 @@ export function Modal({
           'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])'
         )
       ).filter(
-        (el) => !el.hasAttribute('disabled') && !el.getAttribute('aria-hidden')
+        (el) =>
+          !el.hasAttribute('disabled') &&
+          el.getAttribute('aria-hidden') !== 'true'
       );
       if (nodes.length === 0) {
         e.preventDefault();

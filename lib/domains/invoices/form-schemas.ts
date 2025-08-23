@@ -11,8 +11,14 @@ const normalizeDate = (d: Date) =>
 // UI用フォームスキーマ（RHFのフィールド型と一致させるためにcoerceを使わない）
 export const invoiceFormUiSchema = z
   .object({
-    // 取引先IDは空白しかない値を拒否
-    clientId: commonValidationSchemas.cuid('取引先ID'),
+    // 取引先ID（初期状態では空文字列を許可、選択後はCUID形式を要求）
+    clientId: z.preprocess(
+      (val) => (typeof val === 'string' && val.trim() === '' ? '' : val),
+      z.union([
+        z.literal(''), // フォーム初期状態用
+        commonValidationSchemas.cuid('取引先ID'), // 選択後のCUID
+      ])
+    ),
     // プレビューで表示される取引先名（オプション）
     clientName: z.string().optional(),
     issueDate: z.date(),

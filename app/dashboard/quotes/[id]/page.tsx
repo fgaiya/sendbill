@@ -24,6 +24,11 @@ export default async function QuoteDetailPage({
     notFound();
   }
 
+  // 念のため company が取得できなかった場合も 404
+  if (!company) {
+    notFound();
+  }
+
   const quote = await prisma.quote.findFirst({
     where: {
       id,

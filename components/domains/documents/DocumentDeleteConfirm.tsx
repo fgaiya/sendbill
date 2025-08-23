@@ -166,6 +166,7 @@ export function DocumentDeleteConfirm({
       'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
     );
 
+    if (focusableElements.length === 0) return;
     const firstElement = focusableElements[0] as HTMLElement;
     const lastElement = focusableElements[
       focusableElements.length - 1
@@ -218,13 +219,18 @@ export function DocumentDeleteConfirm({
     }
   }, [isDeleting, onCancel]);
 
-  // 削除可能性の判定
-  const canDelete = isQuoteDocument
-    ? (quoteApi?.canDelete ?? true)
-    : (invoiceApi?.canDelete ?? true);
+  // 削除可能性の判定（関連データ取得失敗時は安全のため無効化）
+  const canDelete = relatedDataError
+    ? false
+    : isQuoteDocument
+      ? (quoteApi?.canDelete ?? false)
+      : (invoiceApi?.canDelete ?? false);
   const warnings = isQuoteDocument
     ? (quoteApi?.warnings ?? [])
     : (invoiceApi?.warnings ?? []);
+  const blockers = isQuoteDocument
+    ? (quoteApi?.blockers ?? [])
+    : (invoiceApi?.blockers ?? []);
 
   const modalContent = (
     <div
@@ -321,13 +327,38 @@ export function DocumentDeleteConfirm({
                 </Card>
               )}
 
-              {/* 警告表示（API提供のwarningsを使用） */}
+              {/* 削除阻害要因表示（赤系） */}
+              {blockers.length > 0 && (
+                <Card className="border-red-300 bg-red-50">
+                  <div className="p-3">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <AlertTriangle className="h-4 w-4 text-red-600" />
+                      <span className="font-medium text-red-800">
+                        削除できない理由
+                      </span>
+                    </div>
+                    <ul className="list-disc list-inside ml-2 text-sm text-red-700">
+                      {blockers.map((blocker, i) => (
+                        <li key={i}>{blocker}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </Card>
+              )}
+
+              {/* 警告表示（黄系） */}
               {warnings.length > 0 && (
                 <Card className="border-yellow-200 bg-yellow-50">
                   <div className="p-3">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                      <span className="font-medium text-yellow-800">
+                        注意事項
+                      </span>
+                    </div>
                     <ul className="list-disc list-inside ml-2 text-sm text-yellow-700">
-                      {warnings.map((w, i) => (
-                        <li key={i}>{w}</li>
+                      {warnings.map((warning, i) => (
+                        <li key={i}>{warning}</li>
                       ))}
                     </ul>
                   </div>

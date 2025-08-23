@@ -149,6 +149,11 @@ export function DocumentListView({
                   isOpen={isModalOpen}
                   onClose={handleCloseModal}
                   document={selectedDocument}
+                  canDelete={
+                    selectedDocument.documentType === 'invoice'
+                      ? selectedDocument.status !== 'PAID'
+                      : true // TODO: 見積書は別途 related-data 取得で厳密化
+                  }
                 />
               )}
             </>

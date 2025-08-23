@@ -169,7 +169,7 @@ export const quoteSearchSchema = z
     ),
     clientId: z.preprocess(
       (v) => (typeof v === 'string' && v.trim() === '' ? undefined : v),
-      z.string().optional()
+      commonValidationSchemas.cuid('クライアントID').optional()
     ),
     dateFrom: z.coerce.date().optional(),
     dateTo: z.coerce.date().optional(),

@@ -91,7 +91,13 @@ export function SidebarProvider({ children }: SidebarProviderProps) {
 export function useSidebar(): SidebarContextType {
   const context = useContext(SidebarContext);
   if (context === undefined) {
-    throw new Error('useSidebar must be used within a SidebarProvider');
+    // SidebarProviderが存在しない場合はデフォルト値を返す
+    return {
+      isCollapsed: false,
+      toggle: () => {},
+      collapse: () => {},
+      expand: () => {},
+    };
   }
   return context;
 }

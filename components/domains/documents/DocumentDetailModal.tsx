@@ -141,10 +141,10 @@ export function DocumentDetailModal({
       if (onDelete) {
         onDelete(document.id);
       } else {
-        const isQuote = document.documentType === 'quote';
-        const endpoint = isQuote
-          ? `/api/quotes/${document.id}`
-          : `/api/invoices/${document.id}`;
+        const isQuoteDoc = document.documentType === 'quote';
+        const endpoint = isQuoteDoc
+          ? `/api/quotes/${encodeURIComponent(String(document.id))}`
+          : `/api/invoices/${encodeURIComponent(String(document.id))}`;
         const res = await fetch(endpoint, { method: 'DELETE' });
         if (!res.ok) {
           let msg = '削除に失敗しました';

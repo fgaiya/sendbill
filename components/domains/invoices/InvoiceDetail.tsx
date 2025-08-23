@@ -78,11 +78,9 @@ export function InvoiceDetail({ invoice }: InvoiceDetailProps) {
 
   const actionButtons = (
     <>
-      <Link href={`/dashboard/invoices/${invoice.id}/edit`}>
-        <Button variant="outline" size="sm">
-          編集
-        </Button>
-      </Link>
+      <Button variant="outline" size="sm">
+        <Link href={`/dashboard/invoices/${invoice.id}/edit`}>編集</Link>
+      </Button>
 
       {invoice.status !== 'PAID' && (
         <Button
