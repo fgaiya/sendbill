@@ -37,6 +37,13 @@ import type { SidebarMenuConfig } from './types';
 
 export const SIDEBAR_MENU_CONFIG: SidebarMenuConfig[] = [
   {
+    href: '/',
+    label: 'ホーム',
+    iconName: 'LayoutDashboard',
+    requireAuth: false,
+    isActive: (pathname: string) => pathname === '/',
+  },
+  {
     href: '/dashboard',
     label: 'ダッシュボード',
     iconName: 'LayoutDashboard',
