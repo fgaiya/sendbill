@@ -4,70 +4,98 @@ import { useMemo } from 'react';
 
 import {
   calculateItemTax,
-  calculateQuoteTotal,
-  type CompanyForCalculation,
-  type QuoteTotalCalculationResult,
-  type TaxSummaryByRate,
-  type TaxCalculationResult,
-} from '@/lib/domains/quotes/calculations';
-import type { QuoteItemFormData } from '@/lib/domains/quotes/form-schemas';
-import {
-  formatCurrency,
-  formatNumber,
-  getSummaryCategoryLabel,
-} from '@/lib/shared/utils';
+  calculateItemsTotal,
+  type InvoiceTotalCalculationResult,
+} from '@/lib/domains/invoices/calculations';
+import type { InvoiceItemFormData } from '@/lib/domains/invoices/form-schemas';
+import type { CompanyForCalculation } from '@/lib/domains/quotes/calculations';
+import { formatCurrency, formatNumber } from '@/lib/shared/utils/currency';
 import type {
   CompanyForPreview,
   ClientForPreview,
 } from '@/lib/shared/utils/print';
 
-export interface QuotePreviewProps {
-  items: QuoteItemFormData[];
+export interface InvoicePreviewProps {
+  items: InvoiceItemFormData[];
   company: CompanyForCalculation;
   companyForPreview?: CompanyForPreview;
   client?: ClientForPreview;
   clientName?: string; // 後方互換性のため保持
   issueDate?: Date;
-  expiryDate?: Date;
+  dueDate?: Date;
   title?: string;
   description?: string;
   notes?: string;
-  quoteNumber?: string;
+  invoiceNumber?: string;
   className?: string;
 }
 
-/**
- * 見積書プレビューコンポーネント
- * リアルタイム計算結果とA4印刷レイアウトプレビューを提供
- */
-export function QuotePreview({
+function TaxSummaryRow({
+  label,
+  amount,
+  className = '',
+}: {
+  label: string;
+  amount: number;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`flex justify-between text-xs text-gray-600 print:text-gray-800 ${className}`}
+    >
+      <span>{label}</span>
+      <span>{formatCurrency(amount)}</span>
+    </div>
+  );
+}
+
+export function InvoicePreview({
   items,
-  company,
+  company: _company,
   companyForPreview,
   client,
   clientName = '未選択',
   issueDate,
-  expiryDate,
-  title = '見積書',
+  dueDate,
+  title = '請求書',
   description,
   notes,
-  quoteNumber,
+  invoiceNumber,
   className = '',
-}: QuotePreviewProps) {
-  // 各行の計算結果をメモ化（フィルタリングせずに全行処理）
-  const itemRows = useMemo<
-    Array<{ item: QuoteItemFormData; result: TaxCalculationResult }>
-  >(() => {
+}: InvoicePreviewProps) {
+  // 各行の計算結果をメモ化
+  const itemRows = useMemo(() => {
     return items.map((item) => ({
       item,
-      result: calculateItemTax(item, company),
+      result: calculateItemTax({
+        unitPrice: item.unitPrice,
+        quantity: item.quantity,
+        discountAmount: item.discountAmount,
+        taxCategory: item.taxCategory,
+        taxRate: item.taxRate ?? null,
+      }),
     }));
-  }, [items, company]);
+  }, [items]);
 
-  // 全体の計算結果をメモ化（validItemsフィルタ廃止、calculateQuoteTotalに統一）
-  const totalCalculation = useMemo<QuoteTotalCalculationResult>(() => {
-    return calculateQuoteTotal(items, company);
-  }, [items, company]);
+  // 全体の計算結果をメモ化
+  const totalCalculation = useMemo<InvoiceTotalCalculationResult>(() => {
+    const invoiceItems = items.map((item, index) => ({
+      id: `temp-${index}`,
+      invoiceId: 'temp',
+      description: item.description,
+      unitPrice: item.unitPrice,
+      quantity: item.quantity,
+      discountAmount: item.discountAmount,
+      taxCategory: item.taxCategory,
+      taxRate: item.taxRate ?? null,
+      unit: item.unit ?? null,
+      sku: item.sku ?? null,
+      sortOrder: item.sortOrder,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }));
+    return calculateItemsTotal(invoiceItems);
+  }, [items]);
 
   // 日付フォーマット
   const formatDate = (date?: Date): string => {
@@ -90,9 +118,9 @@ export function QuotePreview({
             <h2 className="text-2xl font-bold text-gray-900 print:text-black">
               {title}
             </h2>
-            {quoteNumber && (
+            {invoiceNumber && (
               <p className="mt-1 text-sm text-gray-600 print:text-gray-800">
-                見積書番号: {quoteNumber}
+                請求書番号: {invoiceNumber}
               </p>
             )}
             {description && (
@@ -103,7 +131,7 @@ export function QuotePreview({
           </div>
           <div className="text-right text-sm text-gray-600 print:text-gray-800">
             <div>発行日: {formatDate(issueDate)}</div>
-            {expiryDate && <div>有効期限: {formatDate(expiryDate)}</div>}
+            {dueDate && <div>支払期限: {formatDate(dueDate)}</div>}
           </div>
         </div>
       </div>
@@ -206,106 +234,99 @@ export function QuotePreview({
 
       {/* 品目一覧 */}
       <div className="p-6 print:p-4">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-200 print:border-gray-400">
-                <th className="text-left py-3 px-2 font-semibold text-gray-900 print:text-black">
-                  品目名
-                </th>
-                <th className="text-right py-3 px-2 font-semibold text-gray-900 print:text-black">
-                  単価
-                </th>
-                <th className="text-right py-3 px-2 font-semibold text-gray-900 print:text-black">
-                  数量
-                </th>
-                <th className="text-right py-3 px-2 font-semibold text-gray-900 print:text-black">
-                  割引額
-                </th>
-                <th className="text-right py-3 px-2 font-semibold text-gray-900 print:text-black">
-                  税率
-                </th>
-                <th className="text-right py-3 px-2 font-semibold text-gray-900 print:text-black">
-                  金額
-                  <div className="text-xs font-normal text-gray-500 print:text-gray-700">
-                    (税込)
-                  </div>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {itemRows.map(({ item, result }, index) => {
-                if (!item || !item.description) return null;
+        {items.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-200 print:border-gray-400">
+                  <th className="text-left py-3 px-2 font-semibold text-gray-900 print:text-black">
+                    品目名
+                  </th>
+                  <th className="text-right py-3 px-2 font-semibold text-gray-900 print:text-black">
+                    単価
+                  </th>
+                  <th className="text-right py-3 px-2 font-semibold text-gray-900 print:text-black">
+                    数量
+                  </th>
+                  <th className="text-right py-3 px-2 font-semibold text-gray-900 print:text-black">
+                    割引額
+                  </th>
+                  <th className="text-right py-3 px-2 font-semibold text-gray-900 print:text-black">
+                    金額
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {itemRows.map(({ item, result }, index) => {
+                  const discountDisplay = item.discountAmount
+                    ? formatCurrency(item.discountAmount)
+                    : null;
 
-                return (
-                  <tr
-                    key={index}
-                    className="border-b border-gray-100 print:border-gray-300"
-                  >
-                    <td className="py-3 px-2 text-gray-900 print:text-black">
-                      {item.description}
-                    </td>
-                    <td className="py-3 px-2 text-right text-gray-900 print:text-black">
-                      {formatCurrency(item.unitPrice || 0)}
-                      {company.priceIncludesTax ? (
+                  return (
+                    <tr
+                      key={index}
+                      className="border-b border-gray-100 print:border-gray-300 avoid-break"
+                    >
+                      <td className="py-3 px-2 text-gray-900 print:text-black">
+                        {item.description}
+                      </td>
+                      <td className="py-3 px-2 text-right text-gray-900 print:text-black">
+                        {formatCurrency(item.unitPrice)}
                         <div className="text-xs text-gray-500 print:text-gray-700">
-                          (税込)
+                          {_company.priceIncludesTax ? '(税込)' : '(税抜)'}
                         </div>
-                      ) : (
-                        <div className="text-xs text-gray-500 print:text-gray-700">
-                          (税抜)
-                        </div>
-                      )}
-                    </td>
-                    <td className="py-3 px-2 text-right text-gray-900 print:text-black">
-                      {formatNumber(item.quantity || 0)}
-                    </td>
-                    <td className="py-3 px-2 text-right text-gray-900 print:text-black">
-                      {item.discountAmount
-                        ? formatCurrency(item.discountAmount)
-                        : '-'}
-                    </td>
-                    <td className="py-3 px-2 text-right text-gray-900 print:text-black">
-                      {result.effectiveTaxRate}%
-                      <div className="text-xs text-gray-500 print:text-gray-700">
-                        {result.taxCategory === 'STANDARD' && '標準'}
-                        {result.taxCategory === 'REDUCED' && '軽減'}
-                        {result.taxCategory === 'EXEMPT' && '免税'}
-                        {result.taxCategory === 'NON_TAX' && '非課税'}
-                      </div>
-                    </td>
-                    <td className="py-3 px-2 text-right font-semibold text-gray-900 print:text-black">
-                      {formatCurrency(result.lineTotal)}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-
-        {/* 空状態表示 */}
-        {itemRows.length === 0 && (
+                      </td>
+                      <td className="py-3 px-2 text-right text-gray-900 print:text-black">
+                        {formatNumber(item.quantity)} {item.unit || '個'}
+                      </td>
+                      <td className="py-3 px-2 text-right text-gray-900 print:text-black">
+                        {discountDisplay || '-'}
+                      </td>
+                      <td className="py-3 px-2 text-right font-semibold text-gray-900 print:text-black">
+                        {formatCurrency(result.lineTotal)}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
           <div className="text-center py-8 text-gray-500 print:text-gray-700">
-            品目が登録されていません
+            品目が追加されていません
           </div>
         )}
       </div>
 
-      {/* 合計・税額内訳 */}
-      <div className="p-6 border-t border-gray-200 print:border-gray-400 bg-gray-50 print:bg-white">
+      {/* 合計部分 */}
+      <div className="p-6 print:p-4 border-t border-gray-200 print:border-gray-400 print:border-t-2 bg-gray-50 print:bg-white">
         <div className="max-w-md ml-auto space-y-3">
           {/* 税率別内訳 */}
-          {totalCalculation.taxSummary.length > 0 && (
-            <div className="space-y-2">
-              <h4 className="text-sm font-semibold text-gray-900 print:text-black">
-                税率別内訳
-              </h4>
-              {totalCalculation.taxSummary.map((summary, index) => (
-                <TaxSummaryRow key={index} summary={summary} />
-              ))}
-            </div>
-          )}
+          <div className="space-y-2">
+            <h4 className="text-sm font-semibold text-gray-900 print:text-black">
+              税率別内訳
+            </h4>
+            <TaxSummaryRow
+              label="標準税率対象"
+              amount={totalCalculation.taxByRate.standard.taxableAmount}
+            />
+            <TaxSummaryRow
+              label="標準税率税額"
+              amount={totalCalculation.taxByRate.standard.taxAmount}
+            />
+            <TaxSummaryRow
+              label="軽減税率対象"
+              amount={totalCalculation.taxByRate.reduced.taxableAmount}
+            />
+            <TaxSummaryRow
+              label="軽減税率税額"
+              amount={totalCalculation.taxByRate.reduced.taxAmount}
+            />
+            <TaxSummaryRow
+              label="免税対象"
+              amount={totalCalculation.taxByRate.exempt.taxableAmount}
+            />
+          </div>
 
           {/* 合計行 */}
           <div className="border-t border-gray-300 print:border-gray-600 pt-3 space-y-2">
@@ -333,50 +354,62 @@ export function QuotePreview({
         </div>
       </div>
 
-      {/* 振込先情報 */}
+      {/* 振込先情報・支払方法 */}
       {companyForPreview &&
         (companyForPreview.bankName ||
           companyForPreview.bankBranch ||
           companyForPreview.bankAccountNumber) && (
-          <div className="p-6 border-t border-gray-200 print:border-gray-400">
+          <div className="p-6 print:p-4 border-t border-gray-200 print:border-gray-400">
             <h4 className="text-sm font-semibold text-gray-900 print:text-black mb-3">
-              お振込先
+              お支払い方法
             </h4>
             <div className="bg-gray-50 print:bg-white p-4 rounded-lg border border-gray-200 print:border-gray-400">
-              <div className="grid grid-cols-2 gap-4 text-sm text-gray-700 print:text-gray-800">
-                {companyForPreview.bankName && (
-                  <div>
-                    <span className="font-semibold">銀行名:</span>{' '}
-                    {companyForPreview.bankName}
-                  </div>
-                )}
-                {companyForPreview.bankBranch && (
-                  <div>
-                    <span className="font-semibold">支店名:</span>{' '}
-                    {companyForPreview.bankBranch}
-                  </div>
-                )}
-                {companyForPreview.bankAccountType && (
-                  <div>
-                    <span className="font-semibold">口座種類:</span>{' '}
-                    {companyForPreview.bankAccountType}
-                  </div>
-                )}
-                {companyForPreview.bankAccountNumber && (
-                  <div>
-                    <span className="font-semibold">口座番号:</span>{' '}
-                    {companyForPreview.bankAccountNumber}
-                  </div>
-                )}
-                {companyForPreview.bankAccountHolder && (
-                  <div className="col-span-2">
-                    <span className="font-semibold">口座名義:</span>{' '}
-                    {companyForPreview.bankAccountHolder}
-                  </div>
-                )}
+              <div className="mb-3">
+                <div className="text-sm font-semibold text-gray-900 print:text-black mb-2">
+                  銀行振込
+                </div>
+                <div className="grid grid-cols-2 gap-4 text-sm text-gray-700 print:text-gray-800">
+                  {companyForPreview.bankName && (
+                    <div>
+                      <span className="font-semibold">銀行名:</span>{' '}
+                      {companyForPreview.bankName}
+                    </div>
+                  )}
+                  {companyForPreview.bankBranch && (
+                    <div>
+                      <span className="font-semibold">支店名:</span>{' '}
+                      {companyForPreview.bankBranch}
+                    </div>
+                  )}
+                  {companyForPreview.bankAccountType && (
+                    <div>
+                      <span className="font-semibold">口座種類:</span>{' '}
+                      {companyForPreview.bankAccountType}
+                    </div>
+                  )}
+                  {companyForPreview.bankAccountNumber && (
+                    <div>
+                      <span className="font-semibold">口座番号:</span>{' '}
+                      {companyForPreview.bankAccountNumber}
+                    </div>
+                  )}
+                  {companyForPreview.bankAccountHolder && (
+                    <div className="col-span-2">
+                      <span className="font-semibold">口座名義:</span>{' '}
+                      {companyForPreview.bankAccountHolder}
+                    </div>
+                  )}
+                </div>
               </div>
-              <div className="mt-3 text-xs text-gray-500 print:text-gray-700">
-                ※ 振込手数料はお客様ご負担でお願いいたします
+              <div className="border-t border-gray-200 print:border-gray-400 pt-3 space-y-2">
+                <div className="text-xs text-gray-500 print:text-gray-700">
+                  ※ 振込手数料はお客様ご負担でお願いいたします
+                </div>
+                {dueDate && (
+                  <div className="text-xs text-red-600 print:text-red-800 font-semibold">
+                    支払期限: {formatDate(dueDate)}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -384,7 +417,7 @@ export function QuotePreview({
 
       {/* 備考セクション */}
       {notes && (
-        <div className="p-6 border-t border-gray-200 print:border-gray-400">
+        <div className="p-6 print:p-4 border-t border-gray-200 print:border-gray-400">
           <h4 className="text-sm font-semibold text-gray-900 print:text-black mb-2">
             備考
           </h4>
@@ -393,26 +426,6 @@ export function QuotePreview({
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-/**
- * 税率別集計行コンポーネント
- */
-function TaxSummaryRow({ summary }: { summary: TaxSummaryByRate }) {
-  const categoryLabel = getSummaryCategoryLabel(summary.category);
-  const rateLabel =
-    summary.taxRate === 0
-      ? categoryLabel
-      : `${categoryLabel}${summary.taxRate}%`;
-
-  return (
-    <div className="flex justify-between text-xs text-gray-600 print:text-gray-800">
-      <span>
-        {rateLabel} 対象: {formatCurrency(summary.taxableAmount)}
-      </span>
-      <span>税額: {formatCurrency(summary.taxAmount)}</span>
     </div>
   );
 }
