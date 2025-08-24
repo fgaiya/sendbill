@@ -134,7 +134,9 @@ export function DocumentActions({ document, onRefresh }: DocumentActionsProps) {
 
   const handlePrintPreview = () => {
     const basePath = isQuote(document) ? 'quotes' : 'invoices';
-    window.open(`/dashboard/${basePath}/${document.id}/print`, '_blank');
+    const url = `/dashboard/${basePath}/${document.id}/print`;
+    const w = window.open(url, '_blank', 'noopener,noreferrer');
+    if (w) w.opener = null; // 逆タブナビング対策（ブラウザ差異への保険）
   };
 
   if (showDeleteConfirm) {

@@ -76,8 +76,16 @@ export function InvoicePreviewModal({
       focusableElements.length - 1
     ] as HTMLElement;
 
+    if (!firstElement || !lastElement) return;
+
     const handleTab = (e: KeyboardEvent) => {
       if (e.key !== 'Tab') return;
+
+      // フォーカス可能な要素が1つだけの場合
+      if (focusableElements.length === 1) {
+        e.preventDefault();
+        return;
+      }
 
       if (e.shiftKey) {
         if (document.activeElement === firstElement) {
@@ -177,6 +185,7 @@ export function InvoicePreviewModal({
     </div>
   );
 
-  // React Portal を使用してbody直下にレンダリング
+  // React Portal を使用してbody直下にレンダリング（SSR対応）
+  if (typeof window === 'undefined') return null;
   return createPortal(modalContent, document.body);
 }

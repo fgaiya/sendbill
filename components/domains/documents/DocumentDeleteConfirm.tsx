@@ -174,6 +174,12 @@ export function DocumentDeleteConfirm({
     const handleTab = (e: KeyboardEvent) => {
       if (e.key !== 'Tab') return;
 
+      // フォーカス可能な要素が1つだけの場合
+      if (focusableElements.length === 1) {
+        e.preventDefault();
+        return;
+      }
+
       if (e.shiftKey) {
         if (window.document.activeElement === firstElement) {
           e.preventDefault();
@@ -406,5 +412,7 @@ export function DocumentDeleteConfirm({
     </div>
   );
 
+  // React Portal を使用してbody直下にレンダリング（SSR対応）
+  if (typeof window === 'undefined') return null;
   return createPortal(modalContent, window.document.body);
 }

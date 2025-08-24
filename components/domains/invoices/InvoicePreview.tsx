@@ -101,6 +101,7 @@ export function InvoicePreview({
   const formatDate = (date?: Date): string => {
     if (!date) return '未設定';
     return new Intl.DateTimeFormat('ja-JP', {
+      timeZone: 'Asia/Tokyo',
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',

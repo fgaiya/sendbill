@@ -151,7 +151,7 @@
   aside,
   footer,
   .app-chrome,
-  nav[role="navigation"] {
+  nav[role='navigation'] {
     display: none !important;
   }
 
@@ -167,11 +167,18 @@
     print-color-adjust: exact !important;
   }
 
-  /* 影・角丸の無効化 */
-  .shadow,
-  .ring,
-  .rounded {
+  /* Tailwind の派生ユーティリティを含め一括無効化 */
+  [class~="shadow"],
+  [class^="shadow-"],
+  [class*=" shadow-"],
+  [class~="ring"],
+  [class^="ring-"],
+  [class*=" ring-"] {
     box-shadow: none !important;
+  }
+  [class~="rounded"],
+  [class^="rounded-"],
+  [class*=" rounded-"] {
     border-radius: 0 !important;
   }
 

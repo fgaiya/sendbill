@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 import { useRouter } from 'next/navigation';
 
@@ -15,17 +15,25 @@ interface PrintControlsProps {
 export function PrintControls({ className = '' }: PrintControlsProps) {
   const router = useRouter();
   const [zoom, setZoom] = useState(100);
-  const [originalZoom, setOriginalZoom] = useState(100);
+  const zoomRef = useRef(100);
+  const originalZoomRef = useRef(100);
+
+  // zoom値をrefに同期
+  useEffect(() => {
+    zoomRef.current = zoom;
+  }, [zoom]);
 
   // 印刷前後のズーム管理
   useEffect(() => {
     const handleBeforePrint = () => {
-      setOriginalZoom(zoom);
+      // 直前のズーム値を保存し、一時的に100%へ
+      originalZoomRef.current = zoomRef.current;
       setZoom(100);
     };
 
     const handleAfterPrint = () => {
-      setZoom(originalZoom);
+      // 保存しておいたズーム値へ復元
+      setZoom(originalZoomRef.current);
     };
 
     window.addEventListener('beforeprint', handleBeforePrint);
@@ -35,7 +43,7 @@ export function PrintControls({ className = '' }: PrintControlsProps) {
       window.removeEventListener('beforeprint', handleBeforePrint);
       window.removeEventListener('afterprint', handleAfterPrint);
     };
-  }, [zoom, originalZoom]);
+  }, []);
 
   const handlePrint = () => {
     window.print();

@@ -60,7 +60,12 @@ export function normalizeItemsForPreview<
     discountAmount: Number(item.discountAmount),
     taxCategory: item.taxCategory,
     sortOrder: item.sortOrder,
-    taxRate: item.taxRate ? Number(item.taxRate) : undefined,
+    taxRate:
+      item.taxRate === null || item.taxRate === undefined
+        ? undefined
+        : isNaN(Number(item.taxRate))
+          ? 0
+          : Number(item.taxRate),
     unit: item.unit ?? undefined,
     sku: item.sku ?? undefined,
   }));
