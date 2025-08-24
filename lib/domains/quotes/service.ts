@@ -318,6 +318,79 @@ export async function getQuote(
 }
 
 /**
+ * 見積書を複製
+ * - タイトル相当のフィールドはモデルに存在しないため、notesはそのまま複製
+ * - 発行日は本日、ステータスは常にDRAFT、番号は仮番号（DRAFT-xxxxx）
+ * - 品目は新規IDで全件複製し並び順を維持
+ */
+export async function duplicateQuote(
+  companyId: string,
+  sourceQuoteId: string
+): Promise<QuoteWithRelations> {
+  return await prisma.$transaction(async (tx) => {
+    // 元の見積書取得（会社所属チェック含む）
+    const source = await tx.quote.findFirst({
+      where: { id: sourceQuoteId, companyId, deletedAt: null },
+      include: {
+        items: { orderBy: { sortOrder: 'asc' } },
+      },
+    });
+    if (!source) {
+      throw new NotFoundError('見積書が見つかりません');
+    }
+
+    // 仮番号生成
+    const draftNumber = `DRAFT-${Date.now()}-${Math.random()
+      .toString(36)
+      .slice(2, 8)}`;
+
+    // 新しい見積書作成
+    const today = new Date();
+    const created = await tx.quote.create({
+      data: {
+        companyId,
+        clientId: source.clientId,
+        quoteNumber: draftNumber,
+        issueDate: today,
+        // 複製時の有効期限は明示要件がないため保持（そのまま）
+        expiryDate: source.expiryDate ?? undefined,
+        notes: source.notes ?? undefined,
+        status: 'DRAFT',
+      },
+    });
+
+    // 品目複製（新IDで作成、sortOrder維持）
+    for (const item of source.items ?? []) {
+      await tx.quoteItem.create({
+        data: {
+          quoteId: created.id,
+          description: item.description,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          taxCategory: item.taxCategory,
+          taxRate: item.taxRate ?? undefined,
+          discountAmount: item.discountAmount,
+          unit: item.unit ?? undefined,
+          sku: item.sku ?? undefined,
+          sortOrder: item.sortOrder,
+        },
+      });
+    }
+
+    // 作成後の完全データを返却
+    const duplicated = await tx.quote.findUnique({
+      where: { id: created.id },
+      include: {
+        client: true,
+        items: { orderBy: { sortOrder: 'asc' } },
+      },
+    });
+    if (!duplicated) throw new NotFoundError('複製後の見積書が見つかりません');
+    return duplicated as QuoteWithRelations;
+  });
+}
+
+/**
  * 品目を作成
  */
 export async function createQuoteItem(

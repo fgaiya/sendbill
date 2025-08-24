@@ -74,10 +74,27 @@ export function DocumentActions({ document, onRefresh }: DocumentActionsProps) {
 
   const handleDuplicate = async () => {
     try {
-      // 複製機能の実装（今後のバージョンで実装予定）
-      toast.info('複製機能は今後のバージョンで実装予定です');
-    } catch {
-      toast.error('複製に失敗しました');
+      const apiPath = isQuote(document)
+        ? `/api/quotes/${document.id}/duplicate`
+        : `/api/invoices/${document.id}/duplicate`;
+
+      const response = await fetch(apiPath, { method: 'POST' });
+      if (!response.ok) {
+        let errorMessage = '複製に失敗しました';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch {}
+        throw new Error(errorMessage);
+      }
+
+      const result = await response.json();
+      toast.success(result.message || '複製しました');
+      await onRefresh();
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : '複製に失敗しました';
+      toast.error(message);
     }
   };
 
