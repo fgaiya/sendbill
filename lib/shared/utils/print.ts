@@ -53,23 +53,42 @@ export function normalizeItemsForPreview<
     sku?: string | null;
   },
 >(items: T[]): Array<QuoteItemFormData | InvoiceItemFormData> {
+  const toNumberOrZero = (v: number | string): number => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+  };
+  const toOptionalNumber = (
+    v: number | string | null | undefined
+  ): number | undefined => {
+    if (v === null || v === undefined) return undefined;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : undefined;
+  };
+
   return items.map((item) => ({
     description: item.description,
-    quantity: Number(item.quantity),
-    unitPrice: Number(item.unitPrice),
-    discountAmount: Number(item.discountAmount),
+    quantity: toNumberOrZero(item.quantity),
+    unitPrice: toNumberOrZero(item.unitPrice),
+    discountAmount: toNumberOrZero(item.discountAmount),
     taxCategory: item.taxCategory,
     sortOrder: item.sortOrder,
-    taxRate:
-      item.taxRate === null || item.taxRate === undefined
-        ? undefined
-        : isNaN(Number(item.taxRate))
-          ? 0
-          : Number(item.taxRate),
+    // 税率の不正値は0%ではなくundefinedへ（計算側の既定ロジックに委譲）
+    taxRate: toOptionalNumber(item.taxRate),
     unit: item.unit ?? undefined,
     sku: item.sku ?? undefined,
   }));
 }
+
+/**
+ * 安全な税率変換ヘルパー（NaN/負値をフォールバック）
+ */
+const toTaxRate = (
+  v: number | string | { toString(): string },
+  fallback: number
+): number => {
+  const n = Number(v);
+  return Number.isFinite(n) && n >= 0 ? n : fallback;
+};
 
 /**
  * Prismaの会社データを計算用の会社データに正規化
@@ -80,8 +99,8 @@ export function normalizeCompanyForCalculation(company: {
   priceIncludesTax: boolean;
 }): CompanyForCalculation {
   return {
-    standardTaxRate: Number(company.standardTaxRate),
-    reducedTaxRate: Number(company.reducedTaxRate),
+    standardTaxRate: toTaxRate(company.standardTaxRate, 10), // デフォルト10%
+    reducedTaxRate: toTaxRate(company.reducedTaxRate, 8), // デフォルト8%
     priceIncludesTax: company.priceIncludesTax,
   };
 }
@@ -134,8 +153,8 @@ export function normalizeCompanyForPreview(company: {
     bankAccountNumber: nullToUndefined(company.bankAccountNumber),
     bankAccountHolder: nullToUndefined(company.bankAccountHolder),
     bankAccountType: nullToUndefined(company.bankAccountType),
-    standardTaxRate: Number(company.standardTaxRate),
-    reducedTaxRate: Number(company.reducedTaxRate),
+    standardTaxRate: toTaxRate(company.standardTaxRate, 10),
+    reducedTaxRate: toTaxRate(company.reducedTaxRate, 8),
     priceIncludesTax: company.priceIncludesTax,
   };
 }
