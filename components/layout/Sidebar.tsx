@@ -24,7 +24,7 @@ export function Sidebar({ className }: SidebarProps) {
   const actionItems = SIDEBAR_ACTION_ITEMS;
 
   return (
-    <div className="hidden lg:block">
+    <div className="hidden lg:block print:hidden">
       <SidebarContent
         isCollapsed={sidebar.isCollapsed}
         onToggle={sidebar.toggle}

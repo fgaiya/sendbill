@@ -5,22 +5,19 @@ import { useEffect, useRef } from 'react';
 import { X, Printer } from 'lucide-react';
 import { createPortal } from 'react-dom';
 
-import { QuotePreview, type QuotePreviewProps } from './QuotePreview';
+import { InvoicePreview, type InvoicePreviewProps } from './InvoicePreview';
 
-interface QuotePreviewModalProps extends QuotePreviewProps {
+interface InvoicePreviewModalProps
+  extends Omit<InvoicePreviewProps, 'className'> {
   isOpen: boolean;
   onClose: () => void;
 }
 
-/**
- * 全画面見積書プレビューモーダル
- * React Portal + A11y対応（フォーカストラップ、キーボード操作）
- */
-export function QuotePreviewModal({
+export function InvoicePreviewModal({
   isOpen,
   onClose,
   ...previewProps
-}: QuotePreviewModalProps) {
+}: InvoicePreviewModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -118,7 +115,7 @@ export function QuotePreviewModal({
       className="fixed inset-0 z-50 flex items-center justify-center p-4 print:p-0"
       role="dialog"
       aria-modal="true"
-      aria-labelledby="quote-preview-title"
+      aria-labelledby="invoice-preview-title"
     >
       {/* 背景オーバーレイ */}
       <div
@@ -135,10 +132,10 @@ export function QuotePreviewModal({
         {/* ヘッダー（印刷時非表示） */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200 print:hidden">
           <h2
-            id="quote-preview-title"
+            id="invoice-preview-title"
             className="text-lg font-semibold text-gray-900"
           >
-            見積書プレビュー
+            請求書プレビュー
           </h2>
           <div className="flex items-center space-x-2">
             <button
@@ -161,7 +158,7 @@ export function QuotePreviewModal({
 
         {/* プレビューコンテンツ */}
         <div className="overflow-auto max-h-[calc(90vh-4rem)] print:overflow-visible print:max-h-none">
-          <QuotePreview {...previewProps} className="m-4 print:m-0" />
+          <InvoicePreview {...previewProps} className="m-4 print:m-0" />
         </div>
 
         {/* フッター（印刷時非表示） */}

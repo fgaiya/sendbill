@@ -10,6 +10,7 @@ import {
   Receipt,
   Download,
   ArrowRight,
+  Printer,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -131,6 +132,13 @@ export function DocumentActions({ document, onRefresh }: DocumentActionsProps) {
     }
   };
 
+  const handlePrintPreview = () => {
+    const basePath = isQuote(document) ? 'quotes' : 'invoices';
+    const url = `/dashboard/${basePath}/${document.id}/print`;
+    const w = window.open(url, '_blank', 'noopener,noreferrer');
+    if (w) w.opener = null; // 逆タブナビング対策（ブラウザ差異への保険）
+  };
+
   if (showDeleteConfirm) {
     return (
       <div className="flex items-center space-x-2">
@@ -165,6 +173,12 @@ export function DocumentActions({ document, onRefresh }: DocumentActionsProps) {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
+        {/* 印刷プレビュー */}
+        <DropdownMenuItem onClick={handlePrintPreview}>
+          <Printer className="mr-2 h-4 w-4" />
+          印刷プレビュー
+        </DropdownMenuItem>
+
         {/* 複製 */}
         <DropdownMenuItem onClick={handleDuplicate}>
           <Copy className="mr-2 h-4 w-4" />

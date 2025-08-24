@@ -38,6 +38,7 @@ model Company {
   bankBranch                String?
   bankAccountNumber         String?
   bankAccountHolder         String?
+  bankAccountType           String?
   createdAt                 DateTime @default(now())
   updatedAt                 DateTime @updatedAt
 

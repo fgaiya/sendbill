@@ -468,5 +468,7 @@ export function InvoiceConversionDialog({
     </div>
   );
 
+  // React Portal を使用してbody直下にレンダリング（SSR対応）
+  if (typeof window === 'undefined') return null;
   return createPortal(modalContent, document.body);
 }

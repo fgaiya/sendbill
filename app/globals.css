@@ -136,3 +136,101 @@
     border: 0;
   }
 }
+
+/* 印刷メディア最適化 */
+@media print {
+  /* A4ページ設定 */
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+
+  /* アプリケーションChrome非表示 */
+  .print-controls,
+  header,
+  aside,
+  footer,
+  .app-chrome,
+  nav[role='navigation'] {
+    display: none !important;
+  }
+
+  /* 印刷専用レイアウト調整 */
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  /* カラー印刷対応 */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Tailwind の派生ユーティリティを含め一括無効化 */
+  [class~='shadow'],
+  [class^='shadow-'],
+  [class*=' shadow-'],
+  [class~='ring'],
+  [class^='ring-'],
+  [class*=' ring-'] {
+    box-shadow: none !important;
+  }
+  [class~='rounded'],
+  [class^='rounded-'],
+  [class*=' rounded-'] {
+    border-radius: 0 !important;
+  }
+
+  /* テーブルヘッダー反復表示 */
+  thead {
+    display: table-header-group !important;
+  }
+
+  tfoot {
+    display: table-footer-group !important;
+  }
+
+  /* 改ページ制御 */
+  .page-break {
+    break-after: page;
+  }
+
+  .avoid-break {
+    break-inside: avoid;
+  }
+
+  /* テーブル行の分割回避 */
+  tr {
+    break-inside: avoid;
+  }
+
+  /* 印刷時の文字色強制 */
+  .print-text-black {
+    color: black !important;
+  }
+
+  .print-text-gray {
+    color: #374151 !important;
+  }
+}
+
+/* 印刷プレビュー用A4レイアウト */
+.print-page {
+  width: 210mm;
+  min-height: 297mm;
+  margin: auto;
+  background: white;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  padding: 12mm;
+}
+
+@media print {
+  .print-page {
+    width: auto;
+    min-height: auto;
+    margin: 0;
+    box-shadow: none;
+    padding: 0;
+  }
+}
