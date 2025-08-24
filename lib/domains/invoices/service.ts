@@ -926,6 +926,86 @@ async function getNextSortOrder(invoiceId: string): Promise<number> {
 }
 
 /**
+ * 請求書を複製
+ * - 発行日は本日、ステータスはDRAFT、番号は仮番号（DRAFT-xxxxx）
+ * - 品目は新規IDで全件複製し並び順を維持
+ * - 元請求書が同一Companyに属することを検証
+ */
+export async function duplicateInvoice(
+  companyId: string,
+  sourceInvoiceId: string
+): Promise<InvoiceWithRelations> {
+  return await prisma.$transaction(async (tx) => {
+    // 元の請求書取得
+    const source = await tx.invoice.findFirst({
+      where: { id: sourceInvoiceId, companyId, deletedAt: null },
+      include: {
+        items: { orderBy: { sortOrder: 'asc' } },
+      },
+    });
+    if (!source) {
+      throw new NotFoundError('請求書が見つかりません');
+    }
+
+    // 仮番号
+    const draftNumber = `DRAFT-${Date.now()}-${Math.random()
+      .toString(36)
+      .slice(2, 8)}`;
+
+    const today = new Date();
+    // 新しい請求書作成（quoteIdの引き継ぎはしない：純粋な複製として）
+    const created = await tx.invoice.create({
+      data: {
+        companyId,
+        clientId: source.clientId,
+        invoiceNumber: draftNumber,
+        issueDate: today,
+        // 期日は要件未定のため未設定、備考はそのまま
+        dueDate: source.dueDate ?? undefined,
+        notes: source.notes ?? undefined,
+        status: 'DRAFT',
+      },
+    });
+
+    // 品目複製
+    for (const item of source.items ?? []) {
+      await tx.invoiceItem.create({
+        data: {
+          invoiceId: created.id,
+          description: item.description,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          taxCategory: item.taxCategory,
+          taxRate: item.taxRate ?? undefined,
+          discountAmount: item.discountAmount,
+          unit: item.unit ?? undefined,
+          sku: item.sku ?? undefined,
+          sortOrder: item.sortOrder,
+        },
+      });
+    }
+
+    const duplicated = await tx.invoice.findUnique({
+      where: { id: created.id },
+      include: {
+        client: true,
+        items: { orderBy: { sortOrder: 'asc' } },
+        quote: {
+          select: {
+            id: true,
+            quoteNumber: true,
+            issueDate: true,
+            status: true,
+          },
+        },
+      },
+    });
+    if (!duplicated) throw new NotFoundError('複製後の請求書が見つかりません');
+    return duplicated as InvoiceWithRelations;
+  });
+}
+
+/**
  * 請求書品目一括処理（作成・更新・削除・並び替え）
  */
 export async function bulkProcessInvoiceItems(
