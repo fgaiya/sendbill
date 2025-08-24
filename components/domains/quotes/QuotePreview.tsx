@@ -240,7 +240,7 @@ export function QuotePreview({
                 return (
                   <tr
                     key={index}
-                    className="border-b border-gray-100 print:border-gray-300"
+                    className="border-b border-gray-100 print:border-gray-300 avoid-break"
                   >
                     <td className="py-3 px-2 text-gray-900 print:text-black">
                       {item.description}

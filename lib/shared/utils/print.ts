@@ -61,8 +61,10 @@ export function normalizeItemsForPreview<
     v: number | string | null | undefined
   ): number | undefined => {
     if (v === null || v === undefined) return undefined;
+    // 空文字／空白文字列は未入力扱いとする
+    if (typeof v === 'string' && v.trim() === '') return undefined;
     const n = Number(v);
-    return Number.isFinite(n) ? n : undefined;
+    return Number.isFinite(n) && n >= 0 ? n : undefined;
   };
 
   return items.map((item) => ({
@@ -86,7 +88,11 @@ const toTaxRate = (
   v: number | string | { toString(): string },
   fallback: number
 ): number => {
-  const n = Number(v);
+  const raw =
+    typeof v === 'object' && v && 'toString' in v ? v.toString() : String(v);
+  const s = raw.trim();
+  if (s === '') return fallback;
+  const n = Number(s);
   return Number.isFinite(n) && n >= 0 ? n : fallback;
 };
 
