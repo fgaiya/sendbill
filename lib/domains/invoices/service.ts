@@ -3,7 +3,7 @@ import {
   InvoiceStatus,
   QuoteStatus,
   type InvoiceItem as PrismaInvoiceItem,
-} from '@prisma/client';
+} from '@prisma/client/edge';
 
 import { httpError } from '@/lib/shared/forms';
 import { getPrisma } from '@/lib/shared/prisma';

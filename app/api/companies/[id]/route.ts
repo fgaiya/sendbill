@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client/edge';
 
 import { companySchemas, apiErrors, handleApiError } from '@/lib/shared/forms';
 import { getPrisma } from '@/lib/shared/prisma';

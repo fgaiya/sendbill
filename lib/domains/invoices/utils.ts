@@ -1,4 +1,4 @@
-import { Prisma, InvoiceStatus } from '@prisma/client';
+import { Prisma, InvoiceStatus } from '@prisma/client/edge';
 import Papa from 'papaparse';
 
 import type {

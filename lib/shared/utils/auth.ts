@@ -1,5 +1,5 @@
 import { auth, currentUser } from '@clerk/nextjs/server';
-import { Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client/edge';
 
 import { apiErrors } from '@/lib/shared/forms';
 import { getPrisma } from '@/lib/shared/prisma';

@@ -1,4 +1,4 @@
-import { Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client/edge';
 
 /**
  * オブジェクト操作共通ユーティリティ

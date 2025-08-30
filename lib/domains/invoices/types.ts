@@ -4,7 +4,7 @@ import {
   InvoiceItem as PrismaInvoiceItem,
   Client as PrismaClientModel,
   Quote as PrismaQuote,
-} from '@prisma/client';
+} from '@prisma/client/edge';
 
 export type InvoiceStatus = PrismaInvoiceStatus;
 
