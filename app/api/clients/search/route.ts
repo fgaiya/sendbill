@@ -6,7 +6,7 @@ import {
   buildClientSearchWhere,
 } from '@/lib/domains/clients/utils';
 import { apiErrors, handleApiError } from '@/lib/shared/forms';
-import { prisma } from '@/lib/shared/prisma';
+import { getPrisma } from '@/lib/shared/prisma';
 import { requireUserCompany } from '@/lib/shared/utils/auth';
 
 export async function GET(request: NextRequest) {
@@ -39,13 +39,13 @@ export async function GET(request: NextRequest) {
 
     // 検索実行（名前順でソート）とカウント（並列実行）
     const [clients, total] = await Promise.all([
-      prisma.client.findMany({
+      getPrisma().client.findMany({
         where,
         orderBy: { name: 'asc' },
         take: limit,
         include: includeRelations,
       }),
-      prisma.client.count({ where }),
+      getPrisma().client.count({ where }),
     ]);
 
     return NextResponse.json({

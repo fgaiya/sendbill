@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
 
 import { companySchemas, apiErrors, handleApiError } from '@/lib/shared/forms';
-import { prisma } from '@/lib/shared/prisma';
+import { getPrisma } from '@/lib/shared/prisma';
 import { requireAuth } from '@/lib/shared/utils/auth';
 
 export async function POST(request: NextRequest) {
@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
 
     // 直接作成を試行し、一意制約違反をキャッチ（TOCTOU問題を回避）
     try {
-      const company = await prisma.company.create({
+      const company = await getPrisma().company.create({
         data: { ...validatedData, userId: user!.id },
       });
       return NextResponse.json(company, { status: 201 });
@@ -47,7 +47,7 @@ export async function GET() {
       return NextResponse.json(error, { status });
     }
 
-    const company = await prisma.company.findUnique({
+    const company = await getPrisma().company.findUnique({
       where: { userId: user!.id },
     });
 

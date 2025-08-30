@@ -6,7 +6,7 @@ import {
 } from '@prisma/client';
 
 import { httpError } from '@/lib/shared/forms';
-import { prisma } from '@/lib/shared/prisma';
+import { getPrisma } from '@/lib/shared/prisma';
 import { ConflictError, NotFoundError } from '@/lib/shared/utils/errors';
 
 import {
@@ -47,7 +47,7 @@ export async function createQuote(
   data: QuoteData
 ): Promise<QuoteWithRelations> {
   // クライアントの存在確認
-  const client = await prisma.client.findFirst({
+  const client = await getPrisma().client.findFirst({
     where: {
       id: data.clientId,
       companyId,
@@ -63,7 +63,7 @@ export async function createQuote(
   const draftNumber = `DRAFT-${Date.now()}-${Math.random()
     .toString(36)
     .slice(2, 8)}`;
-  const quote = await prisma.quote.create({
+  const quote = await getPrisma().quote.create({
     data: {
       companyId,
       clientId: data.clientId,
@@ -93,7 +93,7 @@ export async function updateQuote(
   data: QuoteUpdateData
 ): Promise<QuoteWithRelations> {
   // 見積書の存在確認
-  const existingQuote = await prisma.quote.findFirst({
+  const existingQuote = await getPrisma().quote.findFirst({
     where: {
       id: quoteId,
       companyId,
@@ -107,7 +107,7 @@ export async function updateQuote(
 
   // クライアントIDが変更される場合は存在確認
   if (data.clientId && data.clientId !== existingQuote.clientId) {
-    const client = await prisma.client.findFirst({
+    const client = await getPrisma().client.findFirst({
       where: {
         id: data.clientId,
         companyId,
@@ -122,7 +122,7 @@ export async function updateQuote(
 
   // 楽観ロック: updatedAt 一致条件
   const { updatedAt, ...updateData } = data;
-  const result = await prisma.quote.updateMany({
+  const result = await getPrisma().quote.updateMany({
     where: { id: quoteId, companyId, deletedAt: null, updatedAt },
     data: updateData,
   });
@@ -132,7 +132,7 @@ export async function updateQuote(
     );
   }
 
-  const quote = await prisma.quote.findFirst({
+  const quote = await getPrisma().quote.findFirst({
     where: { id: quoteId, companyId },
     include: {
       client: true,
@@ -154,7 +154,7 @@ export async function updateQuoteStatus(
   companyId: string,
   newStatus: QuoteStatus
 ): Promise<QuoteWithRelations> {
-  return await prisma.$transaction(async (tx) => {
+  return await getPrisma().$transaction(async (tx) => {
     // 見積書の存在確認
     const existingQuote = await tx.quote.findFirst({
       where: {
@@ -255,7 +255,7 @@ export async function deleteQuote(
   quoteId: string,
   companyId: string
 ): Promise<void> {
-  const existingQuote = await prisma.quote.findFirst({
+  const existingQuote = await getPrisma().quote.findFirst({
     where: {
       id: quoteId,
       companyId,
@@ -267,7 +267,7 @@ export async function deleteQuote(
     throw new NotFoundError('見積書が見つかりません');
   }
 
-  await prisma.quote.update({
+  await getPrisma().quote.update({
     where: { id: quoteId },
     data: { deletedAt: new Date() },
   });
@@ -284,14 +284,14 @@ export async function getQuotes(
   pagination: { skip: number; take: number }
 ): Promise<{ quotes: QuoteWithRelations[]; total: number }> {
   const [quotes, total] = await Promise.all([
-    prisma.quote.findMany({
+    getPrisma().quote.findMany({
       where,
       orderBy,
       include,
       skip: pagination.skip,
       take: pagination.take,
     }),
-    prisma.quote.count({ where }),
+    getPrisma().quote.count({ where }),
   ]);
 
   return { quotes: quotes as QuoteWithRelations[], total };
@@ -305,7 +305,7 @@ export async function getQuote(
   companyId: string,
   include: QuoteIncludeConfig = {}
 ): Promise<QuoteWithRelations | null> {
-  const quote = await prisma.quote.findFirst({
+  const quote = await getPrisma().quote.findFirst({
     where: {
       id: quoteId,
       companyId,
@@ -327,7 +327,7 @@ export async function duplicateQuote(
   companyId: string,
   sourceQuoteId: string
 ): Promise<QuoteWithRelations> {
-  return await prisma.$transaction(async (tx) => {
+  return await getPrisma().$transaction(async (tx) => {
     // 元の見積書取得（会社所属チェック含む）
     const source = await tx.quote.findFirst({
       where: { id: sourceQuoteId, companyId, deletedAt: null },
@@ -399,7 +399,7 @@ export async function createQuoteItem(
   data: QuoteItemData
 ): Promise<PrismaQuoteItem> {
   // 見積書の存在確認
-  const quote = await prisma.quote.findFirst({
+  const quote = await getPrisma().quote.findFirst({
     where: {
       id: quoteId,
       companyId,
@@ -418,7 +418,7 @@ export async function createQuoteItem(
     sortOrder = next;
   }
 
-  const item = await prisma.quoteItem.create({
+  const item = await getPrisma().quoteItem.create({
     data: {
       quoteId,
       ...data,
@@ -439,7 +439,7 @@ export async function updateQuoteItem(
   data: QuoteItemUpdateData
 ): Promise<PrismaQuoteItem> {
   // 品目の存在確認
-  const existingItem = await prisma.quoteItem.findFirst({
+  const existingItem = await getPrisma().quoteItem.findFirst({
     where: {
       id: itemId,
       quote: {
@@ -485,7 +485,7 @@ export async function updateQuoteItem(
 
   // 楽観ロック: updatedAt 一致条件
   const { updatedAt, ...updateData } = data;
-  const result = await prisma.quoteItem.updateMany({
+  const result = await getPrisma().quoteItem.updateMany({
     where: {
       id: itemId,
       quoteId,
@@ -499,7 +499,9 @@ export async function updateQuoteItem(
       '更新競合が発生しました。最新の状態を取得してから再試行してください。'
     );
   }
-  const item = await prisma.quoteItem.findUnique({ where: { id: itemId } });
+  const item = await getPrisma().quoteItem.findUnique({
+    where: { id: itemId },
+  });
   if (!item) throw new NotFoundError('品目が見つかりません');
 
   return item as PrismaQuoteItem;
@@ -513,7 +515,7 @@ export async function deleteQuoteItem(
   quoteId: string,
   companyId: string
 ): Promise<void> {
-  const existingItem = await prisma.quoteItem.findFirst({
+  const existingItem = await getPrisma().quoteItem.findFirst({
     where: {
       id: itemId,
       quote: {
@@ -528,7 +530,7 @@ export async function deleteQuoteItem(
     throw new NotFoundError('品目が見つかりません');
   }
 
-  await prisma.quoteItem.delete({
+  await getPrisma().quoteItem.delete({
     where: { id: itemId },
   });
 }
@@ -542,7 +544,7 @@ export async function reorderQuoteItems(
   companyId: string,
   data: ReorderQuoteItemsData
 ): Promise<PrismaQuoteItem[]> {
-  return await prisma.$transaction(async (tx) => {
+  return await getPrisma().$transaction(async (tx) => {
     // 見積書の存在確認
     const quote = await tx.quote.findFirst({
       where: { id: quoteId, companyId, deletedAt: null },
@@ -587,7 +589,7 @@ export async function getQuoteItems(
   companyId: string
 ): Promise<PrismaQuoteItem[]> {
   // 見積書の存在確認
-  const quote = await prisma.quote.findFirst({
+  const quote = await getPrisma().quote.findFirst({
     where: {
       id: quoteId,
       companyId,
@@ -599,7 +601,7 @@ export async function getQuoteItems(
     throw new NotFoundError('見積書が見つかりません');
   }
 
-  const items = await prisma.quoteItem.findMany({
+  const items = await getPrisma().quoteItem.findMany({
     where: { quoteId },
     orderBy: { sortOrder: 'asc' },
   });
@@ -615,7 +617,7 @@ export async function getQuoteItem(
   quoteId: string,
   companyId: string
 ): Promise<PrismaQuoteItem | null> {
-  const item = await prisma.quoteItem.findFirst({
+  const item = await getPrisma().quoteItem.findFirst({
     where: {
       id: itemId,
       quoteId,
@@ -633,7 +635,7 @@ export async function bulkProcessQuoteItems(
   companyId: string,
   bulkData: BulkQuoteItemsData
 ): Promise<PrismaQuoteItem[]> {
-  return await prisma.$transaction(async (tx) => {
+  return await getPrisma().$transaction(async (tx) => {
     // 見積書の存在確認
     const quote = await tx.quote.findFirst({
       where: {
@@ -777,7 +779,7 @@ export async function replaceAllQuoteItems(
     sortOrder?: number;
   }>
 ): Promise<PrismaQuoteItem[]> {
-  return await prisma.$transaction(async (tx) => {
+  return await getPrisma().$transaction(async (tx) => {
     // 見積書の存在確認
     const quote = await tx.quote.findFirst({
       where: {
@@ -836,7 +838,7 @@ export async function replaceAllQuoteItems(
  * 次の sortOrder を取得（10刻み）
  */
 async function getNextSortOrder(quoteId: string): Promise<number> {
-  const last = await prisma.quoteItem.findFirst({
+  const last = await getPrisma().quoteItem.findFirst({
     where: { quoteId },
     orderBy: { sortOrder: 'desc' },
     select: { sortOrder: true },
@@ -854,7 +856,7 @@ export async function importQuoteItemsFromCSV(
   csvText: string,
   overwrite = false
 ): Promise<CsvImportResult> {
-  return await prisma.$transaction(async (tx) => {
+  return await getPrisma().$transaction(async (tx) => {
     // 見積書の存在確認
     const quote = await tx.quote.findFirst({
       where: {
@@ -963,7 +965,7 @@ export async function calculateQuoteTax(
 ): Promise<TaxCalculationResult> {
   // 見積書と会社情報を取得
   const [quote, company] = await Promise.all([
-    prisma.quote.findFirst({
+    getPrisma().quote.findFirst({
       where: {
         id: quoteId,
         companyId,
@@ -973,7 +975,7 @@ export async function calculateQuoteTax(
         items: true,
       },
     }),
-    prisma.company.findUnique({
+    getPrisma().company.findUnique({
       where: { id: companyId },
       select: {
         standardTaxRate: true,

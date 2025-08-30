@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_DATABASE_URL")
 }
 
 model User {
@@ -146,9 +147,9 @@ model Invoice {
   status        InvoiceStatus @default(DRAFT)
   notes         String?
 
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  deletedAt   DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  deletedAt     DateTime?
   paymentDate   DateTime?
   paymentMethod PaymentMethod? @default(BANK_TRANSFER)
   paymentTerms  String?
@@ -210,19 +211,19 @@ enum InvoiceStatus {
 
 enum PaymentMethod {
   BANK_TRANSFER // 銀行振込
-  CREDIT_CARD   // クレジットカード
-  CASH          // 現金
-  CHECK         // 小切手
+  CREDIT_CARD // クレジットカード
+  CASH // 現金
+  CHECK // 小切手
 }
 
 model ConversionLog {
-  id              String   @id @default(cuid())
-  quoteId         String
-  invoiceId       String
-  userId          String // Clerk User ID
-  companyId       String
-  conversionDate  DateTime @default(now())
-  
+  id             String   @id @default(cuid())
+  quoteId        String
+  invoiceId      String
+  userId         String // Clerk User ID
+  companyId      String
+  conversionDate DateTime @default(now())
+
   // 変換前データスナップショット
   quoteSnapshot   Json
   // 変換パラメータ
@@ -230,19 +231,19 @@ model ConversionLog {
   issueDate       DateTime
   dueDate         DateTime?
   notes           String?
-  
+
   // エラー情報
-  errorMessage    String?
-  stackTrace      String?
-  
+  errorMessage String?
+  stackTrace   String?
+
   // 監査用
-  createdAt       DateTime @default(now())
-  
+  createdAt DateTime @default(now())
+
   // リレーション
-  quote           Quote    @relation(fields: [quoteId], references: [id])
-  invoice         Invoice  @relation(fields: [invoiceId], references: [id])
-  company         Company  @relation(fields: [companyId], references: [id])
-  
+  quote   Quote   @relation(fields: [quoteId], references: [id])
+  invoice Invoice @relation(fields: [invoiceId], references: [id])
+  company Company @relation(fields: [companyId], references: [id])
+
   @@unique([invoiceId, companyId])
   @@map("conversion_logs")
 }

@@ -4,7 +4,7 @@ import { InvoicePreview } from '@/components/domains/invoices/InvoicePreview';
 import { PrintControls } from '@/components/print/PrintControls';
 import { convertPrismaInvoiceToInvoice } from '@/lib/domains/invoices/types';
 import type { InvoiceWithRelations } from '@/lib/domains/invoices/types';
-import { prisma } from '@/lib/shared/prisma';
+import { getPrisma } from '@/lib/shared/prisma';
 import { requireUserCompany } from '@/lib/shared/utils/auth';
 import { preparePrintPreviewData } from '@/lib/shared/utils/print';
 
@@ -22,7 +22,7 @@ export default async function InvoicePrintPage({
     notFound();
   }
 
-  const invoice = await prisma.invoice.findFirst({
+  const invoice = await getPrisma().invoice.findFirst({
     where: {
       id,
       companyId: company.id,

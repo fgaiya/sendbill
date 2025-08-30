@@ -2,7 +2,7 @@ import { auth, currentUser } from '@clerk/nextjs/server';
 import { Prisma } from '@prisma/client';
 
 import { apiErrors } from '@/lib/shared/forms';
-import { prisma } from '@/lib/shared/prisma';
+import { getPrisma } from '@/lib/shared/prisma';
 
 /**
  * Clerkユーザーに対応するDBユーザーを取得・作成する統一関数
@@ -19,7 +19,7 @@ async function getOrCreateUser(autoCreate: boolean = false) {
     }
 
     // 2. 既存ユーザーをDBから検索
-    let user = await prisma.user.findUnique({
+    let user = await getPrisma().user.findUnique({
       where: { clerkId },
     });
 
@@ -43,7 +43,7 @@ async function getOrCreateUser(autoCreate: boolean = false) {
 
     // 5. DBにユーザー作成（冪等性を考慮）
     try {
-      user = await prisma.user.create({
+      user = await getPrisma().user.create({
         data: {
           clerkId: clerkId,
           email: clerkUser.primaryEmailAddress.emailAddress,
@@ -66,7 +66,7 @@ async function getOrCreateUser(autoCreate: boolean = false) {
           'User already created by concurrent request, fetching:',
           clerkId
         );
-        user = await prisma.user.findUnique({
+        user = await getPrisma().user.findUnique({
           where: { clerkId },
         });
         return user;
@@ -134,7 +134,7 @@ export async function requireUserCompany() {
     return { error, status, user: null, company: null };
   }
 
-  let company = await prisma.company.findUnique({
+  let company = await getPrisma().company.findUnique({
     where: { userId: user!.id },
   });
 
@@ -142,11 +142,11 @@ export async function requireUserCompany() {
   if (!company) {
     try {
       // Userの詳細情報を取得してemailを確認
-      const fullUser = await prisma.user.findUnique({
+      const fullUser = await getPrisma().user.findUnique({
         where: { id: user!.id },
       });
 
-      company = await prisma.company.create({
+      company = await getPrisma().company.create({
         data: {
           userId: user!.id,
           companyName: fullUser?.email
@@ -162,7 +162,7 @@ export async function requireUserCompany() {
         createError.code === 'P2002'
       ) {
         // 再度検索を試行
-        company = await prisma.company.findUnique({
+        company = await getPrisma().company.findUnique({
           where: { userId: user!.id },
         });
       }
@@ -206,7 +206,7 @@ export async function requireResourceAccess<T extends { companyId: string }>(
   }
 
   // ユーザーの会社情報を取得
-  const company = await prisma.company.findUnique({
+  const company = await getPrisma().company.findUnique({
     where: { userId: user!.id },
   });
 

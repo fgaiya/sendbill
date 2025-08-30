@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { Webhook } from 'svix';
 
-import { prisma } from '@/lib/shared/prisma';
+import { getPrisma } from '@/lib/shared/prisma';
 
 // Clerkウェブフックイベントの型定義
 interface ClerkWebhookEvent {
@@ -103,7 +103,7 @@ async function handleUserCreated(data: ClerkUserData) {
     }
 
     // トランザクション内でUser作成とCompany作成を同時実行
-    await prisma.$transaction(async (tx) => {
+    await getPrisma().$transaction(async (tx) => {
       // upsertを使用して冪等性を確保
       const user = await tx.user.upsert({
         where: { clerkId: data.id },
@@ -146,7 +146,7 @@ async function handleUserUpdated(data: ClerkUserData) {
     }
 
     // upsertを使用してユーザーが存在しない場合も対応
-    await prisma.user.upsert({
+    await getPrisma().user.upsert({
       where: { clerkId: data.id },
       update: { email: primaryEmail },
       create: {
@@ -166,12 +166,12 @@ async function handleUserUpdated(data: ClerkUserData) {
 async function handleUserDeleted(data: ClerkUserData) {
   try {
     // 冪等性を確保するため、存在チェック後削除
-    const existingUser = await prisma.user.findUnique({
+    const existingUser = await getPrisma().user.findUnique({
       where: { clerkId: data.id },
     });
 
     if (existingUser) {
-      await prisma.user.delete({
+      await getPrisma().user.delete({
         where: { clerkId: data.id },
       });
       console.log('User deleted successfully:', data.id);

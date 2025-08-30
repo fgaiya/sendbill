@@ -6,7 +6,7 @@ import {
   buildIncludeRelations,
 } from '@/lib/domains/clients/utils';
 import { apiErrors, handleApiError } from '@/lib/shared/forms';
-import { prisma } from '@/lib/shared/prisma';
+import { getPrisma } from '@/lib/shared/prisma';
 import { requireResourceAccess } from '@/lib/shared/utils/auth';
 import { updateResource } from '@/lib/shared/utils/crud';
 
@@ -41,7 +41,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       status,
       resource: client,
     } = await requireResourceAccess(
-      await prisma.client.findUnique({
+      await getPrisma().client.findUnique({
         where: { id },
         include: includeRelations,
       }),
@@ -66,7 +66,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
   const { id } = await context.params;
 
   return updateResource(id, request, {
-    model: prisma.client,
+    model: getPrisma().client,
     schemas: clientSchemas,
     resourceName: '取引先',
   });
@@ -81,7 +81,7 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
       status,
       resource: client,
     } = await requireResourceAccess(
-      await prisma.client.findUnique({ where: { id } }),
+      await getPrisma().client.findUnique({ where: { id } }),
       '取引先'
     );
     if (error) {
@@ -95,7 +95,7 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
       );
     }
 
-    await prisma.client.update({
+    await getPrisma().client.update({
       where: { id },
       data: { deletedAt: new Date() },
     });

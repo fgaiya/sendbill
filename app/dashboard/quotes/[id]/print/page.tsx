@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { QuotePreview } from '@/components/domains/quotes/QuotePreview';
 import { PrintControls } from '@/components/print/PrintControls';
 import { convertPrismaQuoteToQuote } from '@/lib/domains/quotes/types';
-import { prisma } from '@/lib/shared/prisma';
+import { getPrisma } from '@/lib/shared/prisma';
 import { requireUserCompany } from '@/lib/shared/utils/auth';
 import { preparePrintPreviewData } from '@/lib/shared/utils/print';
 
@@ -19,7 +19,7 @@ export default async function QuotePrintPage({ params }: QuotePrintPageProps) {
     notFound();
   }
 
-  const quote = await prisma.quote.findFirst({
+  const quote = await getPrisma().quote.findFirst({
     where: {
       id,
       companyId: company.id,

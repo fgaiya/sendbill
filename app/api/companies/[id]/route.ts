@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
 
 import { companySchemas, apiErrors, handleApiError } from '@/lib/shared/forms';
-import { prisma } from '@/lib/shared/prisma';
+import { getPrisma } from '@/lib/shared/prisma';
 import { requireAuth } from '@/lib/shared/utils/auth';
 import { omitUndefined } from '@/lib/shared/utils/objects';
 
@@ -20,7 +20,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     }
 
     // 会社情報を取得・所有権確認
-    const existingCompany = await prisma.company.findUnique({
+    const existingCompany = await getPrisma().company.findUnique({
       where: { id },
       select: { userId: true },
     });
@@ -40,7 +40,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       validatedData as Record<string, unknown>
     );
 
-    const updatedCompany = await prisma.company.update({
+    const updatedCompany = await getPrisma().company.update({
       where: { id },
       data: filteredData,
     });
@@ -60,7 +60,7 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
     }
 
     // 会社情報を取得・所有権確認
-    const existingCompany = await prisma.company.findUnique({
+    const existingCompany = await getPrisma().company.findUnique({
       where: { id },
     });
 
@@ -73,7 +73,7 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
     }
 
     try {
-      await prisma.company.delete({
+      await getPrisma().company.delete({
         where: { id },
       });
     } catch (e: unknown) {

@@ -20,6 +20,7 @@ const eslintConfig = [
       '**/playwright-report/**',
       '**/test-results/**',
       '**/.next/**',
+      '**/.open-next/**',
       '**/out/**',
       '**/build/**',
       '**/.DS_Store',

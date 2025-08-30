@@ -6,7 +6,7 @@ import {
 } from '@prisma/client';
 
 import { httpError } from '@/lib/shared/forms';
-import { prisma } from '@/lib/shared/prisma';
+import { getPrisma } from '@/lib/shared/prisma';
 import { ConflictError, NotFoundError } from '@/lib/shared/utils/errors';
 
 import {
@@ -46,7 +46,7 @@ export async function createInvoice(
   data: InvoiceData
 ): Promise<InvoiceWithRelations> {
   // クライアントの存在確認
-  const client = await prisma.client.findFirst({
+  const client = await getPrisma().client.findFirst({
     where: {
       id: data.clientId,
       companyId,
@@ -60,7 +60,7 @@ export async function createInvoice(
 
   // 見積書からの作成時は見積書の存在確認
   if (data.quoteId) {
-    const quote = await prisma.quote.findFirst({
+    const quote = await getPrisma().quote.findFirst({
       where: {
         id: data.quoteId,
         companyId,
@@ -77,7 +77,7 @@ export async function createInvoice(
   const draftNumber = `DRAFT-${Date.now()}-${Math.random()
     .toString(36)
     .slice(2, 8)}`;
-  const invoice = await prisma.invoice.create({
+  const invoice = await getPrisma().invoice.create({
     data: {
       companyId,
       clientId: data.clientId,
@@ -115,7 +115,7 @@ export async function createInvoiceFromQuote(
   quoteId: string,
   data: CreateInvoiceFromQuoteData
 ): Promise<CreateInvoiceFromQuoteResult> {
-  return await prisma.$transaction(async (tx) => {
+  return await getPrisma().$transaction(async (tx) => {
     // 見積書の存在確認と品目取得
     const quote = await tx.quote.findFirst({
       where: {
@@ -239,7 +239,7 @@ export async function updateInvoice(
   data: InvoiceUpdateData
 ): Promise<InvoiceWithRelations> {
   // 請求書の存在確認
-  const existingInvoice = await prisma.invoice.findFirst({
+  const existingInvoice = await getPrisma().invoice.findFirst({
     where: {
       id: invoiceId,
       companyId,
@@ -253,7 +253,7 @@ export async function updateInvoice(
 
   // クライアントが変更される場合は存在確認
   if (data.clientId && data.clientId !== existingInvoice.clientId) {
-    const client = await prisma.client.findFirst({
+    const client = await getPrisma().client.findFirst({
       where: {
         id: data.clientId,
         companyId,
@@ -268,7 +268,7 @@ export async function updateInvoice(
 
   // 楽観ロック: updatedAt 一致条件
   const { updatedAt, ...updateData } = data;
-  const result = await prisma.invoice.updateMany({
+  const result = await getPrisma().invoice.updateMany({
     where: {
       id: invoiceId,
       companyId,
@@ -284,7 +284,7 @@ export async function updateInvoice(
     );
   }
 
-  const updatedInvoice = await prisma.invoice.findUnique({
+  const updatedInvoice = await getPrisma().invoice.findUnique({
     where: { id: invoiceId },
     include: {
       client: true,
@@ -318,7 +318,7 @@ export async function updateInvoiceStatus(
   newStatus: InvoiceStatus,
   paymentDate?: Date
 ): Promise<InvoiceWithRelations> {
-  return await prisma.$transaction(async (tx) => {
+  return await getPrisma().$transaction(async (tx) => {
     // 請求書の存在確認
     const existingInvoice = await tx.invoice.findFirst({
       where: {
@@ -433,7 +433,7 @@ export async function updatePaymentInfo(
   data: UpdatePaymentData
 ): Promise<InvoiceWithRelations> {
   // 請求書の存在確認
-  const existingInvoice = await prisma.invoice.findFirst({
+  const existingInvoice = await getPrisma().invoice.findFirst({
     where: {
       id: invoiceId,
       companyId,
@@ -455,7 +455,7 @@ export async function updatePaymentInfo(
     throw httpError(400, '支払済みステータスには支払日が必要です');
   }
 
-  const updatedInvoice = await prisma.invoice.update({
+  const updatedInvoice = await getPrisma().invoice.update({
     where: { id: invoiceId },
     data: {
       status: data.status,
@@ -489,7 +489,7 @@ export async function updateOverdueInvoices(
   const today = new Date();
   today.setHours(0, 0, 0, 0); // 時刻を0時に設定
 
-  const result = await prisma.invoice.updateMany({
+  const result = await getPrisma().invoice.updateMany({
     where: {
       companyId,
       status: 'SENT',
@@ -514,7 +514,7 @@ export async function deleteInvoice(
   invoiceId: string,
   companyId: string
 ): Promise<void> {
-  const existingInvoice = await prisma.invoice.findFirst({
+  const existingInvoice = await getPrisma().invoice.findFirst({
     where: {
       id: invoiceId,
       companyId,
@@ -526,7 +526,7 @@ export async function deleteInvoice(
     throw new NotFoundError('請求書が見つかりません');
   }
 
-  await prisma.invoice.update({
+  await getPrisma().invoice.update({
     where: { id: invoiceId },
     data: { deletedAt: new Date() },
   });
@@ -549,14 +549,14 @@ export async function getInvoices(
   };
 
   const [invoices, total] = await Promise.all([
-    prisma.invoice.findMany({
+    getPrisma().invoice.findMany({
       where: secureWhere,
       orderBy,
       include,
       skip: pagination.skip,
       take: pagination.take,
     }),
-    prisma.invoice.count({ where: secureWhere }),
+    getPrisma().invoice.count({ where: secureWhere }),
   ]);
 
   return { invoices: invoices as InvoiceWithRelations[], total };
@@ -570,7 +570,7 @@ export async function getInvoice(
   companyId: string,
   include: InvoiceIncludeConfig = {}
 ): Promise<InvoiceWithRelations | null> {
-  const invoice = await prisma.invoice.findFirst({
+  const invoice = await getPrisma().invoice.findFirst({
     where: {
       id: invoiceId,
       companyId,
@@ -591,7 +591,7 @@ export async function createInvoiceItem(
   data: InvoiceItemData
 ): Promise<PrismaInvoiceItem> {
   // 請求書の存在確認
-  const invoice = await prisma.invoice.findFirst({
+  const invoice = await getPrisma().invoice.findFirst({
     where: {
       id: invoiceId,
       companyId,
@@ -610,7 +610,7 @@ export async function createInvoiceItem(
     sortOrder = next;
   }
 
-  const item = await prisma.invoiceItem.create({
+  const item = await getPrisma().invoiceItem.create({
     data: {
       invoiceId,
       ...data,
@@ -631,7 +631,7 @@ export async function updateInvoiceItem(
   data: InvoiceItemUpdateData
 ): Promise<PrismaInvoiceItem> {
   // 品目の存在確認
-  const existingItem = await prisma.invoiceItem.findFirst({
+  const existingItem = await getPrisma().invoiceItem.findFirst({
     where: {
       id: itemId,
       invoice: {
@@ -677,7 +677,7 @@ export async function updateInvoiceItem(
 
   // 楽観ロック: updatedAt 一致条件
   const { updatedAt, ...updateData } = data;
-  const result = await prisma.invoiceItem.updateMany({
+  const result = await getPrisma().invoiceItem.updateMany({
     where: {
       id: itemId,
       invoiceId,
@@ -691,7 +691,9 @@ export async function updateInvoiceItem(
       '更新競合が発生しました。最新の状態を取得してから再試行してください。'
     );
   }
-  const item = await prisma.invoiceItem.findUnique({ where: { id: itemId } });
+  const item = await getPrisma().invoiceItem.findUnique({
+    where: { id: itemId },
+  });
   if (!item) throw new NotFoundError('品目が見つかりません');
 
   return item as PrismaInvoiceItem;
@@ -705,7 +707,7 @@ export async function deleteInvoiceItem(
   invoiceId: string,
   companyId: string
 ): Promise<void> {
-  const existingItem = await prisma.invoiceItem.findFirst({
+  const existingItem = await getPrisma().invoiceItem.findFirst({
     where: {
       id: itemId,
       invoice: {
@@ -720,7 +722,7 @@ export async function deleteInvoiceItem(
     throw new NotFoundError('品目が見つかりません');
   }
 
-  const deleteResult = await prisma.invoiceItem.deleteMany({
+  const deleteResult = await getPrisma().invoiceItem.deleteMany({
     where: {
       id: itemId,
       invoice: {
@@ -743,7 +745,7 @@ export async function getInvoiceItems(
   invoiceId: string,
   companyId: string
 ): Promise<PrismaInvoiceItem[]> {
-  const items = await prisma.invoiceItem.findMany({
+  const items = await getPrisma().invoiceItem.findMany({
     where: {
       invoice: {
         id: invoiceId,
@@ -765,7 +767,7 @@ export async function getInvoiceItem(
   invoiceId: string,
   companyId: string
 ): Promise<PrismaInvoiceItem | null> {
-  const item = await prisma.invoiceItem.findFirst({
+  const item = await getPrisma().invoiceItem.findFirst({
     where: {
       id: itemId,
       invoice: {
@@ -787,7 +789,7 @@ export async function reorderInvoiceItems(
   companyId: string,
   data: ReorderInvoiceItemsData
 ): Promise<PrismaInvoiceItem[]> {
-  return await prisma.$transaction(async (tx) => {
+  return await getPrisma().$transaction(async (tx) => {
     // 請求書の存在確認
     const invoice = await tx.invoice.findFirst({
       where: {
@@ -866,7 +868,7 @@ export async function calculateInvoiceTax(
 ): Promise<TaxCalculationResult> {
   // 請求書と会社情報を取得
   const [invoice, company] = await Promise.all([
-    prisma.invoice.findFirst({
+    getPrisma().invoice.findFirst({
       where: {
         id: invoiceId,
         companyId,
@@ -876,7 +878,7 @@ export async function calculateInvoiceTax(
         items: true,
       },
     }),
-    prisma.company.findUnique({
+    getPrisma().company.findUnique({
       where: { id: companyId },
       select: {
         standardTaxRate: true,
@@ -916,7 +918,7 @@ export async function calculateInvoiceTax(
  * 次の並び順を取得
  */
 async function getNextSortOrder(invoiceId: string): Promise<number> {
-  const lastItem = await prisma.invoiceItem.findFirst({
+  const lastItem = await getPrisma().invoiceItem.findFirst({
     where: { invoiceId },
     orderBy: { sortOrder: 'desc' },
     select: { sortOrder: true },
@@ -935,7 +937,7 @@ export async function duplicateInvoice(
   companyId: string,
   sourceInvoiceId: string
 ): Promise<InvoiceWithRelations> {
-  return await prisma.$transaction(async (tx) => {
+  return await getPrisma().$transaction(async (tx) => {
     // 元の請求書取得
     const source = await tx.invoice.findFirst({
       where: { id: sourceInvoiceId, companyId, deletedAt: null },
@@ -1013,7 +1015,7 @@ export async function bulkProcessInvoiceItems(
   companyId: string,
   bulkData: BulkInvoiceItemsData
 ): Promise<PrismaInvoiceItem[]> {
-  return await prisma.$transaction(async (tx) => {
+  return await getPrisma().$transaction(async (tx) => {
     // 請求書の存在確認
     const invoice = await tx.invoice.findFirst({
       where: {
@@ -1211,7 +1213,7 @@ export async function replaceAllInvoiceItems(
     sortOrder?: number;
   }>
 ): Promise<PrismaInvoiceItem[]> {
-  return await prisma.$transaction(async (tx) => {
+  return await getPrisma().$transaction(async (tx) => {
     // 請求書の存在確認
     const invoice = await tx.invoice.findFirst({
       where: {
@@ -1275,7 +1277,7 @@ export async function createInvoiceFromQuoteWithHistory(
   userId: string,
   data: CreateInvoiceFromQuoteData
 ): Promise<CreateInvoiceFromQuoteResult> {
-  return await prisma.$transaction(async (tx) => {
+  return await getPrisma().$transaction(async (tx) => {
     let quote: Prisma.QuoteGetPayload<{
       include: {
         items: true;

@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 
 import { QuoteEdit } from '@/components/domains/quotes/QuoteEdit';
 import { convertPrismaQuoteToQuote } from '@/lib/domains/quotes/types';
-import { prisma } from '@/lib/shared/prisma';
+import { getPrisma } from '@/lib/shared/prisma';
 import { requireUserCompany } from '@/lib/shared/utils/auth';
 
 interface QuoteEditPageProps {
@@ -18,7 +18,7 @@ export default async function QuoteEditPage({ params }: QuoteEditPageProps) {
   }
 
   // 見積書を取得
-  const quote = await prisma.quote.findFirst({
+  const quote = await getPrisma().quote.findFirst({
     where: {
       id,
       companyId: company.id,
