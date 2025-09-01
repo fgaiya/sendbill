@@ -154,98 +154,86 @@ export async function updateQuoteStatus(
   companyId: string,
   newStatus: QuoteStatus
 ): Promise<QuoteWithRelations> {
-  return await getPrisma().$transaction(async (tx) => {
-    // 見積書の存在確認
-    const existingQuote = await tx.quote.findFirst({
-      where: {
-        id: quoteId,
-        companyId,
-        deletedAt: null,
-      },
-      include: {
-        items: true,
-      },
-    });
-
-    if (!existingQuote) {
-      throw new NotFoundError('見積書が見つかりません');
-    }
-
-    // ステータス遷移の妥当性チェック
-    if (!isValidStatusTransition(existingQuote.status, newStatus)) {
-      const validTransitions =
-        STATUS_TRANSITION_RULES.find(
-          (r) => r.from === existingQuote.status
-        )?.to.join('、') ?? 'なし';
-      throw new Error(
-        `${existingQuote.status}から${newStatus}への遷移は無効です。有効な遷移先: ${validTransitions}`
-      );
-    }
-
-    // 品目チェック
-    if (requiresItemsForTransition(existingQuote.status, newStatus)) {
-      if (!existingQuote.items || existingQuote.items.length === 0) {
-        throw new Error('品目が登録されていません');
-      }
-
-      // 品目の妥当性チェック
-      for (let i = 0; i < existingQuote.items.length; i++) {
-        const item = existingQuote.items[i];
-        const qty = Number(item.quantity);
-        const price = Number(item.unitPrice);
-        const discount = Number(item.discountAmount);
-
-        if (qty <= 0) {
-          throw new Error(`品目${i + 1}行目: 数量は正の値である必要があります`);
-        }
-        if (price < 0) {
-          throw new Error(`品目${i + 1}行目: 単価は0以上である必要があります`);
-        }
-        if (discount > price * qty) {
-          throw new Error(
-            `品目${i + 1}行目: 割引額が品目合計金額を超えています`
-          );
-        }
-      }
-    }
-
-    const updateData: { status: QuoteStatus; quoteNumber?: string } = {
-      status: newStatus,
-    };
-
-    // 番号生成が必要な場合
-    if (
-      requiresNumberGenerationForTransition(existingQuote.status, newStatus)
-    ) {
-      // 会社情報取得とシーケンス更新
-      const company = await tx.company.update({
-        where: { id: companyId },
-        data: {
-          quoteNumberSeq: {
-            increment: 1,
-          },
-        },
-      });
-
-      // 見積書番号生成
-      const quoteNumber = generateQuoteNumber(company.quoteNumberSeq);
-      updateData.quoteNumber = quoteNumber;
-    }
-
-    // 見積書更新
-    const updatedQuote = await tx.quote.update({
-      where: { id: quoteId },
-      data: updateData,
-      include: {
-        client: true,
-        items: {
-          orderBy: { sortOrder: 'asc' },
-        },
-      },
-    });
-
-    return updatedQuote as QuoteWithRelations;
+  const prisma = getPrisma();
+  // 見積書の存在確認
+  const existingQuote = await prisma.quote.findFirst({
+    where: {
+      id: quoteId,
+      companyId,
+      deletedAt: null,
+    },
+    include: {
+      items: true,
+    },
   });
+
+  if (!existingQuote) {
+    throw new NotFoundError('見積書が見つかりません');
+  }
+
+  // ステータス遷移の妥当性チェック
+  if (!isValidStatusTransition(existingQuote.status, newStatus)) {
+    const validTransitions =
+      STATUS_TRANSITION_RULES.find(
+        (r) => r.from === existingQuote.status
+      )?.to.join('、') ?? 'なし';
+    throw new Error(
+      `${existingQuote.status}から${newStatus}への遷移は無効です。有効な遷移先: ${validTransitions}`
+    );
+  }
+
+  // 品目チェック
+  if (requiresItemsForTransition(existingQuote.status, newStatus)) {
+    if (!existingQuote.items || existingQuote.items.length === 0) {
+      throw new Error('品目が登録されていません');
+    }
+
+    // 品目の妥当性チェック
+    for (let i = 0; i < existingQuote.items.length; i++) {
+      const item = existingQuote.items[i];
+      const qty = Number(item.quantity);
+      const price = Number(item.unitPrice);
+      const discount = Number(item.discountAmount);
+
+      if (qty <= 0) {
+        throw new Error(`品目${i + 1}行目: 数量は正の値である必要があります`);
+      }
+      if (price < 0) {
+        throw new Error(`品目${i + 1}行目: 単価は0以上である必要があります`);
+      }
+      if (discount > price * qty) {
+        throw new Error(`品目${i + 1}行目: 割引額が品目合計金額を超えています`);
+      }
+    }
+  }
+
+  const updateData: { status: QuoteStatus; quoteNumber?: string } = {
+    status: newStatus,
+  };
+
+  // 番号生成が必要な場合
+  if (requiresNumberGenerationForTransition(existingQuote.status, newStatus)) {
+    // 会社情報取得とシーケンス更新（単発UPDATEで原子的にインクリメント）
+    const company = await prisma.company.update({
+      where: { id: companyId },
+      data: { quoteNumberSeq: { increment: 1 } },
+    });
+
+    // 見積書番号生成
+    updateData.quoteNumber = generateQuoteNumber(company.quoteNumberSeq);
+  }
+
+  // 見積書更新
+  const updatedQuote = await prisma.quote.update({
+    where: { id: quoteId },
+    data: updateData,
+    include: {
+      client: true,
+      items: { orderBy: { sortOrder: 'asc' } },
+    },
+  });
+
+  return updatedQuote as QuoteWithRelations;
 }
 
 /**
@@ -327,26 +315,24 @@ export async function duplicateQuote(
   companyId: string,
   sourceQuoteId: string
 ): Promise<QuoteWithRelations> {
-  return await getPrisma().$transaction(async (tx) => {
-    // 元の見積書取得（会社所属チェック含む）
-    const source = await tx.quote.findFirst({
-      where: { id: sourceQuoteId, companyId, deletedAt: null },
-      include: {
-        items: { orderBy: { sortOrder: 'asc' } },
-      },
-    });
-    if (!source) {
-      throw new NotFoundError('見積書が見つかりません');
-    }
+  const prisma = getPrisma();
+  // 元の見積書取得（会社所属チェック含む）
+  const source = await prisma.quote.findFirst({
+    where: { id: sourceQuoteId, companyId, deletedAt: null },
+    include: { items: { orderBy: { sortOrder: 'asc' } } },
+  });
+  if (!source) {
+    throw new NotFoundError('見積書が見つかりません');
+  }
 
-    // 仮番号生成
-    const draftNumber = `DRAFT-${Date.now()}-${Math.random()
-      .toString(36)
-      .slice(2, 8)}`;
+  // 仮番号生成
+  const draftNumber = `DRAFT-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
-    // 新しい見積書作成
-    const today = new Date();
-    const created = await tx.quote.create({
+  // 新しい見積書作成（失敗時は補償削除）
+  const today = new Date();
+  let created: { id: string } | null = null;
+  try {
+    created = await prisma.quote.create({
       data: {
         companyId,
         clientId: source.clientId,
@@ -361,7 +347,7 @@ export async function duplicateQuote(
 
     // 品目複製（新IDで作成、sortOrder維持）
     for (const item of source.items ?? []) {
-      await tx.quoteItem.create({
+      await prisma.quoteItem.create({
         data: {
           quoteId: created.id,
           description: item.description,
@@ -376,18 +362,25 @@ export async function duplicateQuote(
         },
       });
     }
+  } catch (e) {
+    if (created?.id) {
+      // 見積書作成後に失敗した場合は補償削除
+      try {
+        await prisma.quote.delete({ where: { id: created.id } });
+      } catch (_) {
+        // すでに削除済み等は無視
+      }
+    }
+    throw e;
+  }
 
-    // 作成後の完全データを返却
-    const duplicated = await tx.quote.findUnique({
-      where: { id: created.id },
-      include: {
-        client: true,
-        items: { orderBy: { sortOrder: 'asc' } },
-      },
-    });
-    if (!duplicated) throw new NotFoundError('複製後の見積書が見つかりません');
-    return duplicated as QuoteWithRelations;
+  // 作成後の完全データを返却
+  const duplicated = await prisma.quote.findUnique({
+    where: { id: created.id },
+    include: { client: true, items: { orderBy: { sortOrder: 'asc' } } },
   });
+  if (!duplicated) throw new NotFoundError('複製後の見積書が見つかりません');
+  return duplicated as QuoteWithRelations;
 }
 
 /**
@@ -544,41 +537,40 @@ export async function reorderQuoteItems(
   companyId: string,
   data: ReorderQuoteItemsData
 ): Promise<PrismaQuoteItem[]> {
-  return await getPrisma().$transaction(async (tx) => {
-    // 見積書の存在確認
-    const quote = await tx.quote.findFirst({
-      where: { id: quoteId, companyId, deletedAt: null },
-    });
-    if (!quote) {
-      throw new NotFoundError('見積書が見つかりません');
-    }
-
-    let updatedCount = 0;
-    for (const { id, sortOrder, updatedAt } of data.items) {
-      const result = await tx.quoteItem.updateMany({
-        where: {
-          id,
-          quoteId,
-          quote: { companyId, deletedAt: null },
-          updatedAt,
-        },
-        data: { sortOrder },
-      });
-      updatedCount += result.count;
-    }
-
-    if (updatedCount !== data.items.length) {
-      throw new ConflictError(
-        '更新競合が発生しました。最新の状態を取得してから再試行してください。'
-      );
-    }
-
-    const items = await tx.quoteItem.findMany({
-      where: { quoteId },
-      orderBy: { sortOrder: 'asc' },
-    });
-    return items as PrismaQuoteItem[];
+  const prisma = getPrisma();
+  // 見積書の存在確認
+  const quote = await prisma.quote.findFirst({
+    where: { id: quoteId, companyId, deletedAt: null },
   });
+  if (!quote) {
+    throw new NotFoundError('見積書が見つかりません');
+  }
+
+  let updatedCount = 0;
+  for (const { id, sortOrder, updatedAt } of data.items) {
+    const result = await prisma.quoteItem.updateMany({
+      where: {
+        id,
+        quoteId,
+        quote: { companyId, deletedAt: null },
+        updatedAt,
+      },
+      data: { sortOrder },
+    });
+    updatedCount += result.count;
+  }
+
+  if (updatedCount !== data.items.length) {
+    throw new ConflictError(
+      '更新競合が発生しました。最新の状態を取得してから再試行してください。'
+    );
+  }
+
+  const items = await prisma.quoteItem.findMany({
+    where: { quoteId },
+    orderBy: { sortOrder: 'asc' },
+  });
+  return items as PrismaQuoteItem[];
 }
 
 /**
@@ -635,130 +627,105 @@ export async function bulkProcessQuoteItems(
   companyId: string,
   bulkData: BulkQuoteItemsData
 ): Promise<PrismaQuoteItem[]> {
-  return await getPrisma().$transaction(async (tx) => {
-    // 見積書の存在確認
-    const quote = await tx.quote.findFirst({
-      where: {
-        id: quoteId,
-        companyId,
-        deletedAt: null,
-      },
-    });
-
-    if (!quote) {
-      throw new NotFoundError('見積書が見つかりません');
-    }
-
-    const results: PrismaQuoteItem[] = [];
-
-    for (const item of bulkData.items) {
-      switch (item.action) {
-        case 'create':
-          const createdItem = await tx.quoteItem.create({
-            data: {
-              quoteId,
-              ...item.data,
-            },
-          });
-          results.push(createdItem as PrismaQuoteItem);
-          break;
-
-        case 'update': {
-          // 楽観ロック: updatedAt 一致条件
-          const { updatedAt, ...updateData } = item.data;
-
-          // 既存値を取得して整合性検証
-          const existing = await tx.quoteItem.findFirst({
-            where: {
-              id: item.id,
-              quoteId,
-              quote: { companyId, deletedAt: null },
-            },
-          });
-          if (!existing) {
-            throw new NotFoundError('品目が見つかりません');
-          }
-
-          const effectiveQuantity =
-            updateData.quantity !== undefined
-              ? Number(updateData.quantity)
-              : Number(existing.quantity);
-          const effectiveUnitPrice =
-            updateData.unitPrice !== undefined
-              ? Number(updateData.unitPrice)
-              : Number(existing.unitPrice);
-          const effectiveDiscount =
-            updateData.discountAmount !== undefined
-              ? Number(updateData.discountAmount)
-              : Number(existing.discountAmount);
-
-          if (effectiveQuantity <= 0) {
-            throw httpError(400, '数量は正の数である必要があります');
-          }
-          if (effectiveUnitPrice < 0) {
-            throw httpError(400, '単価は0以上である必要があります');
-          }
-          if (effectiveDiscount < 0) {
-            throw httpError(400, '割引額は0以上である必要があります');
-          }
-          if (effectiveDiscount > effectiveUnitPrice * effectiveQuantity) {
-            throw httpError(
-              400,
-              '割引額は品目合計金額を超えることはできません'
-            );
-          }
-
-          const result = await tx.quoteItem.updateMany({
-            where: {
-              id: item.id,
-              quoteId,
-              quote: { companyId, deletedAt: null },
-              updatedAt,
-            },
-            data: updateData,
-          });
-          if (result.count === 0) {
-            throw new Error(
-              '更新競合が発生しました。最新の状態を取得してから再試行してください。'
-            );
-          }
-          const updatedItem = await tx.quoteItem.findUnique({
-            where: { id: item.id },
-          });
-          results.push(updatedItem as PrismaQuoteItem);
-          break;
-        }
-
-        case 'delete':
-          await tx.quoteItem.delete({
-            where: { id: item.id },
-          });
-          break;
-      }
-    }
-
-    // ソート順を正規化
-    const allItems = await tx.quoteItem.findMany({
-      where: { quoteId },
-      orderBy: { sortOrder: 'asc' },
-    });
-
-    const currentMap = new Map(allItems.map((it) => [it.id, it.sortOrder]));
-    const normalizedItems = normalizeSortOrder(
-      allItems.map((item) => ({ id: item.id, sortOrder: item.sortOrder }))
-    );
-    for (const item of normalizedItems) {
-      const prev = currentMap.get(item.id);
-      if (prev !== item.sortOrder) {
-        await tx.quoteItem.update({
-          where: { id: item.id },
-          data: { sortOrder: item.sortOrder },
-        });
-      }
-    }
-
-    return results;
+  const prisma = getPrisma();
+  // 見積書の存在確認
+  const quote = await prisma.quote.findFirst({
+    where: { id: quoteId, companyId, deletedAt: null },
   });
+  if (!quote) {
+    throw new NotFoundError('見積書が見つかりません');
+  }
+
+  const results: PrismaQuoteItem[] = [];
+
+  for (const item of bulkData.items) {
+    switch (item.action) {
+      case 'create': {
+        const createdItem = await prisma.quoteItem.create({
+          data: { quoteId, ...item.data },
+        });
+        results.push(createdItem as PrismaQuoteItem);
+        break;
+      }
+      case 'update': {
+        const { updatedAt, ...updateData } = item.data;
+        const existing = await prisma.quoteItem.findFirst({
+          where: {
+            id: item.id,
+            quoteId,
+            quote: { companyId, deletedAt: null },
+          },
+        });
+        if (!existing) throw new NotFoundError('品目が見つかりません');
+
+        const effectiveQuantity =
+          updateData.quantity !== undefined
+            ? Number(updateData.quantity)
+            : Number(existing.quantity);
+        const effectiveUnitPrice =
+          updateData.unitPrice !== undefined
+            ? Number(updateData.unitPrice)
+            : Number(existing.unitPrice);
+        const effectiveDiscount =
+          updateData.discountAmount !== undefined
+            ? Number(updateData.discountAmount)
+            : Number(existing.discountAmount);
+        if (effectiveQuantity <= 0)
+          throw httpError(400, '数量は正の数である必要があります');
+        if (effectiveUnitPrice < 0)
+          throw httpError(400, '単価は0以上である必要があります');
+        if (effectiveDiscount < 0)
+          throw httpError(400, '割引額は0以上である必要があります');
+        if (effectiveDiscount > effectiveUnitPrice * effectiveQuantity)
+          throw httpError(400, '割引額は品目合計金額を超えることはできません');
+
+        const result = await prisma.quoteItem.updateMany({
+          where: {
+            id: item.id,
+            quoteId,
+            quote: { companyId, deletedAt: null },
+            updatedAt,
+          },
+          data: updateData,
+        });
+        if (result.count === 0) {
+          throw new Error(
+            '更新競合が発生しました。最新の状態を取得してから再試行してください。'
+          );
+        }
+        const updatedItem = await prisma.quoteItem.findUnique({
+          where: { id: item.id },
+        });
+        results.push(updatedItem as PrismaQuoteItem);
+        break;
+      }
+      case 'delete': {
+        await prisma.quoteItem.delete({ where: { id: item.id } });
+        break;
+      }
+    }
+  }
+
+  // ソート順を正規化
+  const allItems = await prisma.quoteItem.findMany({
+    where: { quoteId },
+    orderBy: { sortOrder: 'asc' },
+  });
+  const currentMap = new Map(allItems.map((it) => [it.id, it.sortOrder]));
+  const normalizedItems = normalizeSortOrder(
+    allItems.map((item) => ({ id: item.id, sortOrder: item.sortOrder }))
+  );
+  for (const item of normalizedItems) {
+    const prev = currentMap.get(item.id);
+    if (prev !== item.sortOrder) {
+      await prisma.quoteItem.update({
+        where: { id: item.id },
+        data: { sortOrder: item.sortOrder },
+      });
+    }
+  }
+
+  return results;
 }
 
 /**
@@ -779,59 +746,48 @@ export async function replaceAllQuoteItems(
     sortOrder?: number;
   }>
 ): Promise<PrismaQuoteItem[]> {
-  return await getPrisma().$transaction(async (tx) => {
-    // 見積書の存在確認
-    const quote = await tx.quote.findFirst({
-      where: {
-        id: quoteId,
-        companyId,
-        deletedAt: null,
+  const prisma = getPrisma();
+  // 見積書の存在確認
+  const quote = await prisma.quote.findFirst({
+    where: { id: quoteId, companyId, deletedAt: null },
+  });
+  if (!quote) {
+    throw new NotFoundError('見積書が見つかりません');
+  }
+
+  // 既存品目を全削除
+  await prisma.quoteItem.deleteMany({ where: { quoteId } });
+
+  // 新規品目を一括作成
+  if (newItems.length === 0) {
+    return [];
+  }
+
+  const results: PrismaQuoteItem[] = [];
+  let sortOrder = 0;
+
+  for (const itemData of newItems) {
+    const qty = Number(itemData.quantity);
+    const unitPrice = Number(itemData.unitPrice);
+    const discount = Number(itemData.discountAmount ?? 0);
+    if (qty <= 0) throw httpError(400, '数量は正の数である必要があります');
+    if (unitPrice < 0) throw httpError(400, '単価は0以上である必要があります');
+    if (discount < 0) throw httpError(400, '割引額は0以上である必要があります');
+    if (discount > unitPrice * qty) {
+      throw httpError(400, '割引額は品目合計金額を超えることはできません');
+    }
+
+    const createdItem = await prisma.quoteItem.create({
+      data: {
+        quoteId,
+        ...itemData,
+        sortOrder: itemData.sortOrder ?? sortOrder++,
       },
     });
+    results.push(createdItem as PrismaQuoteItem);
+  }
 
-    if (!quote) {
-      throw new NotFoundError('見積書が見つかりません');
-    }
-
-    // 既存品目を全削除
-    await tx.quoteItem.deleteMany({
-      where: { quoteId },
-    });
-
-    // 新規品目を一括作成
-    if (newItems.length === 0) {
-      return [];
-    }
-
-    const results: PrismaQuoteItem[] = [];
-    let sortOrder = 0;
-
-    for (const itemData of newItems) {
-      // 入力値の整合性チェック（サーバー側の最終防衛線）
-      const qty = Number(itemData.quantity);
-      const unitPrice = Number(itemData.unitPrice);
-      const discount = Number(itemData.discountAmount ?? 0);
-      if (qty <= 0) throw httpError(400, '数量は正の数である必要があります');
-      if (unitPrice < 0)
-        throw httpError(400, '単価は0以上である必要があります');
-      if (discount < 0)
-        throw httpError(400, '割引額は0以上である必要があります');
-      if (discount > unitPrice * qty) {
-        throw httpError(400, '割引額は品目合計金額を超えることはできません');
-      }
-
-      const createdItem = await tx.quoteItem.create({
-        data: {
-          quoteId,
-          ...itemData,
-          sortOrder: itemData.sortOrder ?? sortOrder++,
-        },
-      });
-      results.push(createdItem as PrismaQuoteItem);
-    }
-
-    return results;
-  });
+  return results;
 }
 
 /**
@@ -856,104 +812,80 @@ export async function importQuoteItemsFromCSV(
   csvText: string,
   overwrite = false
 ): Promise<CsvImportResult> {
-  return await getPrisma().$transaction(async (tx) => {
-    // 見積書の存在確認
-    const quote = await tx.quote.findFirst({
-      where: {
-        id: quoteId,
-        companyId,
-        deletedAt: null,
-      },
-    });
-
-    if (!quote) {
-      throw new NotFoundError('見積書が見つかりません');
-    }
-
-    // 上書きモードの場合、既存品目を削除
-    if (overwrite) {
-      await tx.quoteItem.deleteMany({
-        where: { quoteId },
-      });
-    }
-
-    // CSVパース
-    let csvData: Array<Record<string, string>>;
-    try {
-      csvData = parseCSVData(csvText);
-    } catch (error) {
-      return {
-        success: false,
-        imported: 0,
-        errors: [{ row: 0, error: (error as Error).message }],
-      };
-    }
-
-    const errors: Array<{ row: number; error: string }> = [];
-    let imported = 0;
-
-    // データ処理
-    for (let i = 0; i < csvData.length; i++) {
-      const row = csvData[i];
-      const rowNumber = i + 2; // ヘッダー行分を考慮
-
-      try {
-        // 必須フィールドチェック
-        if (!row.description) {
-          throw new Error('品目名は必須です');
-        }
-        if (!row.quantity || isNaN(Number(row.quantity))) {
-          throw new Error('数量は数値である必要があります');
-        }
-        if (!row.unitPrice || isNaN(Number(row.unitPrice))) {
-          throw new Error('単価は数値である必要があります');
-        }
-
-        // 品目作成
-        // taxCategory を安全に解決
-        const validTaxCategories: readonly TaxCategory[] = [
-          'STANDARD',
-          'REDUCED',
-          'EXEMPT',
-          'NON_TAX',
-        ] as const;
-        const value = row.taxCategory?.toUpperCase();
-        const taxCategory: TaxCategory = validTaxCategories.includes(
-          value as TaxCategory
-        )
-          ? (value as TaxCategory)
-          : 'STANDARD';
-
-        await tx.quoteItem.create({
-          data: {
-            quoteId,
-            description: row.description,
-            quantity: Number(row.quantity),
-            unitPrice: Number(row.unitPrice),
-            taxCategory,
-            taxRate: row.taxRate ? Number(row.taxRate) : undefined,
-            discountAmount: row.discountAmount ? Number(row.discountAmount) : 0,
-            unit: row.unit || undefined,
-            sku: row.sku || undefined,
-            sortOrder: (i + 1) * 10,
-          },
-        });
-
-        imported++;
-      } catch (error) {
-        errors.push({
-          row: rowNumber,
-          error: (error as Error).message,
-        });
-      }
-    }
-
-    return {
-      success: errors.length === 0,
-      imported,
-      errors,
-    };
+  const prisma = getPrisma();
+  // 見積書の存在確認
+  const quote = await prisma.quote.findFirst({
+    where: { id: quoteId, companyId, deletedAt: null },
   });
+  if (!quote) {
+    throw new NotFoundError('見積書が見つかりません');
+  }
+
+  // 上書きモードの場合、既存品目を削除
+  if (overwrite) {
+    await prisma.quoteItem.deleteMany({ where: { quoteId } });
+  }
+
+  // CSVパース
+  let csvData: Array<Record<string, string>>;
+  try {
+    csvData = parseCSVData(csvText);
+  } catch (error) {
+    return {
+      success: false,
+      imported: 0,
+      errors: [{ row: 0, error: (error as Error).message }],
+    };
+  }
+
+  const errors: Array<{ row: number; error: string }> = [];
+  let imported = 0;
+
+  for (let i = 0; i < csvData.length; i++) {
+    const row = csvData[i];
+    const rowNumber = i + 2; // ヘッダー行分を考慮
+    try {
+      if (!row.description) throw new Error('品目名は必須です');
+      if (!row.quantity || isNaN(Number(row.quantity)))
+        throw new Error('数量は数値である必要があります');
+      if (!row.unitPrice || isNaN(Number(row.unitPrice)))
+        throw new Error('単価は数値である必要があります');
+
+      const validTaxCategories: readonly TaxCategory[] = [
+        'STANDARD',
+        'REDUCED',
+        'EXEMPT',
+        'NON_TAX',
+      ] as const;
+      const value = row.taxCategory?.toUpperCase();
+      const taxCategory: TaxCategory = validTaxCategories.includes(
+        value as TaxCategory
+      )
+        ? (value as TaxCategory)
+        : 'STANDARD';
+
+      await prisma.quoteItem.create({
+        data: {
+          quoteId,
+          description: row.description,
+          quantity: Number(row.quantity),
+          unitPrice: Number(row.unitPrice),
+          taxCategory,
+          taxRate: row.taxRate ? Number(row.taxRate) : undefined,
+          discountAmount: row.discountAmount ? Number(row.discountAmount) : 0,
+          unit: row.unit || undefined,
+          sku: row.sku || undefined,
+          sortOrder: (i + 1) * 10,
+        },
+      });
+
+      imported++;
+    } catch (error) {
+      errors.push({ row: rowNumber, error: (error as Error).message });
+    }
+  }
+
+  return { success: errors.length === 0, imported, errors };
 }
 
 /**

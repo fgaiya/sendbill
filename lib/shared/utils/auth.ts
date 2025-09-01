@@ -114,9 +114,72 @@ function createAuthResponse(user: { id: string } | null) {
  * 開発環境では自動ユーザー作成、本番環境ではWebhook前提
  */
 export async function requireAuth() {
-  const isDevelopment = process.env.NODE_ENV === 'development';
-  const user = await getOrCreateUser(isDevelopment);
-  return createAuthResponse(user);
+  try {
+    // 1) Clerk セッション確認
+    const { userId: clerkId } = await auth();
+    if (!clerkId) {
+      return {
+        error: apiErrors.unauthorized(),
+        status: 401,
+        user: null,
+      };
+    }
+
+    // 2) DBユーザー取得
+    const prisma = getPrisma();
+    let user = await prisma.user.findUnique({ where: { clerkId } });
+
+    // 3) 未プロビジョニング時の扱い（AUTH_AUTO_PROVISION フラグ or dev で救済）
+    const allowAutoProvision =
+      process.env.AUTH_AUTO_PROVISION === 'true' ||
+      process.env.NODE_ENV === 'development';
+
+    if (!user) {
+      if (!allowAutoProvision) {
+        // ログイン済みだがDBユーザーが存在しない
+        return {
+          error: apiErrors.forbidden(),
+          status: 403,
+          user: null,
+        };
+      }
+
+      // Lazy Create（救済）
+      const clerkUser = await currentUser();
+      const email = clerkUser?.primaryEmailAddress?.emailAddress;
+      if (!email) {
+        return { error: apiErrors.internal(), status: 500, user: null };
+      }
+
+      try {
+        user = await prisma.user.create({
+          data: {
+            clerkId,
+            email,
+          },
+        });
+      } catch (error: unknown) {
+        if (
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === 'P2002'
+        ) {
+          // 同時作成の競合 → 取得に切替
+          user = await prisma.user.findUnique({ where: { clerkId } });
+        } else {
+          throw error;
+        }
+      }
+
+      if (!user) {
+        return { error: apiErrors.internal(), status: 500, user: null };
+      }
+    }
+
+    return { error: null, status: 200, user };
+  } catch (error) {
+    console.error('requireAuth error:', error);
+    return { error: apiErrors.internal(), status: 500, user: null };
+  }
 }
 
 /**
