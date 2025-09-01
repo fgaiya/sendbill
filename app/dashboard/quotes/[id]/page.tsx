@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 
 import { QuoteDetail } from '@/components/domains/quotes/QuoteDetail';
 import { convertPrismaQuoteToQuote } from '@/lib/domains/quotes/types';
-import { prisma } from '@/lib/shared/prisma';
+import { getPrisma } from '@/lib/shared/prisma';
 import { requireUserCompany } from '@/lib/shared/utils/auth';
 
 interface QuoteDetailPageProps {
@@ -29,7 +29,7 @@ export default async function QuoteDetailPage({
     notFound();
   }
 
-  const quote = await prisma.quote.findFirst({
+  const quote = await getPrisma().quote.findFirst({
     where: {
       id,
       companyId: company.id,

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { Webhook } from 'svix';
 
-import { prisma } from '@/lib/shared/prisma';
+import { getPrisma } from '@/lib/shared/prisma';
 
 // Clerkウェブフックイベントの型定義
 interface ClerkWebhookEvent {
@@ -102,31 +102,29 @@ async function handleUserCreated(data: ClerkUserData) {
       return;
     }
 
-    // トランザクション内でUser作成とCompany作成を同時実行
-    await prisma.$transaction(async (tx) => {
-      // upsertを使用して冪等性を確保
-      const user = await tx.user.upsert({
-        where: { clerkId: data.id },
-        update: { email: primaryEmail },
-        create: {
-          clerkId: data.id,
-          email: primaryEmail,
-        },
-      });
+    // Cloudflare Workers + Accelerate ではコールバック形式の$transactionは非対応のため
+    // 個別の upsert を順次実行して冪等に作成/更新する
+    const prisma = getPrisma();
 
-      // 既存のCompanyがない場合のみ作成
-      await tx.company.upsert({
-        where: { userId: user.id },
-        update: {},
-        create: {
-          userId: user.id,
-          companyName: `${primaryEmail}の会社`, // デフォルト名
-        },
-      });
-      console.log('Company ensured (created or existed):', data.id);
+    const user = await prisma.user.upsert({
+      where: { clerkId: data.id },
+      update: { email: primaryEmail },
+      create: {
+        clerkId: data.id,
+        email: primaryEmail,
+      },
     });
 
-    console.log('User and Company created successfully:', data.id);
+    await prisma.company.upsert({
+      where: { userId: user.id },
+      update: {},
+      create: {
+        userId: user.id,
+        companyName: `${primaryEmail}の会社`, // デフォルト名
+      },
+    });
+
+    console.log('User and Company ensured successfully:', data.id);
   } catch (error) {
     console.error('Failed to create user and company:', error);
     throw error;
@@ -146,7 +144,7 @@ async function handleUserUpdated(data: ClerkUserData) {
     }
 
     // upsertを使用してユーザーが存在しない場合も対応
-    await prisma.user.upsert({
+    await getPrisma().user.upsert({
       where: { clerkId: data.id },
       update: { email: primaryEmail },
       create: {
@@ -166,12 +164,12 @@ async function handleUserUpdated(data: ClerkUserData) {
 async function handleUserDeleted(data: ClerkUserData) {
   try {
     // 冪等性を確保するため、存在チェック後削除
-    const existingUser = await prisma.user.findUnique({
+    const existingUser = await getPrisma().user.findUnique({
       where: { clerkId: data.id },
     });
 
     if (existingUser) {
-      await prisma.user.delete({
+      await getPrisma().user.delete({
         where: { clerkId: data.id },
       });
       console.log('User deleted successfully:', data.id);

@@ -3,7 +3,7 @@ import {
   Quote as PrismaQuote,
   QuoteItem as PrismaQuoteItem,
   Client as PrismaClientModel,
-} from '@prisma/client';
+} from '@prisma/client/edge';
 
 export type QuoteStatus = PrismaQuoteStatus;
 

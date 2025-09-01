@@ -3,10 +3,10 @@ import {
   InvoiceStatus,
   QuoteStatus,
   type InvoiceItem as PrismaInvoiceItem,
-} from '@prisma/client';
+} from '@prisma/client/edge';
 
 import { httpError } from '@/lib/shared/forms';
-import { prisma } from '@/lib/shared/prisma';
+import { getPrisma } from '@/lib/shared/prisma';
 import { ConflictError, NotFoundError } from '@/lib/shared/utils/errors';
 
 import {
@@ -46,7 +46,7 @@ export async function createInvoice(
   data: InvoiceData
 ): Promise<InvoiceWithRelations> {
   // クライアントの存在確認
-  const client = await prisma.client.findFirst({
+  const client = await getPrisma().client.findFirst({
     where: {
       id: data.clientId,
       companyId,
@@ -60,7 +60,7 @@ export async function createInvoice(
 
   // 見積書からの作成時は見積書の存在確認
   if (data.quoteId) {
-    const quote = await prisma.quote.findFirst({
+    const quote = await getPrisma().quote.findFirst({
       where: {
         id: data.quoteId,
         companyId,
@@ -77,7 +77,7 @@ export async function createInvoice(
   const draftNumber = `DRAFT-${Date.now()}-${Math.random()
     .toString(36)
     .slice(2, 8)}`;
-  const invoice = await prisma.invoice.create({
+  const invoice = await getPrisma().invoice.create({
     data: {
       companyId,
       clientId: data.clientId,
@@ -115,45 +115,30 @@ export async function createInvoiceFromQuote(
   quoteId: string,
   data: CreateInvoiceFromQuoteData
 ): Promise<CreateInvoiceFromQuoteResult> {
-  return await prisma.$transaction(async (tx) => {
-    // 見積書の存在確認と品目取得
-    const quote = await tx.quote.findFirst({
-      where: {
-        id: quoteId,
-        companyId,
-        deletedAt: null,
-      },
-      include: {
-        items: {
-          orderBy: { sortOrder: 'asc' },
-        },
-      },
-    });
+  const prisma = getPrisma();
+  // 見積書の存在確認と品目取得
+  const quote = await prisma.quote.findFirst({
+    where: { id: quoteId, companyId, deletedAt: null },
+    include: { items: { orderBy: { sortOrder: 'asc' } } },
+  });
 
-    if (!quote) {
-      throw new NotFoundError('指定された見積書が見つかりません');
-    }
+  if (!quote) throw new NotFoundError('指定された見積書が見つかりません');
+  if (quote.items.length === 0) {
+    throw httpError(400, '見積書に品目が登録されていません');
+  }
 
-    if (quote.items.length === 0) {
-      throw httpError(400, '見積書に品目が登録されていません');
-    }
+  const sourceItems = data.selectedItemIds
+    ? quote.items.filter((item) => data.selectedItemIds!.includes(item.id))
+    : quote.items;
+  if (sourceItems.length === 0) {
+    throw httpError(400, '複製する品目が選択されていません');
+  }
 
-    // 複製対象品目の決定
-    const sourceItems = data.selectedItemIds
-      ? quote.items.filter((item) => data.selectedItemIds!.includes(item.id))
-      : quote.items;
+  const draftNumber = `DRAFT-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
-    if (sourceItems.length === 0) {
-      throw httpError(400, '複製する品目が選択されていません');
-    }
-
-    // 請求書番号の仮採番
-    const draftNumber = `DRAFT-${Date.now()}-${Math.random()
-      .toString(36)
-      .slice(2, 8)}`;
-
-    // 請求書を作成
-    const invoice = await tx.invoice.create({
+  let invoice: { id: string } | null = null;
+  try {
+    invoice = await prisma.invoice.create({
       data: {
         companyId,
         clientId: quote.clientId,
@@ -164,26 +149,11 @@ export async function createInvoiceFromQuote(
         notes: data.notes,
         status: 'DRAFT',
       },
-      include: {
-        client: true,
-        items: {
-          orderBy: { sortOrder: 'asc' },
-        },
-        quote: {
-          select: {
-            id: true,
-            quoteNumber: true,
-            issueDate: true,
-            status: true,
-          },
-        },
-      },
     });
 
-    // 品目を複製
     for (let i = 0; i < sourceItems.length; i++) {
       const sourceItem = sourceItems[i];
-      await tx.invoiceItem.create({
+      await prisma.invoiceItem.create({
         data: {
           invoiceId: invoice.id,
           description: sourceItem.description,
@@ -198,36 +168,32 @@ export async function createInvoiceFromQuote(
         },
       });
     }
-
-    // 最新の請求書情報を取得（品目含む）
-    const createdInvoice = await tx.invoice.findUnique({
-      where: { id: invoice.id },
-      include: {
-        client: true,
-        items: {
-          orderBy: { sortOrder: 'asc' },
-        },
-        quote: {
-          select: {
-            id: true,
-            quoteNumber: true,
-            issueDate: true,
-            status: true,
-          },
-        },
-      },
-    });
-
-    if (!createdInvoice) {
-      throw new NotFoundError('作成した請求書が見つかりません');
+  } catch (e) {
+    if (invoice?.id) {
+      try {
+        await prisma.invoice.delete({ where: { id: invoice.id } });
+      } catch (_) {}
     }
+    throw e;
+  }
 
-    return {
-      invoice: createdInvoice as InvoiceWithRelations,
-      duplicatedItemsCount: sourceItems.length,
-      totalItemsCount: quote.items.length,
-    };
+  const createdInvoice = await prisma.invoice.findUnique({
+    where: { id: invoice.id },
+    include: {
+      client: true,
+      items: { orderBy: { sortOrder: 'asc' } },
+      quote: {
+        select: { id: true, quoteNumber: true, issueDate: true, status: true },
+      },
+    },
   });
+  if (!createdInvoice)
+    throw new NotFoundError('作成した請求書が見つかりません');
+  return {
+    invoice: createdInvoice as InvoiceWithRelations,
+    duplicatedItemsCount: sourceItems.length,
+    totalItemsCount: quote.items.length,
+  };
 }
 
 /**
@@ -239,7 +205,7 @@ export async function updateInvoice(
   data: InvoiceUpdateData
 ): Promise<InvoiceWithRelations> {
   // 請求書の存在確認
-  const existingInvoice = await prisma.invoice.findFirst({
+  const existingInvoice = await getPrisma().invoice.findFirst({
     where: {
       id: invoiceId,
       companyId,
@@ -253,7 +219,7 @@ export async function updateInvoice(
 
   // クライアントが変更される場合は存在確認
   if (data.clientId && data.clientId !== existingInvoice.clientId) {
-    const client = await prisma.client.findFirst({
+    const client = await getPrisma().client.findFirst({
       where: {
         id: data.clientId,
         companyId,
@@ -268,7 +234,7 @@ export async function updateInvoice(
 
   // 楽観ロック: updatedAt 一致条件
   const { updatedAt, ...updateData } = data;
-  const result = await prisma.invoice.updateMany({
+  const result = await getPrisma().invoice.updateMany({
     where: {
       id: invoiceId,
       companyId,
@@ -284,7 +250,7 @@ export async function updateInvoice(
     );
   }
 
-  const updatedInvoice = await prisma.invoice.findUnique({
+  const updatedInvoice = await getPrisma().invoice.findUnique({
     where: { id: invoiceId },
     include: {
       client: true,
@@ -318,110 +284,78 @@ export async function updateInvoiceStatus(
   newStatus: InvoiceStatus,
   paymentDate?: Date
 ): Promise<InvoiceWithRelations> {
-  return await prisma.$transaction(async (tx) => {
-    // 請求書の存在確認
-    const existingInvoice = await tx.invoice.findFirst({
-      where: {
-        id: invoiceId,
-        companyId,
-        deletedAt: null,
-      },
-      include: {
-        items: true,
-      },
-    });
-
-    if (!existingInvoice) {
-      throw new NotFoundError('請求書が見つかりません');
-    }
-
-    // ステータス遷移の妥当性チェック
-    if (!isValidStatusTransition(existingInvoice.status, newStatus)) {
-      throw httpError(400, '無効なステータス遷移です');
-    }
-
-    // 品目が必要な遷移の場合のチェック
-    if (requiresItemsForTransition(existingInvoice.status, newStatus)) {
-      if (!existingInvoice.items || existingInvoice.items.length === 0) {
-        throw httpError(400, 'ステータス変更には品目の登録が必要です');
-      }
-
-      // 品目の妥当性チェック
-      for (let i = 0; i < existingInvoice.items.length; i++) {
-        const item = existingInvoice.items[i];
-        const qty = Number(item.quantity);
-        const price = Number(item.unitPrice);
-        const discount = Number(item.discountAmount);
-
-        if (qty <= 0) {
-          throw new Error(`品目${i + 1}行目: 数量は正の数である必要があります`);
-        }
-        if (price < 0) {
-          throw new Error(`品目${i + 1}行目: 単価は0以上である必要があります`);
-        }
-        if (discount > price * qty) {
-          throw new Error(
-            `品目${i + 1}行目: 割引額が品目合計金額を超えています`
-          );
-        }
-      }
-    }
-
-    // 支払日が必要な遷移の場合のチェック
-    if (newStatus === 'PAID' && !paymentDate) {
-      throw httpError(400, '支払済みステータスには支払日が必要です');
-    }
-
-    const updateData: {
-      status: InvoiceStatus;
-      invoiceNumber?: string;
-      paymentDate?: Date | null;
-    } = {
-      status: newStatus,
-      paymentDate: newStatus === 'PAID' ? paymentDate || new Date() : null,
-    };
-
-    // 番号生成が必要な場合
-    if (
-      requiresNumberGenerationForTransition(existingInvoice.status, newStatus)
-    ) {
-      // 会社情報取得とシーケンス更新
-      const company = await tx.company.update({
-        where: { id: companyId },
-        data: {
-          invoiceNumberSeq: {
-            increment: 1,
-          },
-        },
-      });
-
-      // 請求書番号生成
-      const invoiceNumber = generateInvoiceNumber(company.invoiceNumberSeq);
-      updateData.invoiceNumber = invoiceNumber;
-    }
-
-    // 請求書更新
-    const updatedInvoice = await tx.invoice.update({
-      where: { id: invoiceId },
-      data: updateData,
-      include: {
-        client: true,
-        items: {
-          orderBy: { sortOrder: 'asc' },
-        },
-        quote: {
-          select: {
-            id: true,
-            quoteNumber: true,
-            issueDate: true,
-            status: true,
-          },
-        },
-      },
-    });
-
-    return updatedInvoice as InvoiceWithRelations;
+  const prisma = getPrisma();
+  // 請求書の存在確認
+  const existingInvoice = await prisma.invoice.findFirst({
+    where: { id: invoiceId, companyId, deletedAt: null },
+    include: { items: true },
   });
+
+  if (!existingInvoice) {
+    throw new NotFoundError('請求書が見つかりません');
+  }
+
+  // ステータス遷移の妥当性チェック
+  if (!isValidStatusTransition(existingInvoice.status, newStatus)) {
+    throw httpError(400, '無効なステータス遷移です');
+  }
+
+  // 品目が必要な遷移の場合のチェック
+  if (requiresItemsForTransition(existingInvoice.status, newStatus)) {
+    if (!existingInvoice.items || existingInvoice.items.length === 0) {
+      throw httpError(400, 'ステータス変更には品目の登録が必要です');
+    }
+
+    for (let i = 0; i < existingInvoice.items.length; i++) {
+      const item = existingInvoice.items[i];
+      const qty = Number(item.quantity);
+      const price = Number(item.unitPrice);
+      const discount = Number(item.discountAmount);
+      if (qty <= 0)
+        throw new Error(`品目${i + 1}行目: 数量は正の数である必要があります`);
+      if (price < 0)
+        throw new Error(`品目${i + 1}行目: 単価は0以上である必要があります`);
+      if (discount > price * qty)
+        throw new Error(`品目${i + 1}行目: 割引額が品目合計金額を超えています`);
+    }
+  }
+
+  if (newStatus === 'PAID' && !paymentDate) {
+    throw httpError(400, '支払済みステータスには支払日が必要です');
+  }
+
+  const updateData: {
+    status: InvoiceStatus;
+    invoiceNumber?: string;
+    paymentDate?: Date | null;
+  } = {
+    status: newStatus,
+    paymentDate: newStatus === 'PAID' ? paymentDate || new Date() : null,
+  };
+
+  if (
+    requiresNumberGenerationForTransition(existingInvoice.status, newStatus)
+  ) {
+    const company = await prisma.company.update({
+      where: { id: companyId },
+      data: { invoiceNumberSeq: { increment: 1 } },
+    });
+    updateData.invoiceNumber = generateInvoiceNumber(company.invoiceNumberSeq);
+  }
+
+  const updatedInvoice = await prisma.invoice.update({
+    where: { id: invoiceId },
+    data: updateData,
+    include: {
+      client: true,
+      items: { orderBy: { sortOrder: 'asc' } },
+      quote: {
+        select: { id: true, quoteNumber: true, issueDate: true, status: true },
+      },
+    },
+  });
+
+  return updatedInvoice as InvoiceWithRelations;
 }
 
 /**
@@ -433,7 +367,7 @@ export async function updatePaymentInfo(
   data: UpdatePaymentData
 ): Promise<InvoiceWithRelations> {
   // 請求書の存在確認
-  const existingInvoice = await prisma.invoice.findFirst({
+  const existingInvoice = await getPrisma().invoice.findFirst({
     where: {
       id: invoiceId,
       companyId,
@@ -455,7 +389,7 @@ export async function updatePaymentInfo(
     throw httpError(400, '支払済みステータスには支払日が必要です');
   }
 
-  const updatedInvoice = await prisma.invoice.update({
+  const updatedInvoice = await getPrisma().invoice.update({
     where: { id: invoiceId },
     data: {
       status: data.status,
@@ -489,7 +423,7 @@ export async function updateOverdueInvoices(
   const today = new Date();
   today.setHours(0, 0, 0, 0); // 時刻を0時に設定
 
-  const result = await prisma.invoice.updateMany({
+  const result = await getPrisma().invoice.updateMany({
     where: {
       companyId,
       status: 'SENT',
@@ -514,7 +448,7 @@ export async function deleteInvoice(
   invoiceId: string,
   companyId: string
 ): Promise<void> {
-  const existingInvoice = await prisma.invoice.findFirst({
+  const existingInvoice = await getPrisma().invoice.findFirst({
     where: {
       id: invoiceId,
       companyId,
@@ -526,7 +460,7 @@ export async function deleteInvoice(
     throw new NotFoundError('請求書が見つかりません');
   }
 
-  await prisma.invoice.update({
+  await getPrisma().invoice.update({
     where: { id: invoiceId },
     data: { deletedAt: new Date() },
   });
@@ -549,14 +483,14 @@ export async function getInvoices(
   };
 
   const [invoices, total] = await Promise.all([
-    prisma.invoice.findMany({
+    getPrisma().invoice.findMany({
       where: secureWhere,
       orderBy,
       include,
       skip: pagination.skip,
       take: pagination.take,
     }),
-    prisma.invoice.count({ where: secureWhere }),
+    getPrisma().invoice.count({ where: secureWhere }),
   ]);
 
   return { invoices: invoices as InvoiceWithRelations[], total };
@@ -570,7 +504,7 @@ export async function getInvoice(
   companyId: string,
   include: InvoiceIncludeConfig = {}
 ): Promise<InvoiceWithRelations | null> {
-  const invoice = await prisma.invoice.findFirst({
+  const invoice = await getPrisma().invoice.findFirst({
     where: {
       id: invoiceId,
       companyId,
@@ -591,7 +525,7 @@ export async function createInvoiceItem(
   data: InvoiceItemData
 ): Promise<PrismaInvoiceItem> {
   // 請求書の存在確認
-  const invoice = await prisma.invoice.findFirst({
+  const invoice = await getPrisma().invoice.findFirst({
     where: {
       id: invoiceId,
       companyId,
@@ -610,7 +544,7 @@ export async function createInvoiceItem(
     sortOrder = next;
   }
 
-  const item = await prisma.invoiceItem.create({
+  const item = await getPrisma().invoiceItem.create({
     data: {
       invoiceId,
       ...data,
@@ -631,7 +565,7 @@ export async function updateInvoiceItem(
   data: InvoiceItemUpdateData
 ): Promise<PrismaInvoiceItem> {
   // 品目の存在確認
-  const existingItem = await prisma.invoiceItem.findFirst({
+  const existingItem = await getPrisma().invoiceItem.findFirst({
     where: {
       id: itemId,
       invoice: {
@@ -677,7 +611,7 @@ export async function updateInvoiceItem(
 
   // 楽観ロック: updatedAt 一致条件
   const { updatedAt, ...updateData } = data;
-  const result = await prisma.invoiceItem.updateMany({
+  const result = await getPrisma().invoiceItem.updateMany({
     where: {
       id: itemId,
       invoiceId,
@@ -691,7 +625,9 @@ export async function updateInvoiceItem(
       '更新競合が発生しました。最新の状態を取得してから再試行してください。'
     );
   }
-  const item = await prisma.invoiceItem.findUnique({ where: { id: itemId } });
+  const item = await getPrisma().invoiceItem.findUnique({
+    where: { id: itemId },
+  });
   if (!item) throw new NotFoundError('品目が見つかりません');
 
   return item as PrismaInvoiceItem;
@@ -705,7 +641,7 @@ export async function deleteInvoiceItem(
   invoiceId: string,
   companyId: string
 ): Promise<void> {
-  const existingItem = await prisma.invoiceItem.findFirst({
+  const existingItem = await getPrisma().invoiceItem.findFirst({
     where: {
       id: itemId,
       invoice: {
@@ -720,7 +656,7 @@ export async function deleteInvoiceItem(
     throw new NotFoundError('品目が見つかりません');
   }
 
-  const deleteResult = await prisma.invoiceItem.deleteMany({
+  const deleteResult = await getPrisma().invoiceItem.deleteMany({
     where: {
       id: itemId,
       invoice: {
@@ -743,7 +679,7 @@ export async function getInvoiceItems(
   invoiceId: string,
   companyId: string
 ): Promise<PrismaInvoiceItem[]> {
-  const items = await prisma.invoiceItem.findMany({
+  const items = await getPrisma().invoiceItem.findMany({
     where: {
       invoice: {
         id: invoiceId,
@@ -765,7 +701,7 @@ export async function getInvoiceItem(
   invoiceId: string,
   companyId: string
 ): Promise<PrismaInvoiceItem | null> {
-  const item = await prisma.invoiceItem.findFirst({
+  const item = await getPrisma().invoiceItem.findFirst({
     where: {
       id: itemId,
       invoice: {
@@ -787,74 +723,48 @@ export async function reorderInvoiceItems(
   companyId: string,
   data: ReorderInvoiceItemsData
 ): Promise<PrismaInvoiceItem[]> {
-  return await prisma.$transaction(async (tx) => {
-    // 請求書の存在確認
-    const invoice = await tx.invoice.findFirst({
-      where: {
-        id: invoiceId,
-        companyId,
-        deletedAt: null,
-      },
-    });
-
-    if (!invoice) {
-      throw new NotFoundError('請求書が見つかりません');
-    }
-
-    // 並び順を正規化
-    const normalizedItems = normalizeSortOrder(data.items);
-
-    // 一括更新（楽観ロック対応）
-    const updateResults: { itemId: string; success: boolean }[] = [];
-
-    for (const item of normalizedItems) {
-      const originalItem = data.items.find((i) => i.id === item.id);
-      if (!originalItem) {
-        throw new Error(`品目ID ${item.id} の元データが見つかりません`);
-      }
-
-      const result = await tx.invoiceItem.updateMany({
-        where: {
-          id: item.id,
-          invoiceId,
-          invoice: { companyId, deletedAt: null },
-          updatedAt: originalItem.updatedAt,
-        },
-        data: {
-          sortOrder: item.sortOrder,
-        },
-      });
-
-      updateResults.push({
-        itemId: item.id,
-        success: result.count > 0,
-      });
-    }
-
-    // 失敗した更新があるかチェック
-    const failedUpdates = updateResults.filter((r) => !r.success);
-    if (failedUpdates.length > 0) {
-      throw new ConflictError(
-        `並び順更新で競合が発生しました。対象品目ID: ${failedUpdates
-          .map((f) => f.itemId)
-          .join(', ')}。最新の状態を取得してから再試行してください。`
-      );
-    }
-
-    // 更新後の品目一覧を取得
-    const updatedItems = await tx.invoiceItem.findMany({
-      where: {
-        invoice: {
-          id: invoiceId,
-          companyId,
-          deletedAt: null,
-        },
-      },
-      orderBy: { sortOrder: 'asc' },
-    });
-
-    return updatedItems as PrismaInvoiceItem[];
+  const prisma = getPrisma();
+  // 請求書の存在確認
+  const invoice = await prisma.invoice.findFirst({
+    where: { id: invoiceId, companyId, deletedAt: null },
   });
+  if (!invoice) {
+    throw new NotFoundError('請求書が見つかりません');
+  }
+
+  const normalizedItems = normalizeSortOrder(data.items);
+  const updateResults: { itemId: string; success: boolean }[] = [];
+  for (const item of normalizedItems) {
+    const originalItem = data.items.find((i) => i.id === item.id);
+    if (!originalItem)
+      throw new Error(`品目ID ${item.id} の元データが見つかりません`);
+
+    const result = await prisma.invoiceItem.updateMany({
+      where: {
+        id: item.id,
+        invoiceId,
+        invoice: { companyId, deletedAt: null },
+        updatedAt: originalItem.updatedAt,
+      },
+      data: { sortOrder: item.sortOrder },
+    });
+    updateResults.push({ itemId: item.id, success: result.count > 0 });
+  }
+
+  const failedUpdates = updateResults.filter((r) => !r.success);
+  if (failedUpdates.length > 0) {
+    throw new ConflictError(
+      `並び順更新で競合が発生しました。対象品目ID: ${failedUpdates
+        .map((f) => f.itemId)
+        .join(', ')}。最新の状態を取得してから再試行してください。`
+    );
+  }
+
+  const updatedItems = await prisma.invoiceItem.findMany({
+    where: { invoice: { id: invoiceId, companyId, deletedAt: null } },
+    orderBy: { sortOrder: 'asc' },
+  });
+  return updatedItems as PrismaInvoiceItem[];
 }
 
 /**
@@ -866,7 +776,7 @@ export async function calculateInvoiceTax(
 ): Promise<TaxCalculationResult> {
   // 請求書と会社情報を取得
   const [invoice, company] = await Promise.all([
-    prisma.invoice.findFirst({
+    getPrisma().invoice.findFirst({
       where: {
         id: invoiceId,
         companyId,
@@ -876,7 +786,7 @@ export async function calculateInvoiceTax(
         items: true,
       },
     }),
-    prisma.company.findUnique({
+    getPrisma().company.findUnique({
       where: { id: companyId },
       select: {
         standardTaxRate: true,
@@ -916,7 +826,7 @@ export async function calculateInvoiceTax(
  * 次の並び順を取得
  */
 async function getNextSortOrder(invoiceId: string): Promise<number> {
-  const lastItem = await prisma.invoiceItem.findFirst({
+  const lastItem = await getPrisma().invoiceItem.findFirst({
     where: { invoiceId },
     orderBy: { sortOrder: 'desc' },
     select: { sortOrder: true },
@@ -935,41 +845,32 @@ export async function duplicateInvoice(
   companyId: string,
   sourceInvoiceId: string
 ): Promise<InvoiceWithRelations> {
-  return await prisma.$transaction(async (tx) => {
-    // 元の請求書取得
-    const source = await tx.invoice.findFirst({
-      where: { id: sourceInvoiceId, companyId, deletedAt: null },
-      include: {
-        items: { orderBy: { sortOrder: 'asc' } },
-      },
-    });
-    if (!source) {
-      throw new NotFoundError('請求書が見つかりません');
-    }
+  const prisma = getPrisma();
+  // 元の請求書取得
+  const source = await prisma.invoice.findFirst({
+    where: { id: sourceInvoiceId, companyId, deletedAt: null },
+    include: { items: { orderBy: { sortOrder: 'asc' } } },
+  });
+  if (!source) throw new NotFoundError('請求書が見つかりません');
 
-    // 仮番号
-    const draftNumber = `DRAFT-${Date.now()}-${Math.random()
-      .toString(36)
-      .slice(2, 8)}`;
-
-    const today = new Date();
-    // 新しい請求書作成（quoteIdの引き継ぎはしない：純粋な複製として）
-    const created = await tx.invoice.create({
+  const draftNumber = `DRAFT-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const today = new Date();
+  let created: { id: string } | null = null;
+  try {
+    created = await prisma.invoice.create({
       data: {
         companyId,
         clientId: source.clientId,
         invoiceNumber: draftNumber,
         issueDate: today,
-        // 期日は要件未定のため未設定、備考はそのまま
         dueDate: source.dueDate ?? undefined,
         notes: source.notes ?? undefined,
         status: 'DRAFT',
       },
     });
 
-    // 品目複製
     for (const item of source.items ?? []) {
-      await tx.invoiceItem.create({
+      await prisma.invoiceItem.create({
         data: {
           invoiceId: created.id,
           description: item.description,
@@ -984,25 +885,27 @@ export async function duplicateInvoice(
         },
       });
     }
+  } catch (e) {
+    if (created?.id) {
+      try {
+        await prisma.invoice.delete({ where: { id: created.id } });
+      } catch (_) {}
+    }
+    throw e;
+  }
 
-    const duplicated = await tx.invoice.findUnique({
-      where: { id: created.id },
-      include: {
-        client: true,
-        items: { orderBy: { sortOrder: 'asc' } },
-        quote: {
-          select: {
-            id: true,
-            quoteNumber: true,
-            issueDate: true,
-            status: true,
-          },
-        },
+  const duplicated = await prisma.invoice.findUnique({
+    where: { id: created.id },
+    include: {
+      client: true,
+      items: { orderBy: { sortOrder: 'asc' } },
+      quote: {
+        select: { id: true, quoteNumber: true, issueDate: true, status: true },
       },
-    });
-    if (!duplicated) throw new NotFoundError('複製後の請求書が見つかりません');
-    return duplicated as InvoiceWithRelations;
+    },
   });
+  if (!duplicated) throw new NotFoundError('複製後の請求書が見つかりません');
+  return duplicated as InvoiceWithRelations;
 }
 
 /**
@@ -1013,184 +916,141 @@ export async function bulkProcessInvoiceItems(
   companyId: string,
   bulkData: BulkInvoiceItemsData
 ): Promise<PrismaInvoiceItem[]> {
-  return await prisma.$transaction(async (tx) => {
-    // 請求書の存在確認
-    const invoice = await tx.invoice.findFirst({
-      where: {
-        id: invoiceId,
-        companyId,
-        deletedAt: null,
-      },
-    });
+  const prisma = getPrisma();
+  // 請求書の存在確認
+  const invoice = await prisma.invoice.findFirst({
+    where: { id: invoiceId, companyId, deletedAt: null },
+  });
+  if (!invoice) throw new NotFoundError('請求書が見つかりません');
 
-    if (!invoice) {
-      throw new NotFoundError('請求書が見つかりません');
-    }
+  const results: PrismaInvoiceItem[] = [];
+  const last = await prisma.invoiceItem.findFirst({
+    where: { invoiceId },
+    orderBy: { sortOrder: 'desc' },
+    select: { sortOrder: true },
+  });
+  let nextSortOrder = (last?.sortOrder ?? -1) + 1;
 
-    const results: PrismaInvoiceItem[] = [];
-    // 新規作成品目の既存最大 sortOrder を起点に採番（安定した順序のため）
-    const last = await tx.invoiceItem.findFirst({
-      where: { invoiceId },
-      orderBy: { sortOrder: 'desc' },
-      select: { sortOrder: true },
-    });
-    let nextSortOrder = (last?.sortOrder ?? -1) + 1;
+  for (const item of bulkData.items) {
+    switch (item.action) {
+      case 'create': {
+        const qty = Number(item.data.quantity);
+        const unitPrice = Number(item.data.unitPrice);
+        const discount = Number(item.data.discountAmount ?? 0);
+        if (qty <= 0) throw httpError(400, '数量は正の数である必要があります');
+        if (unitPrice < 0)
+          throw httpError(400, '単価は0以上である必要があります');
+        if (discount < 0)
+          throw httpError(400, '割引額は0以上である必要があります');
+        if (discount > unitPrice * qty)
+          throw httpError(400, '割引額は品目合計金額を超えることはできません');
 
-    for (const item of bulkData.items) {
-      switch (item.action) {
-        case 'create': {
-          // 入力値の整合性チェック（サーバー側の最終防衛線）
-          const qty = Number(item.data.quantity);
-          const unitPrice = Number(item.data.unitPrice);
-          const discount = Number(item.data.discountAmount ?? 0);
-          if (qty <= 0)
-            throw httpError(400, '数量は正の数である必要があります');
-          if (unitPrice < 0)
-            throw httpError(400, '単価は0以上である必要があります');
-          if (discount < 0)
-            throw httpError(400, '割引額は0以上である必要があります');
-          if (discount > unitPrice * qty) {
-            throw httpError(
-              400,
-              '割引額は品目合計金額を超えることはできません'
-            );
-          }
-
-          const createdItem = await tx.invoiceItem.create({
-            data: {
-              invoiceId,
-              ...item.data,
-              // 指定がなければ末尾に連番で付与（複数 create の順序が安定）
-              sortOrder: item.data.sortOrder ?? nextSortOrder++,
-            },
-          });
-          results.push(createdItem as PrismaInvoiceItem);
-          break;
-        }
-
-        case 'update': {
-          // 楽観ロック: updatedAt 一致条件
-          const { updatedAt, ...updateData } = item.data;
-
-          // 既存値を取得して整合性検証
-          const existing = await tx.invoiceItem.findFirst({
-            where: {
-              id: item.id,
-              invoiceId,
-              invoice: { companyId, deletedAt: null },
-            },
-          });
-          if (!existing) {
-            throw new NotFoundError('品目が見つかりません');
-          }
-
-          const effectiveQuantity =
-            updateData.quantity !== undefined
-              ? Number(updateData.quantity)
-              : Number(existing.quantity);
-          const effectiveUnitPrice =
-            updateData.unitPrice !== undefined
-              ? Number(updateData.unitPrice)
-              : Number(existing.unitPrice);
-          const effectiveDiscount =
-            updateData.discountAmount !== undefined
-              ? Number(updateData.discountAmount)
-              : Number(existing.discountAmount);
-
-          if (effectiveQuantity <= 0) {
-            throw httpError(400, '数量は正の数である必要があります');
-          }
-          if (effectiveUnitPrice < 0) {
-            throw httpError(400, '単価は0以上である必要があります');
-          }
-          if (effectiveDiscount < 0) {
-            throw httpError(400, '割引額は0以上である必要があります');
-          }
-          if (effectiveDiscount > effectiveUnitPrice * effectiveQuantity) {
-            throw httpError(
-              400,
-              '割引額は品目合計金額を超えることはできません'
-            );
-          }
-
-          const result = await tx.invoiceItem.updateMany({
-            where: {
-              id: item.id,
-              invoiceId,
-              invoice: { companyId, deletedAt: null },
-              updatedAt,
-            },
-            data: updateData,
-          });
-          if (result.count === 0) {
-            throw new Error(
-              '更新競合が発生しました。最新の状態を取得してから再試行してください。'
-            );
-          }
-          const updatedItem = await tx.invoiceItem.findUnique({
-            where: { id: item.id },
-          });
-          results.push(updatedItem as PrismaInvoiceItem);
-          break;
-        }
-
-        case 'delete': {
-          const deleteResult = await tx.invoiceItem.deleteMany({
-            where: {
-              id: item.id,
-              invoice: {
-                id: invoiceId,
-                companyId,
-                deletedAt: null,
-              },
-            },
-          });
-
-          if (deleteResult.count === 0) {
-            throw new NotFoundError(
-              `削除対象品目が見つかりません (ID: ${item.id})`
-            );
-          }
-          break;
-        }
+        const createdItem = await prisma.invoiceItem.create({
+          data: {
+            invoiceId,
+            ...item.data,
+            sortOrder: item.data.sortOrder ?? nextSortOrder++,
+          },
+        });
+        results.push(createdItem as PrismaInvoiceItem);
+        break;
       }
-    }
-
-    // ソート順を正規化
-    const allItems = await tx.invoiceItem.findMany({
-      where: { invoiceId },
-      orderBy: { sortOrder: 'asc' },
-    });
-
-    const currentMap = new Map(allItems.map((it) => [it.id, it.sortOrder]));
-    const normalizedItems = normalizeSortOrder(
-      allItems.map((item) => ({ id: item.id, sortOrder: item.sortOrder }))
-    );
-    for (const item of normalizedItems) {
-      const prev = currentMap.get(item.id);
-      if (prev !== item.sortOrder) {
-        const updateResult = await tx.invoiceItem.updateMany({
+      case 'update': {
+        const { updatedAt, ...updateData } = item.data;
+        const existing = await prisma.invoiceItem.findFirst({
           where: {
             id: item.id,
-            invoice: {
-              id: invoiceId,
-              companyId,
-              deletedAt: null,
-            },
+            invoiceId,
+            invoice: { companyId, deletedAt: null },
           },
-          data: { sortOrder: item.sortOrder },
         });
+        if (!existing) throw new NotFoundError('品目が見つかりません');
 
-        if (updateResult.count === 0) {
-          throw new NotFoundError(
-            `ソート順更新対象品目が見つかりません (ID: ${item.id})`
+        const effectiveQuantity =
+          updateData.quantity !== undefined
+            ? Number(updateData.quantity)
+            : Number(existing.quantity);
+        const effectiveUnitPrice =
+          updateData.unitPrice !== undefined
+            ? Number(updateData.unitPrice)
+            : Number(existing.unitPrice);
+        const effectiveDiscount =
+          updateData.discountAmount !== undefined
+            ? Number(updateData.discountAmount)
+            : Number(existing.discountAmount);
+        if (effectiveQuantity <= 0)
+          throw httpError(400, '数量は正の数である必要があります');
+        if (effectiveUnitPrice < 0)
+          throw httpError(400, '単価は0以上である必要があります');
+        if (effectiveDiscount < 0)
+          throw httpError(400, '割引額は0以上である必要があります');
+        if (effectiveDiscount > effectiveUnitPrice * effectiveQuantity)
+          throw httpError(400, '割引額は品目合計金額を超えることはできません');
+
+        const result = await prisma.invoiceItem.updateMany({
+          where: {
+            id: item.id,
+            invoiceId,
+            invoice: { companyId, deletedAt: null },
+            updatedAt,
+          },
+          data: updateData,
+        });
+        if (result.count === 0) {
+          throw new Error(
+            '更新競合が発生しました。最新の状態を取得してから再試行してください。'
           );
         }
+        const updatedItem = await prisma.invoiceItem.findUnique({
+          where: { id: item.id },
+        });
+        results.push(updatedItem as PrismaInvoiceItem);
+        break;
+      }
+      case 'delete': {
+        const deleteResult = await prisma.invoiceItem.deleteMany({
+          where: {
+            id: item.id,
+            invoice: { id: invoiceId, companyId, deletedAt: null },
+          },
+        });
+        if (deleteResult.count === 0) {
+          throw new NotFoundError(
+            `削除対象品目が見つかりません (ID: ${item.id})`
+          );
+        }
+        break;
       }
     }
+  }
 
-    return results;
+  const allItems = await prisma.invoiceItem.findMany({
+    where: { invoiceId },
+    orderBy: { sortOrder: 'asc' },
   });
+  const currentMap = new Map(allItems.map((it) => [it.id, it.sortOrder]));
+  const normalizedItems = normalizeSortOrder(
+    allItems.map((item) => ({ id: item.id, sortOrder: item.sortOrder }))
+  );
+  for (const item of normalizedItems) {
+    const prev = currentMap.get(item.id);
+    if (prev !== item.sortOrder) {
+      const updateResult = await prisma.invoiceItem.updateMany({
+        where: {
+          id: item.id,
+          invoice: { id: invoiceId, companyId, deletedAt: null },
+        },
+        data: { sortOrder: item.sortOrder },
+      });
+      if (updateResult.count === 0) {
+        throw new NotFoundError(
+          `ソート順更新対象品目が見つかりません (ID: ${item.id})`
+        );
+      }
+    }
+  }
+
+  return results;
 }
 
 /**
@@ -1211,59 +1071,43 @@ export async function replaceAllInvoiceItems(
     sortOrder?: number;
   }>
 ): Promise<PrismaInvoiceItem[]> {
-  return await prisma.$transaction(async (tx) => {
-    // 請求書の存在確認
-    const invoice = await tx.invoice.findFirst({
-      where: {
-        id: invoiceId,
-        companyId,
-        deletedAt: null,
+  const prisma = getPrisma();
+  // 請求書の存在確認
+  const invoice = await prisma.invoice.findFirst({
+    where: { id: invoiceId, companyId, deletedAt: null },
+  });
+  if (!invoice) throw new NotFoundError('請求書が見つかりません');
+
+  await prisma.invoiceItem.deleteMany({ where: { invoiceId } });
+
+  if (newItems.length === 0) {
+    return [];
+  }
+
+  const results: PrismaInvoiceItem[] = [];
+  let sortOrder = 0;
+  for (const itemData of newItems) {
+    const qty = Number(itemData.quantity);
+    const unitPrice = Number(itemData.unitPrice);
+    const discount = Number(itemData.discountAmount ?? 0);
+    if (qty <= 0) throw httpError(400, '数量は正の数である必要があります');
+    if (unitPrice < 0) throw httpError(400, '単価は0以上である必要があります');
+    if (discount < 0) throw httpError(400, '割引額は0以上である必要があります');
+    if (discount > unitPrice * qty) {
+      throw httpError(400, '割引額は品目合計金額を超えることはできません');
+    }
+
+    const createdItem = await prisma.invoiceItem.create({
+      data: {
+        invoiceId,
+        ...itemData,
+        sortOrder: itemData.sortOrder ?? sortOrder++,
       },
     });
+    results.push(createdItem as PrismaInvoiceItem);
+  }
 
-    if (!invoice) {
-      throw new NotFoundError('請求書が見つかりません');
-    }
-
-    // 既存品目を全削除
-    await tx.invoiceItem.deleteMany({
-      where: { invoiceId },
-    });
-
-    // 新規品目を一括作成
-    if (newItems.length === 0) {
-      return [];
-    }
-
-    const results: PrismaInvoiceItem[] = [];
-    let sortOrder = 0;
-
-    for (const itemData of newItems) {
-      // 入力値の整合性チェック（サーバー側の最終防衛線）
-      const qty = Number(itemData.quantity);
-      const unitPrice = Number(itemData.unitPrice);
-      const discount = Number(itemData.discountAmount ?? 0);
-      if (qty <= 0) throw httpError(400, '数量は正の数である必要があります');
-      if (unitPrice < 0)
-        throw httpError(400, '単価は0以上である必要があります');
-      if (discount < 0)
-        throw httpError(400, '割引額は0以上である必要があります');
-      if (discount > unitPrice * qty) {
-        throw httpError(400, '割引額は品目合計金額を超えることはできません');
-      }
-
-      const createdItem = await tx.invoiceItem.create({
-        data: {
-          invoiceId,
-          ...itemData,
-          sortOrder: itemData.sortOrder ?? sortOrder++,
-        },
-      });
-      results.push(createdItem as PrismaInvoiceItem);
-    }
-
-    return results;
-  });
+  return results;
 }
 
 /**
@@ -1275,164 +1119,163 @@ export async function createInvoiceFromQuoteWithHistory(
   userId: string,
   data: CreateInvoiceFromQuoteData
 ): Promise<CreateInvoiceFromQuoteResult> {
-  return await prisma.$transaction(async (tx) => {
-    let quote: Prisma.QuoteGetPayload<{
+  const prisma = getPrisma();
+  let quote: Prisma.QuoteGetPayload<{
+    include: {
+      items: true;
+      client: true;
+    };
+  }> | null = null;
+
+  try {
+    // 1. 見積書の存在確認と詳細取得
+    quote = await prisma.quote.findFirst({
+      where: {
+        id: quoteId,
+        companyId,
+        deletedAt: null,
+      },
       include: {
-        items: true;
-        client: true;
-      };
-    }> | null = null;
-
-    try {
-      // 1. 見積書の存在確認と詳細取得
-      quote = await tx.quote.findFirst({
-        where: {
-          id: quoteId,
-          companyId,
-          deletedAt: null,
+        items: {
+          orderBy: { sortOrder: 'asc' },
         },
-        include: {
-          items: {
-            orderBy: { sortOrder: 'asc' },
+        client: true,
+      },
+    });
+
+    if (!quote) {
+      throw new NotFoundError('指定された見積書が見つかりません');
+    }
+
+    if (quote.items.length === 0) {
+      throw httpError(400, '見積書に品目が登録されていません');
+    }
+
+    // 2. 複製対象品目の決定
+    const sourceItems = data.selectedItemIds
+      ? quote.items.filter((item) => data.selectedItemIds!.includes(item.id))
+      : quote.items;
+
+    if (sourceItems.length === 0) {
+      throw httpError(400, '複製する品目が選択されていません');
+    }
+
+    // 3. 請求書番号の仮採番
+    const draftNumber = `DRAFT-${Date.now()}-${Math.random()
+      .toString(36)
+      .slice(2, 8)}`;
+
+    // 4. 請求書を作成
+    const invoice = await prisma.invoice.create({
+      data: {
+        companyId,
+        clientId: quote.clientId,
+        quoteId: quote.id,
+        invoiceNumber: draftNumber,
+        issueDate: data.issueDate,
+        dueDate: data.dueDate,
+        notes: data.notes,
+        status: 'DRAFT',
+      },
+      include: {
+        client: true,
+        items: {
+          orderBy: { sortOrder: 'asc' },
+        },
+        quote: {
+          select: {
+            id: true,
+            quoteNumber: true,
+            issueDate: true,
+            status: true,
           },
-          client: true,
         },
-      });
+      },
+    });
 
-      if (!quote) {
-        throw new NotFoundError('指定された見積書が見つかりません');
-      }
-
-      if (quote.items.length === 0) {
-        throw httpError(400, '見積書に品目が登録されていません');
-      }
-
-      // 2. 複製対象品目の決定
-      const sourceItems = data.selectedItemIds
-        ? quote.items.filter((item) => data.selectedItemIds!.includes(item.id))
-        : quote.items;
-
-      if (sourceItems.length === 0) {
-        throw httpError(400, '複製する品目が選択されていません');
-      }
-
-      // 3. 請求書番号の仮採番
-      const draftNumber = `DRAFT-${Date.now()}-${Math.random()
-        .toString(36)
-        .slice(2, 8)}`;
-
-      // 4. 請求書を作成
-      const invoice = await tx.invoice.create({
+    // 5. 品目を複製
+    for (let i = 0; i < sourceItems.length; i++) {
+      const sourceItem = sourceItems[i];
+      await prisma.invoiceItem.create({
         data: {
-          companyId,
-          clientId: quote.clientId,
-          quoteId: quote.id,
-          invoiceNumber: draftNumber,
-          issueDate: data.issueDate,
-          dueDate: data.dueDate,
-          notes: data.notes,
-          status: 'DRAFT',
-        },
-        include: {
-          client: true,
-          items: {
-            orderBy: { sortOrder: 'asc' },
-          },
-          quote: {
-            select: {
-              id: true,
-              quoteNumber: true,
-              issueDate: true,
-              status: true,
-            },
-          },
+          invoiceId: invoice.id,
+          description: sourceItem.description,
+          quantity: sourceItem.quantity,
+          unitPrice: sourceItem.unitPrice,
+          taxCategory: sourceItem.taxCategory,
+          taxRate: sourceItem.taxRate,
+          discountAmount: sourceItem.discountAmount,
+          unit: sourceItem.unit,
+          sku: sourceItem.sku,
+          sortOrder: i,
         },
       });
+    }
 
-      // 5. 品目を複製
-      for (let i = 0; i < sourceItems.length; i++) {
-        const sourceItem = sourceItems[i];
-        await tx.invoiceItem.create({
-          data: {
-            invoiceId: invoice.id,
-            description: sourceItem.description,
-            quantity: sourceItem.quantity,
-            unitPrice: sourceItem.unitPrice,
-            taxCategory: sourceItem.taxCategory,
-            taxRate: sourceItem.taxRate,
-            discountAmount: sourceItem.discountAmount,
-            unit: sourceItem.unit,
-            sku: sourceItem.sku,
-            sortOrder: i,
-          },
-        });
-      }
-
-      // 6. 最新の請求書情報を取得（品目含む）
-      const createdInvoice = await tx.invoice.findUnique({
-        where: { id: invoice.id },
-        include: {
-          client: true,
-          items: {
-            orderBy: { sortOrder: 'asc' },
-          },
-          quote: {
-            select: {
-              id: true,
-              quoteNumber: true,
-              issueDate: true,
-              status: true,
-            },
+    // 6. 最新の請求書情報を取得（品目含む）
+    const createdInvoice = await prisma.invoice.findUnique({
+      where: { id: invoice.id },
+      include: {
+        client: true,
+        items: {
+          orderBy: { sortOrder: 'asc' },
+        },
+        quote: {
+          select: {
+            id: true,
+            quoteNumber: true,
+            issueDate: true,
+            status: true,
           },
         },
-      });
+      },
+    });
 
-      if (!createdInvoice) {
-        throw new NotFoundError('作成した請求書が見つかりません');
-      }
+    if (!createdInvoice) {
+      throw new NotFoundError('作成した請求書が見つかりません');
+    }
 
-      // 7. 見積書ステータスをINVOICEDに更新
-      await tx.quote.update({
-        where: { id: quoteId },
-        data: {
-          status: QuoteStatus.INVOICED,
-          updatedAt: new Date(),
-        },
-      });
+    // 7. 見積書ステータスをINVOICEDに更新
+    await prisma.quote.update({
+      where: { id: quoteId },
+      data: {
+        status: QuoteStatus.INVOICED,
+        updatedAt: new Date(),
+      },
+    });
 
-      // 8. 変換履歴を記録（成功時）
-      await tx.conversionLog.create({
-        data: {
-          quoteId,
-          invoiceId: createdInvoice.id,
-          userId,
-          companyId,
-          quoteSnapshot: quote,
-          selectedItemIds: data.selectedItemIds || [],
-          issueDate: data.issueDate,
-          dueDate: data.dueDate,
-          notes: data.notes,
-        },
-      });
-
-      return {
-        invoice: createdInvoice as InvoiceWithRelations,
-        duplicatedItemsCount: sourceItems.length,
-        totalItemsCount: quote.items.length,
-      };
-    } catch (error) {
-      // エラー情報をコンソールに記録（デバッグ用）
-      console.error('Conversion failed for quote:', quoteId, {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined,
-        data,
+    // 8. 変換履歴を記録（成功時）
+    await prisma.conversionLog.create({
+      data: {
+        quoteId,
+        invoiceId: createdInvoice.id,
         userId,
         companyId,
-        quoteFound: !!quote,
-      });
+        quoteSnapshot: quote,
+        selectedItemIds: data.selectedItemIds || [],
+        issueDate: data.issueDate,
+        dueDate: data.dueDate,
+        notes: data.notes,
+      },
+    });
 
-      // 元のエラーを再スロー（トランザクションはロールバックされる）
-      throw error;
-    }
-  });
+    return {
+      invoice: createdInvoice as InvoiceWithRelations,
+      duplicatedItemsCount: sourceItems.length,
+      totalItemsCount: quote.items.length,
+    };
+  } catch (error) {
+    // エラー情報をコンソールに記録（デバッグ用）
+    console.error('Conversion failed for quote:', quoteId, {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      data,
+      userId,
+      companyId,
+      quoteFound: !!quote,
+    });
+
+    // 部分作成があった場合の補償は呼び出し側で個別対応（本関数ではログのみ）
+    throw error;
+  }
 }

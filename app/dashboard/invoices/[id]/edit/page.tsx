@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 
 import { InvoiceEdit } from '@/components/domains/invoices/InvoiceEdit';
 import { convertPrismaInvoiceToInvoice } from '@/lib/domains/invoices/types';
-import { prisma } from '@/lib/shared/prisma';
+import { getPrisma } from '@/lib/shared/prisma';
 import { requireUserCompany } from '@/lib/shared/utils/auth';
 
 interface InvoiceEditPageProps {
@@ -20,7 +20,7 @@ export default async function InvoiceEditPage({
   }
 
   // 請求書を取得
-  const invoice = await prisma.invoice.findFirst({
+  const invoice = await getPrisma().invoice.findFirst({
     where: {
       id,
       companyId: company.id,

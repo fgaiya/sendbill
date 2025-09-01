@@ -9,13 +9,13 @@ import {
   buildOrderBy,
 } from '@/lib/domains/clients/utils';
 import { apiErrors } from '@/lib/shared/forms';
-import { prisma } from '@/lib/shared/prisma';
+import { getPrisma } from '@/lib/shared/prisma';
 import { requireUserCompany } from '@/lib/shared/utils/auth';
 import { createResourceWithAutoUser } from '@/lib/shared/utils/crud';
 
 export async function POST(request: NextRequest) {
   return createResourceWithAutoUser(request, {
-    model: prisma.client,
+    model: getPrisma().client,
     schemas: clientSchemas,
     resourceName: '取引先',
   });
@@ -62,14 +62,14 @@ export async function GET(request: NextRequest) {
 
     // データ取得とカウント（並列実行）
     const [clients, total] = await Promise.all([
-      prisma.client.findMany({
+      getPrisma().client.findMany({
         where,
         orderBy,
         skip: (page - 1) * limit,
         take: limit,
         include: includeRelations,
       }),
-      prisma.client.count({ where }),
+      getPrisma().client.count({ where }),
     ]);
 
     const totalPages = Math.ceil(total / limit);

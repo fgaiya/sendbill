@@ -1,4 +1,4 @@
-import { Prisma, QuoteStatus } from '@prisma/client';
+import { Prisma, QuoteStatus } from '@prisma/client/edge';
 import Papa from 'papaparse';
 
 import type {

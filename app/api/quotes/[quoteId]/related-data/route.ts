@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { handleApiError, commonValidationSchemas } from '@/lib/shared/forms';
-import { prisma } from '@/lib/shared/prisma';
+import { getPrisma } from '@/lib/shared/prisma';
 import { requireUserCompany } from '@/lib/shared/utils/auth';
 
 interface RouteContext {
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     }
 
     // 見積書の存在確認
-    const quote = await prisma.quote.findFirst({
+    const quote = await getPrisma().quote.findFirst({
       where: {
         id: quoteId,
         companyId: company.id,
@@ -43,7 +43,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     }
 
     // 関連する請求書を確認
-    const relatedInvoices = await prisma.invoice.findMany({
+    const relatedInvoices = await getPrisma().invoice.findMany({
       where: {
         quoteId: quoteId,
         companyId: company.id,
@@ -58,7 +58,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     });
 
     // 関連する変換履歴を確認
-    const conversionLogs = await prisma.conversionLog.findMany({
+    const conversionLogs = await getPrisma().conversionLog.findMany({
       where: {
         quoteId: quoteId,
         companyId: company.id,

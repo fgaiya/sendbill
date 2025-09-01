@@ -20,6 +20,7 @@ const eslintConfig = [
       '**/playwright-report/**',
       '**/test-results/**',
       '**/.next/**',
+      '**/.open-next/**',
       '**/out/**',
       '**/build/**',
       '**/.DS_Store',
@@ -85,6 +86,7 @@ const eslintConfig = [
         {
           argsIgnorePattern: '^_',
           varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
         },
       ],
     },
