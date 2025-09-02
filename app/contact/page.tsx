@@ -2,13 +2,6 @@
 
 import { useState } from 'react';
 
-import { Metadata } from 'next';
-
-export const metadata: Metadata = {
-  title: 'お問い合わせ | SendBill',
-  description: 'SendBillに関するご質問・ご要望はこちらからお問い合わせください',
-};
-
 export default function ContactPage() {
   const [formData, setFormData] = useState({
     name: '',
