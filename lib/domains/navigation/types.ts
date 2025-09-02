@@ -49,9 +49,11 @@ export type SidebarContextType = SidebarState;
 
 // アイコン名の型定義
 export type IconName =
+  | 'Home'
   | 'LayoutDashboard'
   | 'FileText'
   | 'Users'
+  | 'Building'
   | 'Receipt'
   | 'Settings'
   | 'LogOut';
@@ -63,6 +65,7 @@ export interface SidebarMenuConfig {
   iconName: IconName;
   requireAuth: boolean;
   isActive?: (pathname: string) => boolean;
+  isLogout?: boolean;
 }
 
 // サイドバーメニュー項目の型
@@ -72,6 +75,7 @@ export interface SidebarMenuItem {
   icon: React.ComponentType<{ className?: string }>;
   requireAuth: boolean;
   isActive?: (pathname: string) => boolean;
+  isLogout?: boolean;
 }
 
 // サイドバーコンポーネントのプロパティ型

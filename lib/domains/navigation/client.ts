@@ -4,9 +4,11 @@ export * from './utils';
 
 // lucide-reactアイコンマッピング
 import {
+  Home,
   LayoutDashboard,
   FileText,
   Users,
+  Building,
   Receipt,
   Settings,
   LogOut,
@@ -20,9 +22,11 @@ const ICON_MAP: Record<
   IconName,
   React.ComponentType<{ className?: string }>
 > = {
+  Home,
   LayoutDashboard,
   FileText,
   Users,
+  Building,
   Receipt,
   Settings,
   LogOut,

@@ -60,12 +60,7 @@ export default function Header() {
           {/* デスクトップ認証エリア */}
           <div className="hidden md:flex md:items-center md:space-x-4">
             {isSignedIn ? (
-              <>
-                <Link href="/dashboard" className={BUTTON_CLASSES.SECONDARY}>
-                  ダッシュボード
-                </Link>
-                <UserButton />
-              </>
+              <UserButton />
             ) : (
               <>
                 <Link href="/sign-in" className={BUTTON_CLASSES.SECONDARY}>

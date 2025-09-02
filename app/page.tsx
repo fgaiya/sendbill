@@ -48,12 +48,12 @@ export default async function Home() {
 
         {userId && (
           <div className="mt-16 text-center">
-            <div className="bg-green-50 border border-green-200 rounded-lg p-6 max-w-2xl mx-auto">
-              <h3 className="text-lg font-semibold text-green-800 mb-2">
-                認証システム動作確認
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 max-w-2xl mx-auto">
+              <h3 className="text-lg font-semibold text-blue-800 mb-3">
+                おかえりなさい！
               </h3>
-              <p className="text-green-700">
-                Clerk SDKが正常に動作し、ユーザー認証が完了しています。
+              <p className="text-blue-700 text-sm">
+                今日も請求書管理を効率的に進めましょう
               </p>
             </div>
           </div>

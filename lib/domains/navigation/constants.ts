@@ -39,7 +39,7 @@ export const SIDEBAR_MENU_CONFIG: SidebarMenuConfig[] = [
   {
     href: '/',
     label: 'ホーム',
-    iconName: 'LayoutDashboard',
+    iconName: 'Home',
     requireAuth: false,
     isActive: (pathname: string) => pathname === '/',
   },
@@ -58,27 +58,28 @@ export const SIDEBAR_MENU_CONFIG: SidebarMenuConfig[] = [
     isActive: (pathname: string) => pathname.startsWith('/dashboard/clients'),
   },
   {
+    href: '/dashboard/company',
+    label: '会社設定',
+    iconName: 'Building',
+    requireAuth: true,
+    isActive: (pathname: string) => pathname.startsWith('/dashboard/company'),
+  },
+  {
     href: '/dashboard/documents',
     label: '帳票管理',
     iconName: 'FileText',
     requireAuth: true,
     isActive: (pathname: string) => pathname.startsWith('/dashboard/documents'),
   },
-  {
-    href: '/dashboard/settings',
-    label: '設定',
-    iconName: 'Settings',
-    requireAuth: true,
-    isActive: (pathname: string) => pathname.startsWith('/dashboard/settings'),
-  },
 ] as const;
 
 // サイドバーアクション項目定義（アイコンなし）
 export const SIDEBAR_ACTION_CONFIG: SidebarMenuConfig[] = [
   {
-    href: '/api/auth/logout',
+    href: '#logout',
     label: 'ログアウト',
     iconName: 'LogOut',
     requireAuth: true,
+    isLogout: true,
   },
 ] as const;
