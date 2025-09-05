@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+import { logUsage } from '@/lib/domains/billing/logger';
+import { checkAndConsume } from '@/lib/domains/billing/metering';
 import {
   invoiceSchemas,
   paginationSchema,
@@ -33,8 +35,43 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = invoiceSchemas.create.parse(body);
 
+    // 使用量ガード: 請求書（帳票）作成 = 月次カウント（検証後に実行）
+    const guard = await checkAndConsume(company.id, 'DOCUMENT_CREATE', 1);
+    if (!guard.allowed) {
+      const plan: 'FREE' | 'PRO' = company.plan === 'PRO' ? 'PRO' : 'FREE';
+      logUsage(company.id, 'DOCUMENT_CREATE', plan, guard, 'block');
+      const errHeaders: Record<string, string> = {};
+      if (guard.usage) {
+        errHeaders['X-Usage-Used'] = String(guard.usage.used);
+        errHeaders['X-Usage-Remaining'] = String(guard.usage.remaining);
+        errHeaders['X-Usage-Limit'] = String(guard.usage.limit);
+        if (guard.warn) errHeaders['X-Usage-Warn'] = 'true';
+      }
+      return NextResponse.json(
+        {
+          error: 'usage_limit_exceeded',
+          code: guard.blockedReason,
+          usage: guard.usage,
+          upgradeUrl: '/api/billing/checkout',
+        },
+        { status: 402, headers: errHeaders }
+      );
+    }
+
     const invoice = await createInvoice(company.id, validatedData);
     const publicInvoice = convertPrismaInvoiceToInvoice(invoice);
+
+    const headers: Record<string, string> = {};
+    if (guard.usage) {
+      headers['X-Usage-Used'] = String(guard.usage.used);
+      headers['X-Usage-Remaining'] = String(guard.usage.remaining);
+      headers['X-Usage-Limit'] = String(guard.usage.limit);
+      if (guard.warn) headers['X-Usage-Warn'] = 'true';
+    }
+    {
+      const plan: 'FREE' | 'PRO' = company.plan === 'PRO' ? 'PRO' : 'FREE';
+      logUsage(company.id, 'DOCUMENT_CREATE', plan, guard, 'consume');
+    }
 
     return NextResponse.json(
       {
@@ -43,7 +80,7 @@ export async function POST(request: NextRequest) {
       },
       {
         status: 201,
-        headers: { Location: `/api/invoices/${publicInvoice.id}` },
+        headers: { Location: `/api/invoices/${publicInvoice.id}`, ...headers },
       }
     );
   } catch (error) {

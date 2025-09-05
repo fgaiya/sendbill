@@ -42,7 +42,7 @@ export function DocumentListView({
     refresh,
   } = actions;
 
-  // Client-side modal state for document details
+  // ドキュメント詳細表示用のクライアントサイドモーダル状態
   const [selectedDocument, setSelectedDocument] = useState<DocumentType | null>(
     null
   );

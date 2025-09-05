@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { z } from 'zod';
 
+import { checkAndConsume } from '@/lib/domains/billing/metering';
 import { invoiceSchemas } from '@/lib/domains/invoices/schemas';
 import { createInvoiceFromQuoteWithHistory } from '@/lib/domains/invoices/service';
 import { convertPrismaInvoiceToInvoice } from '@/lib/domains/invoices/types';
@@ -34,6 +35,20 @@ export async function POST(request: NextRequest, context: RouteContext) {
     // リクエストボディのバリデーション
     const validatedData = invoiceSchemas.createFromQuote.parse(body);
 
+    // 帳票作成としてカウント
+    const guard = await checkAndConsume(company.id, 'DOCUMENT_CREATE', 1);
+    if (!guard.allowed) {
+      return NextResponse.json(
+        {
+          error: 'usage_limit_exceeded',
+          code: guard.blockedReason,
+          usage: guard.usage,
+          upgradeUrl: '/api/billing/checkout',
+        },
+        { status: 402 }
+      );
+    }
+
     // 見積書から請求書を作成（履歴記録付き）
     const result = await createInvoiceFromQuoteWithHistory(
       company.id,
@@ -44,6 +59,14 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
     const publicInvoice = convertPrismaInvoiceToInvoice(result.invoice);
 
+    const headers: Record<string, string> = {};
+    if (guard.usage) {
+      headers['X-Usage-Used'] = String(guard.usage.used);
+      headers['X-Usage-Remaining'] = String(guard.usage.remaining);
+      headers['X-Usage-Limit'] = String(guard.usage.limit);
+      if (guard.warn) headers['X-Usage-Warn'] = 'true';
+    }
+
     return NextResponse.json(
       {
         data: publicInvoice,
@@ -53,7 +76,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       },
       {
         status: 201,
-        headers: { Location: `/api/invoices/${publicInvoice.id}` },
+        headers: { Location: `/api/invoices/${publicInvoice.id}`, ...headers },
       }
     );
   } catch (error) {

@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 
 import { toApiDateString } from '@/lib/shared/utils/date';
 import { omitUndefined } from '@/lib/shared/utils/objects';
+import { emitUsageRefresh } from '@/lib/shared/utils/usage-events';
 
 import { quoteFormWithItemsSchema } from './form-schemas';
 import { type QuoteFormWithItemsData } from './form-schemas';
@@ -208,6 +209,26 @@ export function useQuoteForm(
       }
 
       const responseData = await response.json();
+      // 作成時のみ使用量更新イベント（ヘッダーで即時反映、なければフォールバックで再取得）
+      if (!isEditMode) {
+        const parseNum = (raw: string | null): number | undefined => {
+          if (raw == null) return undefined;
+          const n = Number(raw);
+          return Number.isFinite(n) ? n : undefined;
+        };
+        const parseBool = (raw: string | null): boolean | undefined => {
+          if (raw == null) return undefined;
+          const v = raw.trim().toLowerCase();
+          if (v === 'true' || v === '1') return true;
+          if (v === 'false' || v === '0') return false;
+          return undefined;
+        };
+        const used = parseNum(response.headers.get('X-Usage-Used'));
+        const remaining = parseNum(response.headers.get('X-Usage-Remaining'));
+        const limit = parseNum(response.headers.get('X-Usage-Limit'));
+        const warn = parseBool(response.headers.get('X-Usage-Warn'));
+        emitUsageRefresh({ used, remaining, limit, warn });
+      }
       const savedQuoteId = isEditMode ? quoteId : responseData.data?.id;
       if (!savedQuoteId) {
         throw new Error('見積書IDの取得に失敗しました');
@@ -319,7 +340,7 @@ export function useQuoteForm(
   };
 }
 
-// Quote List Hook Types
+// 見積書一覧フックの型定義
 export interface QuoteListParams {
   page?: number;
   limit?: number;
@@ -560,7 +581,7 @@ export function useQuoteList(
   };
 }
 
-// Quote Delete Hook Types
+// 見積書削除フックの型定義
 export interface UseQuoteDeleteState {
   isDeleting: boolean;
   deleteError?: string;
@@ -622,7 +643,7 @@ export function useQuoteDelete(): UseQuoteDeleteReturn {
   };
 }
 
-// Quote Status Change Hook
+// 見積書ステータス変更フック
 export function useQuoteStatusChange() {
   const [isUpdating, setIsUpdating] = useState(false);
   const [statusError, setStatusError] = useState<string>();

@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 
+import { useRouter } from 'next/navigation';
+
 import { BaseForm } from '@/components/ui/BaseForm';
 import type { CompanyForCalculation } from '@/lib/domains/quotes/calculations';
 import { DEFAULT_COMPANY } from '@/lib/domains/quotes/calculations';
@@ -13,6 +15,13 @@ import { QuotePreviewModal } from './QuotePreviewModal';
 
 export function QuoteForm() {
   const { form, state, actions } = useQuoteForm();
+  const router = useRouter();
+  const [isActionAllowed, setIsActionAllowed] = useState<boolean | undefined>(
+    undefined
+  );
+  const [blockMessage, setBlockMessage] = useState<string | undefined>(
+    undefined
+  );
   const [company, setCompany] = useState<CompanyForCalculation | null>(null);
   const [isLoadingCompany, setIsLoadingCompany] = useState(true);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
@@ -25,7 +34,7 @@ export function QuoteForm() {
   } = form;
 
   const { isSubmitting, submitError } = state;
-  const { onSubmit, onReset } = actions;
+  const { onReset } = actions;
 
   // フォームデータを監視してリアルタイム更新
   const watchedValues = watch();
@@ -82,6 +91,35 @@ export function QuoteForm() {
     fetchCompany();
   }, []);
 
+  // 帳票作成の事前チェック（上限超過時にフォーム無効化）
+  useEffect(() => {
+    const controller = new AbortController();
+    const check = async () => {
+      try {
+        const res = await fetch(
+          '/api/billing/usage/check?action=document_create',
+          { signal: controller.signal }
+        );
+        if (!res.ok) throw new Error('使用量の確認に失敗しました');
+        const json = await res.json();
+        const allowed = Boolean(json?.allowed);
+        setIsActionAllowed(allowed);
+        if (!allowed) {
+          setBlockMessage(
+            '今月の作成上限に達しました。アップグレードをご検討ください。'
+          );
+        } else {
+          setBlockMessage(undefined);
+        }
+      } catch (_e) {
+        // ネットワーク/一時失敗時は無効化せず進める
+        setIsActionAllowed(true);
+      }
+    };
+    void check();
+    return () => controller.abort();
+  }, []);
+
   // キーボードショートカット（Cmd/Ctrl + P）でプレビューを開く
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -101,14 +139,24 @@ export function QuoteForm() {
         <BaseForm
           title="見積書作成"
           description="新しい見積書を作成してください"
-          onSubmit={onSubmit}
+          onSubmit={async () => {
+            const saved = await actions.submitAndGet();
+            if (saved) {
+              router.push('/dashboard/documents');
+            }
+          }}
           onReset={onReset}
           isSubmitting={isSubmitting}
-          isValid={isValid}
+          isValid={isValid && (isActionAllowed ?? true)}
           submitError={submitError}
           submitLabel="作成"
           submittingLabel="作成中..."
         >
+          {blockMessage && (
+            <div className="p-3 rounded bg-yellow-50 text-yellow-800 text-sm">
+              {blockMessage}（ヘッダー右上の「アップグレード」からCheckoutへ）
+            </div>
+          )}
           <QuoteFormFields
             control={control}
             errors={errors}

@@ -94,7 +94,7 @@ export function useCompanyForm() {
   };
 
   return {
-    // Form state
+    // フォーム状態
     control,
     handleSubmit,
     setValue,
@@ -102,13 +102,13 @@ export function useCompanyForm() {
     isSubmitting,
     isValid,
 
-    // UI state
+    // UI状態
     isLoading,
     submitError,
     submitSuccess,
     existingCompany,
 
-    // Actions
+    // アクション
     onSubmit,
     handleReset,
   };
