@@ -147,22 +147,34 @@ function coerceCounterRecord(raw: unknown): CounterRecord {
     throw new Error('Invalid counter record');
   }
   const r = raw as Record<string, unknown>;
-  const num = (v: unknown): number =>
-    typeof v === 'number' ? v : Number(v ?? 0);
-  const str = (v: unknown): string =>
-    typeof v === 'string' ? v : String(v ?? '');
-  const asPeriod = (v: unknown): Period =>
-    v === 'DAILY' ? 'DAILY' : 'MONTHLY';
-  const asMetric = (v: unknown): Metric =>
-    v === 'PDF_GENERATE' ? 'PDF_GENERATE' : 'DOCUMENT_CREATE';
-  const asPlan = (v: unknown): Plan => (v === 'PRO' ? 'PRO' : 'FREE');
+  const num = (name: string, v: unknown): number => {
+    const n = typeof v === 'number' ? v : Number(v);
+    if (!Number.isFinite(n)) throw new Error(`Invalid ${name}: ${String(v)}`);
+    return n;
+  };
+  const str = (name: string, v: unknown): string => {
+    if (typeof v !== 'string') throw new Error(`Invalid ${name}: ${String(v)}`);
+    return v;
+  };
+  const asPeriod = (v: unknown): Period => {
+    if (v === 'DAILY' || v === 'MONTHLY') return v;
+    throw new Error(`Invalid period: ${String(v)}`);
+  };
+  const asMetric = (v: unknown): Metric => {
+    if (v === 'DOCUMENT_CREATE' || v === 'PDF_GENERATE') return v;
+    throw new Error(`Invalid metric: ${String(v)}`);
+  };
+  const asPlan = (v: unknown): Plan => {
+    if (v === 'PRO' || v === 'FREE') return v;
+    throw new Error(`Invalid planAtThatTime: ${String(v)}`);
+  };
   return {
-    used: num(r.used),
-    limit: num(r.limit),
-    graceLimit: num(r.graceLimit),
-    graceUsed: num(r.graceUsed),
+    used: num('used', r.used),
+    limit: num('limit', r.limit),
+    graceLimit: num('graceLimit', r.graceLimit),
+    graceUsed: num('graceUsed', r.graceUsed),
     period: asPeriod(r.period),
-    periodKey: str(r.periodKey),
+    periodKey: str('periodKey', r.periodKey),
     metric: asMetric(r.metric),
     planAtThatTime: asPlan(r.planAtThatTime),
   };
@@ -197,9 +209,10 @@ export async function checkAndConsume(
   // inc を正の整数に正規化
   const step = Math.max(1, Math.floor(Number(inc)) || 1);
   const period = getPeriodForMetric(metric);
-  const periodKey = getPeriodKey(period);
-  // カウンタが無ければ初期化（自己修復を含む）
-  await getOrInitCounter(companyId, metric, period);
+  const now = new Date();
+  // カウンタ初期化（自己修復を含む）し、返却値のperiodKeyを採用
+  const initial = await getOrInitCounter(companyId, metric, period, now);
+  const periodKey = initial.periodKey;
 
   const prisma = getPrisma();
   // 競合時の再試行（最大3回）

@@ -45,10 +45,17 @@ export async function POST() {
     const json = await res.json();
     if (!res.ok) {
       console.error('Stripe immediate cancel error:', json);
-      return NextResponse.json(
-        { error: 'サブスクのキャンセルに失敗しました' },
-        { status: 500 }
-      );
+      // ローカル即時FREE化（Stripe失敗時もユーザーをブロックしない）
+      await getPrisma().company.updateMany({
+        where: { id: company.id },
+        data: {
+          plan: 'FREE',
+          subscriptionStatus: 'canceled',
+          stripeSubscriptionId: null,
+        },
+      });
+      await adjustCurrentPeriodLimits(company.id);
+      return NextResponse.json({ ok: true, stripeError: true });
     }
 
     // 即時反映（Webhookも流れるが、UX向上のため反映）。冪等に更新。
@@ -64,16 +71,29 @@ export async function POST() {
 
     return NextResponse.json({ ok: true });
   } catch (e) {
+    // タイムアウトやネットワーク障害時もローカル即時FREE化（冪等）
     if (e instanceof Error && e.name === 'AbortError') {
-      return NextResponse.json(
-        { error: 'Stripeへのリクエストがタイムアウトしました' },
-        { status: 504 }
-      );
+      await getPrisma().company.updateMany({
+        where: { id: company.id },
+        data: {
+          plan: 'FREE',
+          subscriptionStatus: 'canceled',
+          stripeSubscriptionId: null,
+        },
+      });
+      await adjustCurrentPeriodLimits(company.id);
+      return NextResponse.json({ ok: true, stripeTimeout: true });
     }
     console.error('Cancel error:', e);
-    return NextResponse.json(
-      { error: 'サブスクのキャンセルに失敗しました' },
-      { status: 500 }
-    );
+    await getPrisma().company.updateMany({
+      where: { id: company.id },
+      data: {
+        plan: 'FREE',
+        subscriptionStatus: 'canceled',
+        stripeSubscriptionId: null,
+      },
+    });
+    await adjustCurrentPeriodLimits(company.id);
+    return NextResponse.json({ ok: true, stripeError: true });
   }
 }

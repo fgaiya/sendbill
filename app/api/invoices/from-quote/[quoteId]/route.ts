@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { z } from 'zod';
 
+import { logUsage } from '@/lib/domains/billing/logger';
 import { checkAndConsume, peekUsage } from '@/lib/domains/billing/metering';
 import { invoiceSchemas } from '@/lib/domains/invoices/schemas';
 import { createInvoiceFromQuoteWithHistory } from '@/lib/domains/invoices/service';
@@ -40,6 +41,15 @@ export async function POST(request: NextRequest, context: RouteContext) {
     {
       const pre = await peekUsage(company.id, 'DOCUMENT_CREATE');
       if (!pre.allowed) {
+        const plan: 'FREE' | 'PRO' = company.plan === 'PRO' ? 'PRO' : 'FREE';
+        logUsage(company.id, 'DOCUMENT_CREATE', plan, pre, 'block');
+        const errHeaders: Record<string, string> = {};
+        if (pre.usage) {
+          errHeaders['X-Usage-Used'] = String(pre.usage.used);
+          errHeaders['X-Usage-Remaining'] = String(pre.usage.remaining);
+          errHeaders['X-Usage-Limit'] = String(pre.usage.limit);
+          if (pre.warn) errHeaders['X-Usage-Warn'] = 'true';
+        }
         return NextResponse.json(
           {
             error: 'usage_limit_exceeded',
@@ -47,7 +57,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
             usage: pre.usage,
             upgradeUrl: '/api/billing/checkout',
           },
-          { status: 402 }
+          { status: 402, headers: errHeaders }
         );
       }
     }
@@ -68,6 +78,15 @@ export async function POST(request: NextRequest, context: RouteContext) {
       try {
         await getPrisma().invoice.delete({ where: { id: publicInvoice.id } });
       } catch {}
+      const plan: 'FREE' | 'PRO' = company.plan === 'PRO' ? 'PRO' : 'FREE';
+      logUsage(company.id, 'DOCUMENT_CREATE', plan, guard, 'block');
+      const errHeaders: Record<string, string> = {};
+      if (guard.usage) {
+        errHeaders['X-Usage-Used'] = String(guard.usage.used);
+        errHeaders['X-Usage-Remaining'] = String(guard.usage.remaining);
+        errHeaders['X-Usage-Limit'] = String(guard.usage.limit);
+        if (guard.warn) errHeaders['X-Usage-Warn'] = 'true';
+      }
       return NextResponse.json(
         {
           error: 'usage_limit_exceeded',
@@ -75,7 +94,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
           usage: guard.usage,
           upgradeUrl: '/api/billing/checkout',
         },
-        { status: 402 }
+        { status: 402, headers: errHeaders }
       );
     }
 
