@@ -30,8 +30,14 @@ export function UpgradeModal({
         if (res.ok) {
           const json = await res.json();
           if (json?.plan === 'PRO' || json?.plan === 'FREE') setPlan(json.plan);
+        } else {
+          console.warn('プラン情報の取得に失敗しました:', res.status);
         }
-      } catch {}
+      } catch (e) {
+        if (e instanceof Error && e.name !== 'AbortError') {
+          console.warn('プラン情報の取得でエラーが発生しました:', e.message);
+        }
+      }
     };
     void load();
     return () => controller.abort();

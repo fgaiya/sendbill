@@ -15,28 +15,22 @@ export async function POST() {
       status: status ?? 403,
     });
 
-  if (!BILLING_FLAGS.STRIPE_ENABLED) {
-    return NextResponse.json(
-      {
-        error:
-          'Stripe未有効です。BILLING_FEATURE_STRIPE=true を設定してください。',
-      },
-      { status: 501 }
-    );
-  }
+  // 購入はフラグで遮断しても、解約は常時許可する（フラグ無効でもDB上はFREE化）
 
   const secret = process.env.STRIPE_SECRET_KEY;
-  if (!secret)
-    return NextResponse.json(
-      { error: '未設定: STRIPE_SECRET_KEY' },
-      { status: 500 }
-    );
   const subId = company.stripeSubscriptionId;
-  if (!subId)
-    return NextResponse.json(
-      { error: 'アクティブなサブスクが見つかりません' },
-      { status: 400 }
-    );
+  if (!BILLING_FLAGS.STRIPE_ENABLED || !secret || !subId) {
+    await getPrisma().company.updateMany({
+      where: { id: company.id },
+      data: {
+        plan: 'FREE',
+        subscriptionStatus: 'canceled',
+        stripeSubscriptionId: null,
+      },
+    });
+    await adjustCurrentPeriodLimits(company.id);
+    return NextResponse.json({ ok: true, localOnly: true });
+  }
 
   try {
     // 即時キャンセル（今すぐFreeへ切替）

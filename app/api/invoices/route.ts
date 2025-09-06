@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { logUsage } from '@/lib/domains/billing/logger';
-import { checkAndConsume } from '@/lib/domains/billing/metering';
+import { checkAndConsume, peekUsage } from '@/lib/domains/billing/metering';
 import {
   invoiceSchemas,
   paginationSchema,
@@ -35,9 +35,43 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = invoiceSchemas.create.parse(body);
 
-    // 使用量ガード: 請求書（帳票）作成 = 月次カウント（検証後に実行）
+    // 事前確認（非原子的な許容量チェック）
+    {
+      const pre = await peekUsage(company.id, 'DOCUMENT_CREATE');
+      if (!pre.allowed) {
+        const plan: 'FREE' | 'PRO' = company.plan === 'PRO' ? 'PRO' : 'FREE';
+        logUsage(company.id, 'DOCUMENT_CREATE', plan, pre, 'block');
+        const errHeaders: Record<string, string> = {};
+        if (pre.usage) {
+          errHeaders['X-Usage-Used'] = String(pre.usage.used);
+          errHeaders['X-Usage-Remaining'] = String(pre.usage.remaining);
+          errHeaders['X-Usage-Limit'] = String(pre.usage.limit);
+          if (pre.warn) errHeaders['X-Usage-Warn'] = 'true';
+        }
+        return NextResponse.json(
+          {
+            error: 'usage_limit_exceeded',
+            code: pre.blockedReason,
+            usage: pre.usage,
+            upgradeUrl: '/api/billing/checkout',
+          },
+          { status: 402, headers: errHeaders }
+        );
+      }
+    }
+
+    const invoice = await createInvoice(company.id, validatedData);
+
+    // 成功後に消費（CAS）。競合で失敗した場合は作成を補償削除
     const guard = await checkAndConsume(company.id, 'DOCUMENT_CREATE', 1);
     if (!guard.allowed) {
+      // 補償削除（作成は取り消し）
+      await updateOverdueInvoices(company.id);
+      try {
+        await (await import('@/lib/shared/prisma'))
+          .getPrisma()
+          .invoice.delete({ where: { id: invoice.id } });
+      } catch {}
       const plan: 'FREE' | 'PRO' = company.plan === 'PRO' ? 'PRO' : 'FREE';
       logUsage(company.id, 'DOCUMENT_CREATE', plan, guard, 'block');
       const errHeaders: Record<string, string> = {};
@@ -57,8 +91,6 @@ export async function POST(request: NextRequest) {
         { status: 402, headers: errHeaders }
       );
     }
-
-    const invoice = await createInvoice(company.id, validatedData);
     const publicInvoice = convertPrismaInvoiceToInvoice(invoice);
 
     const headers: Record<string, string> = {};

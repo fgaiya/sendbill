@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
 
     // 2) Checkout Session 作成（サブスク）
     const idem =
-      request.headers.get('x-idempotency-key') || `${company.id}:${Date.now()}`;
+      request.headers.get('x-idempotency-key') || `${company.id}:${user?.id}`;
     const sessionRes = await fetch(`${STRIPE_API}/checkout/sessions`, {
       method: 'POST',
       headers: {

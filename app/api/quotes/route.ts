@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { logUsage } from '@/lib/domains/billing/logger';
-import { checkAndConsume } from '@/lib/domains/billing/metering';
+import { checkAndConsume, peekUsage } from '@/lib/domains/billing/metering';
 import {
   quoteSchemas,
   paginationSchema,
@@ -16,6 +16,7 @@ import {
 } from '@/lib/domains/quotes/utils';
 import { PAGINATION } from '@/lib/shared/constants';
 import { apiErrors, handleApiError } from '@/lib/shared/forms';
+import { getPrisma } from '@/lib/shared/prisma';
 import { requireUserCompany } from '@/lib/shared/utils/auth';
 
 export async function POST(request: NextRequest) {
@@ -28,9 +29,40 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = quoteSchemas.create.parse(body);
 
-    // 使用量ガード（検証後に実行）
+    // 事前確認（非原子的）
+    {
+      const pre = await peekUsage(company.id, 'DOCUMENT_CREATE');
+      if (!pre.allowed) {
+        const plan: 'FREE' | 'PRO' = company.plan === 'PRO' ? 'PRO' : 'FREE';
+        logUsage(company.id, 'DOCUMENT_CREATE', plan, pre, 'block');
+        const errHeaders: Record<string, string> = {};
+        if (pre.usage) {
+          errHeaders['X-Usage-Used'] = String(pre.usage.used);
+          errHeaders['X-Usage-Remaining'] = String(pre.usage.remaining);
+          errHeaders['X-Usage-Limit'] = String(pre.usage.limit);
+          if (pre.warn) errHeaders['X-Usage-Warn'] = 'true';
+        }
+        return NextResponse.json(
+          {
+            error: 'usage_limit_exceeded',
+            code: pre.blockedReason,
+            usage: pre.usage,
+            upgradeUrl: '/api/billing/checkout',
+          },
+          { status: 402, headers: errHeaders }
+        );
+      }
+    }
+
+    const quote = await createQuote(company.id, validatedData);
+    const publicQuote = convertPrismaQuoteToQuote(quote);
+
+    // 成功後に消費（CAS）。競合で失敗した場合は補償削除
     const guard = await checkAndConsume(company.id, 'DOCUMENT_CREATE', 1);
     if (!guard.allowed) {
+      try {
+        await getPrisma().quote.delete({ where: { id: publicQuote.id } });
+      } catch {}
       const plan: 'FREE' | 'PRO' = company.plan === 'PRO' ? 'PRO' : 'FREE';
       logUsage(company.id, 'DOCUMENT_CREATE', plan, guard, 'block');
       const errHeaders: Record<string, string> = {};
@@ -50,9 +82,6 @@ export async function POST(request: NextRequest) {
         { status: 402, headers: errHeaders }
       );
     }
-
-    const quote = await createQuote(company.id, validatedData);
-    const publicQuote = convertPrismaQuoteToQuote(quote);
 
     const headers: Record<string, string> = {};
     if (guard.usage) {

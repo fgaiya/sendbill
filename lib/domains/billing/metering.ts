@@ -34,7 +34,7 @@ async function getOrInitCounter(
   metric: Metric,
   period: Period,
   now = new Date()
-): Promise<unknown> {
+): Promise<CounterRecord> {
   const prisma = getPrisma();
   const periodKey = getPeriodKey(period, now);
 
@@ -95,7 +95,11 @@ async function getOrInitCounter(
   } else {
     // プランが変わっていたら上限を追随（自己修復）
     const rec = coerceCounterRecord(counter);
-    if (rec.planAtThatTime !== currentPlan || rec.limit !== desiredLimit) {
+    if (
+      rec.planAtThatTime !== currentPlan ||
+      rec.limit !== desiredLimit ||
+      rec.graceLimit !== desiredGrace
+    ) {
       await prisma.usageCounter.update({
         where: {
           companyId_period_periodKey_metric: {
@@ -105,7 +109,11 @@ async function getOrInitCounter(
             metric,
           },
         },
-        data: { limit: desiredLimit, planAtThatTime: currentPlan },
+        data: {
+          limit: desiredLimit,
+          graceLimit: desiredGrace,
+          planAtThatTime: currentPlan,
+        },
       });
       counter = await prisma.usageCounter.findUnique({
         where: {
@@ -120,7 +128,7 @@ async function getOrInitCounter(
     }
   }
 
-  return counter!;
+  return coerceCounterRecord(counter!);
 }
 
 type CounterRecord = {
@@ -186,53 +194,114 @@ export async function checkAndConsume(
   metric: Metric,
   inc = 1
 ): Promise<GuardResult> {
+  // inc を正の整数に正規化
+  const step = Math.max(1, Math.floor(Number(inc)) || 1);
   const period = getPeriodForMetric(metric);
-  const counter = await getOrInitCounter(companyId, metric, period);
-  const usage = toUsageInfo(coerceCounterRecord(counter));
-  const allowedHard = usage.used + inc <= usage.limit;
-  const needGrace = !allowedHard && usage.used >= usage.limit;
-  const allowedGrace = !allowedHard && usage.remaining >= inc;
+  const periodKey = getPeriodKey(period);
+  // カウンタが無ければ初期化（自己修復を含む）
+  await getOrInitCounter(companyId, metric, period);
 
-  if (!allowedHard && !allowedGrace) {
-    return {
-      allowed: false,
-      warn: false,
-      blockedReason: 'LIMIT_REACHED',
-      usage,
-    };
-  }
-
-  // consume
   const prisma = getPrisma();
-  if (allowedHard) {
-    await prisma.usageCounter.update({
+  // 競合時の再試行（最大3回）
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const current = await prisma.usageCounter.findUnique({
       where: {
         companyId_period_periodKey_metric: {
           companyId,
           period,
-          periodKey: usage.periodKey,
+          periodKey,
           metric,
         },
       },
-      data: { used: { increment: inc } },
     });
-  } else {
-    // consume grace
-    await prisma.usageCounter.update({
-      where: {
-        companyId_period_periodKey_metric: {
+    if (!current) {
+      await getOrInitCounter(companyId, metric, period);
+      continue;
+    }
+
+    const snap = coerceCounterRecord(current);
+    const usageBefore = toUsageInfo(snap);
+
+    const allowedHard = snap.used + step <= snap.limit;
+    const needGrace = !allowedHard && snap.limit <= snap.used; // ハード到達後にグレース消費
+    const allowedGrace = !allowedHard && usageBefore.remaining >= step;
+
+    if (!allowedHard && !allowedGrace) {
+      // ブロック時は最新スナップショット（消費前）の使用量を返す
+      return {
+        allowed: false,
+        warn: false,
+        blockedReason: 'LIMIT_REACHED',
+        usage: usageBefore,
+      };
+    }
+
+    if (allowedHard) {
+      const res = await prisma.usageCounter.updateMany({
+        where: {
           companyId,
-          period,
-          periodKey: usage.periodKey,
           metric,
+          period,
+          periodKey,
+          used: snap.used, // CAS 条件
         },
-      },
-      data: { graceUsed: { increment: inc } },
-    });
+        data: { used: { increment: step } },
+      });
+      if (res.count === 1) {
+        // 消費後のスナップショットに補正して返す
+        const after: CounterRecord = { ...snap, used: snap.used + step };
+        const usageAfter = toUsageInfo(after);
+        const warn = usageAfter.warn || needGrace;
+        return { allowed: true, warn, usage: usageAfter };
+      }
+      // 競合 → 再試行
+      continue;
+    } else {
+      const res = await prisma.usageCounter.updateMany({
+        where: {
+          companyId,
+          metric,
+          period,
+          periodKey,
+          graceUsed: snap.graceUsed, // CAS 条件
+        },
+        data: { graceUsed: { increment: step } },
+      });
+      if (res.count === 1) {
+        // グレース消費後のスナップショットに補正して返す
+        const after: CounterRecord = {
+          ...snap,
+          graceUsed: snap.graceUsed + step,
+        };
+        const usageAfter = toUsageInfo(after);
+        const warn = usageAfter.warn || needGrace;
+        return { allowed: true, warn, usage: usageAfter };
+      }
+      // 競合 → 再試行
+      continue;
+    }
   }
 
-  const warn = usage.warn || needGrace;
-  return { allowed: true, warn, usage };
+  // 再試行上限：最新状態を返してブロック（安全側）
+  const latest = await prisma.usageCounter.findUnique({
+    where: {
+      companyId_period_periodKey_metric: {
+        companyId,
+        period,
+        periodKey,
+        metric,
+      },
+    },
+  });
+  const latestUsage = latest
+    ? toUsageInfo(coerceCounterRecord(latest))
+    : undefined;
+  return {
+    allowed: false,
+    warn: false,
+    blockedReason: 'INTERNAL_ERROR',
+    usage: latestUsage,
+  };
 }
 
 export async function peekUsage(
@@ -241,7 +310,7 @@ export async function peekUsage(
 ): Promise<GuardResult> {
   const period = getPeriodForMetric(metric);
   const counter = await getOrInitCounter(companyId, metric, period);
-  const usage = toUsageInfo(coerceCounterRecord(counter));
+  const usage = toUsageInfo(counter);
   return { allowed: usage.remaining > 0, warn: usage.warn, usage };
 }
 
@@ -254,8 +323,8 @@ export async function getUsageSummary(
     'DOCUMENT_CREATE',
     'MONTHLY'
   );
-  const toItem = (c: unknown) => {
-    const info = toUsageInfo(coerceCounterRecord(c));
+  const toItem = (c: CounterRecord) => {
+    const info = toUsageInfo(c);
     return {
       used: info.used,
       limit: info.limit, // 表示は上限そのもの（猶予はremainingに含まれる）
@@ -304,7 +373,7 @@ export async function adjustCurrentPeriodLimits(
             metric,
           },
         },
-        data: { limit, planAtThatTime: plan },
+        data: { limit, graceLimit: getGraceFor(metric), planAtThatTime: plan },
       });
     } else {
       await prisma.usageCounter.create({

@@ -98,7 +98,7 @@ export function useQuoteForm(
         unit: item.unit || '',
         sku: item.sku || '',
         sortOrder: item.sortOrder,
-        subtotal: item.unitPrice * item.quantity - item.discountAmount, // 小計計算
+        subtotal: item.unitPrice * item.quantity - (item.discountAmount ?? 0), // 小計計算
       })) || [],
   });
 

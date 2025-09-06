@@ -32,8 +32,8 @@ export function getWarnThreshold(): number {
 }
 
 export function getPeriodKey(period: Period, now = new Date()): string {
-  const y = now.getFullYear();
-  const m = `${now.getMonth() + 1}`.padStart(2, '0');
-  const d = `${now.getDate()}`.padStart(2, '0');
+  const y = now.getUTCFullYear();
+  const m = `${now.getUTCMonth() + 1}`.padStart(2, '0');
+  const d = `${now.getUTCDate()}`.padStart(2, '0');
   return period === 'MONTHLY' ? `${y}-${m}` : `${y}-${m}-${d}`;
 }
