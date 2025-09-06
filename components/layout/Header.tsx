@@ -1,10 +1,14 @@
 'use client';
 
+import { useState } from 'react';
+
 import Link from 'next/link';
 
 import { useAuth, UserButton } from '@clerk/nextjs';
 
 import Navigation from '@/components/domains/navigation/Navigation';
+import { UpgradeModal } from '@/components/features/billing/UpgradeModal';
+import { UsageIndicator } from '@/components/features/billing/UsageIndicator';
 import {
   useMenuState,
   useKeyboardNavigation,
@@ -19,6 +23,7 @@ import { MobileMenu } from './MobileMenu';
 
 export default function Header() {
   const { isSignedIn } = useAuth();
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
   const menu = useMenuState();
   const sidebar = useSidebar();
   const { menuRef, buttonRef, handleMenuKeyDown, handleButtonKeyDown } =
@@ -60,7 +65,10 @@ export default function Header() {
           {/* デスクトップ認証エリア */}
           <div className="hidden md:flex md:items-center md:space-x-4">
             {isSignedIn ? (
-              <UserButton />
+              <>
+                <UsageIndicator onUpgradeClick={() => setUpgradeOpen(true)} />
+                <UserButton />
+              </>
             ) : (
               <>
                 <Link href="/sign-in" className={BUTTON_CLASSES.SECONDARY}>
@@ -90,6 +98,12 @@ export default function Header() {
           onKeyDown={handleMenuKeyDown}
         />
       </div>
+
+      {/* Upgrade Modal */}
+      <UpgradeModal
+        isOpen={upgradeOpen}
+        onClose={() => setUpgradeOpen(false)}
+      />
     </header>
   );
 }

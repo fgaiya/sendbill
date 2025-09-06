@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 
+import { useRouter } from 'next/navigation';
+
 import { BaseForm } from '@/components/ui/BaseForm';
 import { useInvoiceForm } from '@/lib/domains/invoices/hooks';
 import type { CompanyWithBankInfo } from '@/lib/domains/invoices/types';
@@ -12,8 +14,15 @@ import { InvoiceFormFields } from './InvoiceFormFields';
 
 export function InvoiceForm() {
   const { form, state, actions } = useInvoiceForm();
+  const router = useRouter();
   const [company, setCompany] = useState<CompanyWithBankInfo | null>(null);
   const [isLoadingCompany, setIsLoadingCompany] = useState(true);
+  const [isActionAllowed, setIsActionAllowed] = useState<boolean | undefined>(
+    undefined
+  );
+  const [blockMessage, setBlockMessage] = useState<string | undefined>(
+    undefined
+  );
 
   const {
     control,
@@ -23,7 +32,7 @@ export function InvoiceForm() {
   } = form;
 
   const { isSubmitting, submitError } = state;
-  const { onSubmit, onReset } = actions;
+  const { onReset } = actions;
 
   // フォームデータを監視してリアルタイム更新
   const watchedValues = watch();
@@ -116,6 +125,35 @@ export function InvoiceForm() {
     fetchCompany();
   }, []);
 
+  // 帳票作成の事前チェック（上限超過時にフォーム無効化）
+  useEffect(() => {
+    const controller = new AbortController();
+    const check = async () => {
+      try {
+        const res = await fetch(
+          '/api/billing/usage/check?action=document_create',
+          { signal: controller.signal }
+        );
+        if (!res.ok) throw new Error('使用量の確認に失敗しました');
+        const json = await res.json();
+        const allowed = Boolean(json?.allowed);
+        setIsActionAllowed(allowed);
+        if (!allowed) {
+          setBlockMessage(
+            '今月の作成上限に達しました。アップグレードをご検討ください。'
+          );
+        } else {
+          setBlockMessage(undefined);
+        }
+      } catch (_e) {
+        // ネットワーク/一時失敗時は無効化せず進める
+        setIsActionAllowed(true);
+      }
+    };
+    void check();
+    return () => controller.abort();
+  }, []);
+
   // 発行日変更時に支払期限を自動計算する機能（オプション）
   useEffect(() => {
     // 発行日が変更され、かつ支払期限が未設定の場合、自動計算を提案
@@ -136,14 +174,24 @@ export function InvoiceForm() {
         <BaseForm
           title="請求書作成"
           description="新しい請求書を作成してください"
-          onSubmit={onSubmit}
+          onSubmit={async () => {
+            const saved = await actions.submitAndGet();
+            if (saved) {
+              router.push('/dashboard/documents');
+            }
+          }}
           onReset={onReset}
           isSubmitting={isSubmitting}
-          isValid={isValid}
+          isValid={isValid && (isActionAllowed ?? true)}
           submitError={submitError}
           submitLabel="作成"
           submittingLabel="作成中..."
         >
+          {blockMessage && (
+            <div className="p-3 rounded bg-yellow-50 text-yellow-800 text-sm">
+              {blockMessage}（ヘッダー右上の「アップグレード」からCheckoutへ）
+            </div>
+          )}
           <InvoiceFormFields
             control={control}
             errors={errors}

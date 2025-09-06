@@ -54,6 +54,13 @@ model Company {
   quotes         Quote[]
   invoices       Invoice[]
   conversionLogs ConversionLog[]
+  usageCounters  UsageCounter[]
+
+  // Billing / Plan
+  plan                 BillingPlan       @default(FREE)
+  stripeCustomerId     String?           @unique
+  stripeSubscriptionId String?           @unique
+  subscriptionStatus   String?
 
   @@map("companies")
 }
@@ -246,4 +253,41 @@ model ConversionLog {
 
   @@unique([invoiceId, companyId])
   @@map("conversion_logs")
+}
+
+// Usage metering enums and model
+
+enum BillingPlan {
+  FREE
+  PRO
+}
+
+enum UsageMetric {
+  DOCUMENT_CREATE
+  PDF_GENERATE
+}
+
+enum UsagePeriod {
+  DAILY
+  MONTHLY
+}
+
+model UsageCounter {
+  id              String       @id @default(cuid())
+  company         Company      @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  companyId       String
+  metric          UsageMetric
+  period          UsagePeriod
+  periodKey       String
+  used            Int          @default(0)
+  limit           Int
+  planAtThatTime  BillingPlan
+  graceLimit      Int          @default(0)
+  graceUsed       Int          @default(0)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@unique([companyId, period, periodKey, metric])
+  @@index([companyId, metric, period, periodKey])
+  @@map("usage_counters")
 }

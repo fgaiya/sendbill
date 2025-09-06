@@ -4,7 +4,7 @@ import { formatCurrency, toSummaryCategory } from '@/lib/shared/utils';
 
 import type { QuoteItemFormData } from './form-schemas';
 
-// Re-export for external use (e.g., tests)
+// 外部使用（テスト等）のための再エクスポート
 export type { QuoteItemFormData };
 
 /**

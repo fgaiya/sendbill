@@ -86,7 +86,7 @@ export const invoiceItemFormSchema = baseInvoiceItemSchema
     }
   );
 
-// Payment method validation schema
+// 支払方法バリデーションスキーマ
 export const invoicePaymentSchema = z.object({
   paymentMethod: z
     .enum(['BANK_TRANSFER', 'CREDIT_CARD', 'CASH', 'CHECK'])
@@ -103,7 +103,7 @@ export const invoiceFormWithItemsSchema = invoiceFormUiSchema.extend({
   items: z.array(invoiceItemFormSchema),
 });
 
-// Payment fields included form schema
+// 支払フィールド含むフォームスキーマ
 export const invoiceFormWithPaymentSchema = invoiceFormUiSchema
   .merge(invoicePaymentSchema)
   .extend({

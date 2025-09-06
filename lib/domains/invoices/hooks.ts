@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 
 import { toApiDateString } from '@/lib/shared/utils/date';
 import { omitUndefined } from '@/lib/shared/utils/objects';
+import { emitUsageRefresh } from '@/lib/shared/utils/usage-events';
 
 import { invoiceFormWithPaymentSchema } from './form-schemas';
 import { type InvoiceFormWithPaymentData } from './form-schemas';
@@ -240,6 +241,26 @@ export function useInvoiceForm(
       }
 
       const responseData = await response.json();
+      // 作成時のみ使用量更新イベント（ヘッダーで即時反映、なければフォールバックで再取得）
+      if (!isEditMode) {
+        const parseNum = (raw: string | null): number | undefined => {
+          if (raw == null) return undefined;
+          const n = Number(raw);
+          return Number.isFinite(n) ? n : undefined;
+        };
+        const parseBool = (raw: string | null): boolean | undefined => {
+          if (raw == null) return undefined;
+          const v = raw.trim().toLowerCase();
+          if (v === 'true' || v === '1') return true;
+          if (v === 'false' || v === '0') return false;
+          return undefined;
+        };
+        const used = parseNum(response.headers.get('X-Usage-Used'));
+        const remaining = parseNum(response.headers.get('X-Usage-Remaining'));
+        const limit = parseNum(response.headers.get('X-Usage-Limit'));
+        const warn = parseBool(response.headers.get('X-Usage-Warn'));
+        emitUsageRefresh({ used, remaining, limit, warn });
+      }
       const savedInvoiceId = isEditMode ? invoiceId : responseData.data?.id;
       if (!savedInvoiceId) {
         throw new Error('請求書IDの取得に失敗しました');
@@ -352,7 +373,7 @@ export function useInvoiceForm(
   };
 }
 
-// Invoice List Hook Types
+// 請求書一覧フックの型定義
 export interface InvoiceListParams {
   page?: number;
   limit?: number;
@@ -627,7 +648,7 @@ export function useInvoiceList(
   };
 }
 
-// Invoice Delete Hook Types
+// 請求書削除フックの型定義
 export interface UseInvoiceDeleteState {
   isDeleting: boolean;
   deleteError?: string;
@@ -692,7 +713,7 @@ export function useInvoiceDelete(): UseInvoiceDeleteReturn {
   };
 }
 
-// Invoice Status Change Hook
+// 請求書ステータス変更フック
 export function useInvoiceStatusChange() {
   const [isUpdating, setIsUpdating] = useState(false);
   const [statusError, setStatusError] = useState<string>();

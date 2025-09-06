@@ -8,7 +8,6 @@ import {
   Copy,
   FileText,
   Receipt,
-  Download,
   ArrowRight,
   Printer,
 } from 'lucide-react';
@@ -24,6 +23,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import type { Document } from '@/lib/domains/documents/types';
 import { isQuote, getDocumentNumber } from '@/lib/domains/documents/types';
+import { emitUsageRefresh } from '@/lib/shared/utils/usage-events';
 
 interface DocumentActionsProps {
   document: Document;
@@ -90,6 +90,24 @@ export function DocumentActions({ document, onRefresh }: DocumentActionsProps) {
 
       const result = await response.json();
       toast.success(result.message || '複製しました');
+      // 使用量の更新（複製も作成扱い）。ヘッダーがあればノーフェッチで即時反映。
+      const parseNum = (raw: string | null): number | undefined => {
+        if (raw == null) return undefined;
+        const n = Number(raw);
+        return Number.isFinite(n) ? n : undefined;
+      };
+      const parseBool = (raw: string | null): boolean | undefined => {
+        if (raw == null) return undefined;
+        const v = raw.trim().toLowerCase();
+        if (v === 'true' || v === '1') return true;
+        if (v === 'false' || v === '0') return false;
+        return undefined;
+      };
+      const used = parseNum(response.headers.get('X-Usage-Used'));
+      const remaining = parseNum(response.headers.get('X-Usage-Remaining'));
+      const limit = parseNum(response.headers.get('X-Usage-Limit'));
+      const warn = parseBool(response.headers.get('X-Usage-Warn'));
+      emitUsageRefresh({ used, remaining, limit, warn });
       await onRefresh();
     } catch (error) {
       const message =
@@ -129,6 +147,26 @@ export function DocumentActions({ document, onRefresh }: DocumentActionsProps) {
         result.message ||
           `見積書「${getDocumentNumber(document)}」から請求書を作成しました`
       );
+      // 使用量の更新（変換も作成扱い）。ヘッダーがあれば即時反映。
+      {
+        const parseNum = (raw: string | null): number | undefined => {
+          if (raw == null) return undefined;
+          const n = Number(raw);
+          return Number.isFinite(n) ? n : undefined;
+        };
+        const parseBool = (raw: string | null): boolean | undefined => {
+          if (raw == null) return undefined;
+          const v = raw.trim().toLowerCase();
+          if (v === 'true' || v === '1') return true;
+          if (v === 'false' || v === '0') return false;
+          return undefined;
+        };
+        const used = parseNum(response.headers.get('X-Usage-Used'));
+        const remaining = parseNum(response.headers.get('X-Usage-Remaining'));
+        const limit = parseNum(response.headers.get('X-Usage-Limit'));
+        const warn = parseBool(response.headers.get('X-Usage-Warn'));
+        emitUsageRefresh({ used, remaining, limit, warn });
+      }
 
       // 成功後にリフレッシュ
       await onRefresh();
@@ -137,15 +175,6 @@ export function DocumentActions({ document, onRefresh }: DocumentActionsProps) {
         error instanceof Error ? error.message : '変換に失敗しました';
       toast.error(message);
       console.error('Convert to invoice failed:', error);
-    }
-  };
-
-  const handleExportPDF = async () => {
-    try {
-      // PDF出力機能（今後のバージョンで実装予定）
-      toast.info('PDF出力機能は今後のバージョンで実装予定です');
-    } catch {
-      toast.error('PDF出力に失敗しました');
     }
   };
 
@@ -200,12 +229,6 @@ export function DocumentActions({ document, onRefresh }: DocumentActionsProps) {
         <DropdownMenuItem onClick={handleDuplicate}>
           <Copy className="mr-2 h-4 w-4" />
           複製
-        </DropdownMenuItem>
-
-        {/* PDF出力 */}
-        <DropdownMenuItem onClick={handleExportPDF}>
-          <Download className="mr-2 h-4 w-4" />
-          PDF出力
         </DropdownMenuItem>
 
         {/* 見積書→請求書変換（見積書の場合のみ） */}
