@@ -44,7 +44,7 @@ jobs:
       - run: npm run lint
       - run: npm test
 
-      - run: npx playwright install
+      - run: npx playwright install --with-deps
       - run: npm run build
       - run: npx playwright test
 
