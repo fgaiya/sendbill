@@ -7,10 +7,13 @@ on:
 jobs:
   lint-unit-e2e-full:
     runs-on: ubuntu-latest
+    container: mcr.microsoft.com/playwright:v1.54.1-jammy
 
     env:
       NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
       CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+      # コンテナ内のプリインストール済みブラウザを使用し、ダウンロードを抑止
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
 
     steps:
       - uses: actions/checkout@v4
@@ -31,20 +34,10 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nextjs-
 
-      # Playwrightブラウザキャッシュ
-      - name: Cache Playwright browsers
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-playwright-
-
       - run: npm run type-check
       - run: npm run lint
       - run: npm test
 
-      - run: npx playwright install --with-deps
       - run: npm run build
       - run: npx playwright test
 
