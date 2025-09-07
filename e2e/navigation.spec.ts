@@ -4,6 +4,8 @@ test.describe('ナビゲーション', () => {
   test('@smoke 基本的なナビゲーション要素が表示されること', async ({
     page,
   }) => {
+    // デスクトップ前提で検証するためビューポートを固定
+    await page.setViewportSize({ width: 1024, height: 768 });
     await page.goto('/');
 
     // ナビゲーションバーが存在することを確認
@@ -40,6 +42,8 @@ test.describe('ナビゲーション', () => {
   });
 
   test('認証状態に応じたナビゲーションが表示されること', async ({ page }) => {
+    // デスクトップ前提で検証するためビューポートを固定
+    await page.setViewportSize({ width: 1024, height: 768 });
     await page.goto('/');
 
     // 未認証状態でのリンク確認（ヘッダー内のリンクのみを対象）
