@@ -14,6 +14,7 @@ jobs:
       CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
       # コンテナ内のプリインストール済みブラウザを使用し、ダウンロードを抑止
       PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+      HOME: /root
 
     steps:
       - uses: actions/checkout@v4
